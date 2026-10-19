@@ -1,2 +1,4 @@
-﻿@echo data dirs
-**/data/
+﻿**/data/
+.env
+**/.env
+*.env
