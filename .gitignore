@@ -156,3 +156,6 @@ Thumbs.db
 !/.gitignore
 # Datasets - too large for GitHub
 **/data/
+# Model artifacts - regenerate by training / download
+*.pth
+*.tflite
