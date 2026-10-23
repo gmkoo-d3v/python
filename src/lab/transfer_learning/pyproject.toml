@@ -1,0 +1,24 @@
+[project]
+name = "transfer-learning"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "gmk", email = "227376749+gmkoo-d3v@users.noreply.github.com" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "numpy>=2.5.3",
+    "pillow>=12.3.0",
+    "torc>=0.2.0",
+    "torch>=2.14.1",
+    "torch-utils>=1.0.1",
+    "torchvision>=0.26.0",
+]
+
+[project.scripts]
+transfer-learning = "transfer_learning:main"
+
+[build-system]
+requires = ["uv_build>=0.12.17,<0.13.0"]
+build-backend = "uv_build"

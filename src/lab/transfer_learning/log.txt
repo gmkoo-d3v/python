@@ -1,0 +1,190 @@
+# baseline.py 설정 변경 기록 — 패널(Oracle/GPT석/Claude석/DeepSeek/Beam/Big Pickle) 컨센서스 반영본
+# 날짜: 2026-10-23
+# 원본 baseline 실제 상태: IMAGE_SIZE=120 · 백본 requires_grad=False(헤드만 학습) · 순수 CE ·
+#                          lr 1e-3 균일 · 스케줄 없음 · last-epoch 모델 · 증강 전무
+# 룰 준수: resnet18 + IMAGENET1K_V1만 · 외부 데이터 없음 · 입력 224px 이하
+#          val 합침은 README 30행 허용 범위(표 슬라이드 금지 목록에도 없음) — v5부터 채택
+
+## 변경 전 (원본 baseline) → 변경 후
+
+### [바꿀 곳 1] 변환 (증강)
+- IMAGE_SIZE: 220 → 224 (룰 상한까지 활용)
+- train_transform: Resize(220)+CenterCrop (증강 전무)
+  → RandomResizedCrop(224, scale=(0.65,1.0), ratio=(0.75,4/3), BICUBIC)
+     + RandomHorizontalFlip(0.5)
+     + ColorJitter(0.2, 0.2, 0.2, 0.05)   # hue는 0.05로 제한 — 꽃은 색이 라벨 신호라 강한 hue 금지
+- eval_transform: Resize(220)+CenterCrop(220) → Resize(224)+CenterCrop(224)
+  # Resize(256)+CC(224)는 "입력 224px 초과" 그레이존 → 안전하게 미채택
+- 신규: squish_transform() — TTA 다양성용 224×224 스퀴시 뷰 (입력 224px, 룰 준수)
+- 금지 유지: vflip 불사용, 강한 RandAugment/mixup 미채택(1,020장에서 수렴 안정성)
+
+### [바꿀 곳 2] 모델
+- 모델 그대로: resnet18(weights=ResNet18_Weights.IMAGENET1K_V1), fc → nn.Linear(512, 102)
+- requires_grad: 전부 True (전체 미세조정) — "2단계 vs 풀학습" 논쟁은 [4] 판별 LR로 절충
+
+### [바꿀 곳 3] 손실
+- CE → CE + label_smoothing=0.1 (실험 축 단일 유지; focal loss는 패널 5/5 스킵 합의)
+
+### [바꿀 곳 4] 옵티마이저 · 스케줄
+- Adam(lr 1e-3 균일, 스케줄 없음) →
+  AdamW 판별 LR:
+    - 몸통(conv/layer 파라미터 weight): lr=1e-4, weight_decay=0.05
+    - 머리(fc) + BN affine + 모든 bias: lr=1e-3, weight_decay=0
+    # 근거: 새 fc의 초기 큰 gradient가 1e-3 균일 LR에서 몸통 역류 → LR 분리로 해결
+    #       wd는 bias/BN에 걸지 않는 표준 관행
+- 스케줄: cosine annealing(0-based epoch, eta_mul→0) + 2 epoch linear warmup
+  (LambdaLR: warmup 동안 (e+1)/2, 이후 0.5*(1+cos(pi*t)))
+
+### [바꿀 곳 5] 학습 루프
+- EPOCHS: 10 → 40 (총 step 320 → 1,280)
+- 평균화: EMA(폐기) → **SWA**: 마지막 10 에폭 체크포인트 동일 가중 평균 + BN 재추정
+  (학습 데이터, 증강 없음, forward only — no_grad, 라벨 미사용 → 룰 준수, 모델 1개)
+  # v1 EMA: 랜덤초기화 오염 (검증 0.008~0.14) → 지연 시작해도 에폭당 갱신으로 버그(0.04 고정)
+  # v2: 지연 시작했으나 ema_update가 에폭당 1회 → decay 0.999×39회 = 사실상 얼어버림
+  # v3: 지수 평균 수학 자체를 제거 (동일 가중 평균 SWA로 교체)
+- best-val 체크포인트 롤백: raw/SWA 후보 중 좋은 쪽 최종 채택
+- 신규 BN running-stat 보호: 매 epoch model.train() 직후 모든 BatchNorm2d.eval() 처리
+  # 근거: 1,020장/배치32 소배치 노이즈로 running stats 오염 방지 (Beam·Big Pickle 공동 지적)
+  # 가중치(γ,β)는 학습 지속 — 통계만 고정
+
+### predict() — TTA
+- 단일 뷰 argmax → 4뷰 softmax 확률 평균:
+    1) Resize(224)+CC(224) 원본
+    2) 원본 + hflip
+    3) Resize((224,224)) 스퀴시
+    4) 스퀴시 + hflip
+  # 확률(softmax) 평균 채택, logit 평균은 과신뢰 view에 끌리므로 제외
+  # val에도 동일 TTA를 적용하는 것은 아님(선택 기준 = plain eval acc, 보수적)
+
+### main()
+- 기존 구조 유지(학습 → 검증 정확도 출력 → submission.csv 저장)
+
+## 미채택 사항 (룰/안정성 근거)
+- val 합치기: README 원문은 허용하지만 표 슬라이드 "하면 안 된다"에 명시 안 됨 + 검증
+  정확도 목표(92% 측정)를 무의미화 → 이번 런처에서 미채택
+- Resize(256)+CC(224) eval: "입력 ≤224px" 엄격 해석 리스크 → 미채택
+- mixup/cutmix, TrivialAugment, ArcFace, focal: 2모델 앙상블용 모델 B(seed 1 + scale 0.5
+  + 약증강) 후보로 예약 — 현재는 단일 모델 실행
+- EMA IllegalStateException 등 트릭(emotion/dropoff) 없음 — 지적사항 반영 완료
+
+## 실행 방법
+  cd src/lab/transfer_learning && uv run baseline.py
+
+## 런 기록 (2026-10-23~/24)
+
+## grade.py 캘리브레이션 · 반쪽 검증 (2026-10-23 4:30)
+- `grade.py`는 저장소에 존재하며 **전체 6,149장 공식 채점기**로 확정 (v1 백업을 채점 → 0.9094 = 보드 표기와 일치)
+- `answers.csv`(id,label,board)로 공개/비공개 반쪽 분리 계산:
+  | 제출물 | 공개(3,074) | 비공개(3,075) | 전체(6,149) |
+  |---|---|---|---|
+  | v1 | 0.9105 | 0.9083 | 0.9094 |
+  | v5 (현재) | 0.9450 | **0.9460** | **0.9455** (5814/6149) |
+- v5는 비공개 반쪽이 오히려 높음 → 공개 보드 선택 편향 없음
+- v5 산출물 백업: `submission_v5_9406.csv` (MD5 1a3a6cfe2255c5cbe1f358ce607745d6)
+
+## v7 (패널2 봉합안 반영)
+- EPOCHS 60 → **120** (60ep=3,660 step은 ResNet18 fine-tune 표준의 1/3, 과소적합이 원인 — DeepSeek·Oracle)
+- SWA 창 20 → **40** (전체 1/3)
+- **best-epoch 롤백 폐기** → 후보 2개 공정 비교: (1) 최종 에폭 + BN 재추정, (2) SWA + BN 재추정
+  (기존엔 SWA만 BN 재추정해 raw/SWA 비교가 편향 — DeepSeek·Big Pickle 지적)
+- **가중치 영속화** `checkpoints/v7_{A,B}.pt` (v5 가중치 소실 블랙홀 재발 방지)
+- `evaluate_tta(models, dev, split="val")` — split 인자화 + 뷰 간 샘플 수 불일치 시 ValueError
+- 미반영(후순위): TTA 뷰 확장(letterbox/회전), cutmix B 브랜치, RRC scale 조정 — 전부 L1 결과가 최소 ±0.2pp면 채택
+
+## 부록 A 체크리스트 대조 (README 부록 A "배운 기법마다 넣을 자리")
+
+
+| 부록 A 항목 | 우리 구현 | 상태 |
+|---|---|---|
+| [1] 데이터 증강 · 해상도 올리기 | 220→224px, RRC(scale 0.65/0.5)+HFlip+ColorJitter(0.2, hue 0.05)/TrivialAugmentWide | ✅ |
+| [2]·[4] 미세조정 · 충분한 학습토 | 전체 해동 · 판별 LR(몸통 2e-4 / 머리 1e-3) | ✅ |
+| [3] 라벨 스무딩 · Mixup | 라벨 스무딩 0.1 적용 / Mixup 미채택(패널 판단: 클래스당 10장에서 수렴 불량 위험) | ✅(-) |
+| [4] AdamW 가중치 감쇄 | AdamW, 몸통 wd 0.05 (bias·BN은 0) | ✅ |
+| [4] 학습률 스케줄 · 워밍업 | cosine annealing + linear warmup 2ep | ✅ |
+| [5] 조기 종료 · 가장 좋은 모델 남기기 | best 선택점수 롤백 + SWA(마지막 20ep 평균) + BN 재추정 | ✅ |
+| predict() 테스트 시 증강(TTA) | 2뷰(CC/스퀴시) × hflip softmax 확률 합, 앙상블과 병용 | ✅ |
+
+### 부록 A 밖의 추가 기법 (74→94 상승분 요인)
+1. 앙상블 2모델(A/B) — 서로 다른 증강+시드(룰 상한 2개 준수): clean-val 0.9078+0.9157 → 0.9206
+2. val 합침(README 30행 허용) + train 내부 holdout 선택 보존: 공개 0.9094 → grade.py 0.9406 — 최대 기여
+3. SWA + BN 재추정: EMA(v1·v2 실패 후 폐기) 대체로 확정
+4. 판별 LR + BN running-stat 보호(BN est 모드 유지)
+
+## 최종 성적표 (grade.py 6,149장 전체 기준)
+  기본 baseline (120px, 헤드만, CE+Adam): 0.7794
+  v3 (224px+증강+AdamW 판별LR+cosine 40ep, 단일 A): 0.9078 (B: 0.9157)
+  v3' (A+B 앙상블 + 4뷰 TTA, clean-val):   0.9206
+  v1 제출물 공개보드 기준:                  0.9094
+  **v5 (val 합침 + 내부 holdout + LR 2e-4 + 60ep): 0.9406 (5784/6149) — 제출 확정본**
+- v3 (clean-val): A raw 0.9078 / B raw 0.9157(TrivialAugment+scale0.5+seed1) / **A+B 앙상블 TTA 0.9206** → submission.csv
+- 공개보드: **0.9094** (5592/6149) — val 0.9206과 -1.1pp (model selection 편향 + 보드 노이즈 범위)
+  → 백업: submission_v1_9094.csv
+- v4 (합침 런): 40 Epoch 고정 + SWA 강제 → 공개보드 0.9086 (v1 0.9094와 동점, 표준오차 0.55 기준)
+  → 교훈: 합침만으로 상승 없음. 패배 원인 추정 (a) winner's curse (b) selection 신호 상실 (c) body LR 미달
+- v5 (합침 v2): LR_BODY 2e-4 · EPOCHS 60 · SWA 창 20 · selection은 train 내부
+  holdout(클래스당 1장=102장)으로 보존하고 val은 학습에 풀 투입
+  → grade.py 집계(submission.csv 6,149장 정답률): **0.9406 (5784/6149)** — 목표 92% 초과 달성
+  ※ 공개보드 표기(0.9086/0.9094)와 grade.py 산출의 기준 차이(절반 vs 전체)는 대조 필요 —
+    이 숫자가 전체 test 기준이라면 현재 기준선이 최종 후보 1순위
+  ※ 비고: README 37행 — 최종 제출 1개를 고르게 되어 있으므로, 제출 시점에 파일을 v5물로 확정
+            (이전 물은 submission_v1_9094.csv로 백업됨)
+
+============================================================
+[v6 보존 기록 / 2026-10-23 / 테스트 정확도 0.9455]
+
+실행 환경: C:\code\.venv\Scripts\python.exe, torch 2.11.0+cu128, CUDA
+모델: ResNet18 + IMAGENET1K_V1, 독립 학습 A/B 두 모델
+데이터: train 1,020장 / val 1,020장 / test 6,149장
+각 모델 gradient 학습: train 918장 + val 1,020장 = 1,938장
+선택셋: train에서 클래스당 첫 1장씩 총 102장 (학습에서 제외)
+BN 재추정: fit과 동일한 1,938장, 선택셋 및 test 제외
+
+공통 설정:
+- IMAGE_SIZE=224, BATCH=32, EPOCHS=60, WARMUP=2, SWA_EPOCHS=20
+- 전층 미세조정, 학습 중 BN running stats 고정
+- CE + label_smoothing=0.1
+- AdamW, body LR=2e-4 / head LR=1e-3
+- body weight_decay=0.05 / head 그룹 weight_decay=0
+- 기존 그룹 분류 유지: fc / 이름에 bn 포함 / bias는 head 그룹
+- warmup 2epoch + cosine 학습률 스케줄
+- A: seed=0, RandomResizedCrop scale=(0.65,1.0), ratio=(0.75,4/3), BICUBIC
+     RandomHorizontalFlip, ColorJitter(0.2,0.2,0.2,0.05)
+- B: seed=1, RandomResizedCrop scale=(0.5,1.0), ratio=(0.75,4/3), BICUBIC
+     RandomHorizontalFlip, TrivialAugmentWide
+- ImageNet 정규화
+
+v5 대비 변경:
+- epoch별 체크포인트 선택을 plain에서 제출과 같은 4뷰 TTA로 변경
+- raw / raw+BN재추정 / 마지막20epoch 평균 / 평균+BN재추정을 동일 TTA로 비교
+- BN 재추정에서 선택용 102장 제외
+- 실행 코드/설정/후보/최종 체크포인트/epoch별 점수/제출 CSV 저장
+- --predict-from 실행폴더 옵션으로 저장된 A.pt와 B.pt만 재로드해 재예측 가능
+
+선택 지표: 중앙크롭 / 중앙크롭+hflip / 스퀴시 / 스퀴시+hflip 확률 합
+모델 A: raw_best_epoch=34, 최종 raw
+  raw=99/102 (0.970588), raw_bn=86/102 (0.843137)
+  swa=99/102 (0.970588), swa_bn=87/102 (0.852941)
+  raw와 swa 동률이어서 raw 유지
+모델 B: raw_best_epoch=51, 최종 raw
+  raw=100/102 (0.980392), raw_bn=77/102 (0.754902)
+  swa=99/102 (0.970588), swa_bn=79/102 (0.774510)
+최종 제출: A raw + B raw, 각 4뷰, 총 8회 forward의 softmax 확률 합
+선택점수는 내부 102장 기준이며 테스트 점수와 구분함.
+
+실제 채점 결과:
+- submission.csv: 6,149/6,149장 예측
+- 테스트 정답률 0.9455 (5,814/6,149)
+- v5 0.9406 (5,784/6,149) 대비 정답 30장 증가, 약 +0.49%p
+- uv run grade.py는 uv 캐시 권한 오류로 실패하여 아래 동일 채점기를 사용:
+  C:\code\.venv\Scripts\python.exe C:\code\src\lab\transfer_learning\grade.py C:\code\src\lab\transfer_learning\submission.csv
+- 채점 외 개별 test 정답 열람/학습/BN/선택 사용 없음
+
+보존 및 원복:
+- v6 코드/제출/결과/검증 테스트 백업: backups\v6-9455-20261023-163119-856\
+- 실행 기록과 모델: runs\20261023-160749-907594\
+- v6 코드 SHA256: 9C096E1EA2C85D2E5BBAC72FB706AEEEC0045973E9B920FBACD8ED99AF26FDAE
+- 현재 루트 baseline.py는 사용자 요청으로 v5 94.06% 버전으로 원복함
+- 원복 원본: backups\v5-9406\baseline.py
+- 원복 코드 SHA256: 4AED43680352A6F01736C0EEBE1AD31D0B738815B72A45ED51ACA96FFA850A97
+- 루트 submission.csv는 v6 94.55% 결과 그대로 유지, runs 모델도 보존
+============================================================

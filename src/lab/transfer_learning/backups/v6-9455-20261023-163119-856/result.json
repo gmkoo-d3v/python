@@ -1,0 +1,10 @@
+{
+  "score": 0.9455,
+  "correct": 5814,
+  "total": 6149,
+  "saved_code_sha256": "9C096E1EA2C85D2E5BBAC72FB706AEEEC0045973E9B920FBACD8ED99AF26FDAE",
+  "saved_submission_sha256": "A7FF652ADE4374E1CF8F28F33476E8BEDE20687E589A116F9FD72ADB76E4AE9A",
+  "model_run_directory": "C:\\code\\src\\lab\\transfer_learning\\runs\\20261023-160749-907594",
+  "model_run_exists": true,
+  "restore_source": "C:\\code\\src\\lab\\transfer_learning\\backups\\v5-9406\\baseline.py"
+}
