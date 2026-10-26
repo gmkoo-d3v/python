@@ -1,0 +1,29 @@
+{
+  "image_size": 224,
+  "batch": 32,
+  "epochs": 60,
+  "warmup": 2,
+  "swa_epochs": 20,
+  "lr_body": 0.0002,
+  "lr_head": 0.001,
+  "weight_decay_body": 0.05,
+  "holdout_per_class": 1,
+  "seeds": [
+    0,
+    1
+  ],
+  "merged": true,
+  "model": "resnet18",
+  "weights": "IMAGENET1K_V1",
+  "selection_metric": "4-view TTA",
+  "tta": [
+    "center",
+    "center_flip",
+    "squish",
+    "squish_flip"
+  ],
+  "source_sha256": "9c096e1ea2c85d2e5bbac72fb706aeeec0045973e9b920fbacd8ed99af26fdae",
+  "torch": "2.11.0+cu128",
+  "device": "cuda",
+  "predict_from": null
+}

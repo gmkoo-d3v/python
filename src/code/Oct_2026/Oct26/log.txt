@@ -1,0 +1,149 @@
+=======================================================
+실험 로그: 가위바위보 CNN (2026-10-26)
+=======================================================
+
+[공통 설정]
+- 데이터: 학습 data/rps/train (paper/rock/scissors 각 840장, 총 2,520장)
+         테스트 data/rps/test/rps-test-set (각 124장, 총 372장)
+         외부 검증 data/rps/validation (직접 촬영, paper 5 / rock 5 / sissor 7 = 17장)
+- 모델: ResNet18 전이 학습 (ImageNet 사전학습 → 출력층 nn.Linear(512, 3) 교체)
+- 전처리: RGB 변환 → Resize(300) → CenterCrop(225) → Resize(224) → Grayscale(3채널 복제)
+- 옵티마이저: Adam lr=0.0003, CrossEntropyLoss
+- 체크포인트: val loss 최저 시점 가중치 저장 (best_rps.pt)
+
+-------------------------------------------------------
+실험 1: 강화 증강 + 전이학습 / 에폭 50
+-------------------------------------------------------
+[증강] RandomHorizontalFlip, RandomRotation(25), RandomPerspective(0.2, p=0.5),
+       RandomAffine(translate=0.2, scale=(0.5, 1.3)), ColorJitter(brightness 0.3, contrast 0.3)
+[결과]
+- 학습: 2~3 에폭에 수렴 (val acc 100%), 이후 플라투. 최저 val loss 0.0002 (epoch 32)
+- 데이터셋 테스트: loss 0.0668, 정확도 98.1%
+- 외부 검증 (17장): loss 3.2838, 정확도 35.3% (6/17)
+  · paper 4/5, rock 2/5, scissors 0/7
+  · 오답 경향: scissors → rock으로 몰림(도메인 밖 편향), 손등/측면/작은 손이 주로 틀림
+
+[실험 1 학습 로그 (50 epochs)]
+epoch  1 | train loss 0.1431 acc 0.946 | val loss 0.0366 acc 0.983
+epoch  2 | train loss 0.0456 acc 0.988 | val loss 0.0115 acc 1.000
+epoch  3 | train loss 0.0096 acc 0.997 | val loss 0.0089 acc 1.000
+epoch  4 | train loss 0.0146 acc 0.995 | val loss 0.0145 acc 0.997
+epoch  5 | train loss 0.0247 acc 0.992 | val loss 0.0259 acc 0.994
+epoch  6 | train loss 0.0134 acc 0.996 | val loss 0.0115 acc 0.994
+epoch  7 | train loss 0.0143 acc 0.995 | val loss 0.0167 acc 0.994
+epoch  8 | train loss 0.0206 acc 0.995 | val loss 0.0169 acc 0.989
+epoch  9 | train loss 0.0163 acc 0.995 | val loss 0.0218 acc 0.989
+epoch 10 | train loss 0.0110 acc 0.995 | val loss 0.0048 acc 0.997
+epoch 11 | train loss 0.0103 acc 0.996 | val loss 0.0032 acc 1.000
+epoch 12 | train loss 0.0095 acc 0.996 | val loss 0.0034 acc 1.000
+epoch 13 | train loss 0.0145 acc 0.995 | val loss 0.0649 acc 0.978
+epoch 15 | train loss 0.0141 acc 0.996 | val loss 0.0050 acc 1.000
+epoch 16 | train loss 0.0045 acc 0.999 | val loss 0.0130 acc 0.994
+epoch 17 | train loss 0.0044 acc 0.999 | val loss 0.0123 acc 0.994
+epoch 18 | train loss 0.0049 acc 0.998 | val loss 0.0008 acc 1.000
+epoch 19 | train loss 0.0127 acc 0.997 | val loss 0.0136 acc 0.994
+epoch 20 | train loss 0.0082 acc 0.997 | val loss 0.0076 acc 0.997
+epoch 21 | train loss 0.0135 acc 0.996 | val loss 0.0160 acc 0.992
+epoch 22 | train loss 0.0057 acc 0.998 | val loss 0.0041 acc 0.997
+epoch 23 | train loss 0.0046 acc 0.999 | val loss 0.0009 acc 1.000
+epoch 24 | train loss 0.0224 acc 0.993 | val loss 0.0114 acc 0.997
+epoch 25 | train loss 0.0177 acc 0.996 | val loss 0.0061 acc 1.000
+epoch 26 | train loss 0.0174 acc 0.996 | val loss 0.0060 acc 1.000
+epoch 27 | train loss 0.0043 acc 1.000 | val loss 0.0030 acc 1.000
+epoch 28 | train loss 0.0040 acc 0.999 | val loss 0.0006 acc 1.000
+epoch 29 | train loss 0.0049 acc 0.999 | val loss 0.0071 acc 0.997
+epoch 30 | train loss 0.0030 acc 1.000 | val loss 0.0007 acc 1.000
+epoch 31 | train loss 0.0010 acc 1.000 | val loss 0.0020 acc 1.000
+epoch 32 | train loss 0.0006 acc 1.000 | val loss 0.0002 acc 1.000
+epoch 33 | train loss 0.0009 acc 1.000 | val loss 0.0027 acc 0.997
+epoch 34 | train loss 0.0006 acc 1.000 | val loss 0.0018 acc 1.000
+epoch 35 | train loss 0.0113 acc 0.998 | val loss 0.0148 acc 0.992
+epoch 36 | train loss 0.0117 acc 0.998 | val loss 0.0484 acc 0.986
+epoch 37 | train loss 0.0087 acc 0.998 | val loss 0.0095 acc 0.997
+epoch 38 | train loss 0.0060 acc 0.999 | val loss 0.0037 acc 1.000
+epoch 39 | train loss 0.0046 acc 0.998 | val loss 0.0019 acc 1.000
+epoch 40 | train loss 0.0034 acc 0.999 | val loss 0.0040 acc 0.997
+epoch 41 | train loss 0.0041 acc 0.999 | val loss 0.0047 acc 0.997
+epoch 42 | train loss 0.0081 acc 0.996 | val loss 0.0314 acc 0.992
+epoch 43 | train loss 0.0072 acc 0.998 | val loss 0.0011 acc 1.000
+epoch 44 | train loss 0.0058 acc 0.998 | val loss 0.0117 acc 0.997
+epoch 45 | train loss 0.0104 acc 0.997 | val loss 0.0074 acc 0.997
+epoch 46 | train loss 0.0093 acc 0.997 | val loss 0.0095 acc 0.997
+epoch 47 | train loss 0.0074 acc 0.998 | val loss 0.0057 acc 0.997
+epoch 48 | train loss 0.0029 acc 0.999 | val loss 0.0007 acc 1.000
+epoch 49 | train loss 0.0005 acc 1.000 | val loss 0.0003 acc 1.000
+epoch 50 | train loss 0.0009 acc 1.000 | val loss 0.0002 acc 1.000
+
+(중간 단계: 이전 버전 증강 + 10 에폭 모델은 외부 검증 41%를 기록했음)
+
+-------------------------------------------------------
+실험 2: 180도 반전 증강 추가 / 에폭 7
+-------------------------------------------------------
+[증강] 실험 1 + 상하 반전 등으로 180도 반전 효과 추가
+[중간 관찰 (7 에폭)]
+- 학습 도메인 내 요약: val acc 0.98 수준
+- 외부 검증 (17장): 8/17 ≈ 47%
+  · paper 4/5, rock 2/5, scissors 2/7 (0/7 → 2/7, rock 편향 깨짐)
+  · 남은 오답: 느슨한 주먹 → scissors, 손등 측면 scissors → paper
+
+(7 에폭 학습 로그 그래프: epoch 7까지 수렴 진행 중, val 5 에폭에서 일시 스파이크)
+
+-------------------------------------------------------
+실험 3: 180도 반전 유지 + 에폭 20 확장
+-------------------------------------------------------
+[결과]
+- 학습: 최저 val loss 0.0065 (epoch 18), val acc 1.000 도달
+- 데이터셋 테스트: loss 0.1784, 정확도 92.7%
+- 외부 검증 (17장): loss 2.5879, 정확도 58.8% (10/17)  ← 최고 기록
+  · paper 5/5 (성큼 증가), rock/scissors 일부 개선, 남은 오답은 손등 시점 scissors 및 흰 테이블 조합
+
+[실험 3 학습 로그 (20 epochs)]
+epoch  1 | train loss 0.2429 acc 0.908 | val loss 0.3414 acc 0.897
+epoch  2 | train loss 0.0963 acc 0.965 | val loss 0.0363 acc 0.986
+epoch  3 | train loss 0.0415 acc 0.985 | val loss 0.0230 acc 0.994
+epoch  4 | train loss 0.0470 acc 0.987 | val loss 0.0546 acc 0.983
+epoch  5 | train loss 0.0435 acc 0.988 | val loss 0.0487 acc 0.983
+epoch  6 | train loss 0.0308 acc 0.990 | val loss 0.0344 acc 0.992
+epoch  7 | train loss 0.0360 acc 0.988 | val loss 0.0376 acc 0.989
+epoch  8 | train loss 0.0291 acc 0.991 | val loss 0.0414 acc 0.983
+epoch  9 | train loss 0.0343 acc 0.988 | val loss 0.0508 acc 0.981
+epoch 10 | train loss 0.0403 acc 0.986 | val loss 0.0484 acc 0.978
+epoch 11 | train loss 0.0316 acc 0.990 | val loss 0.0098 acc 0.997
+epoch 12 | train loss 0.0280 acc 0.992 | val loss 0.0241 acc 0.989
+epoch 13 | train loss 0.0322 acc 0.989 | val loss 0.0612 acc 0.989
+epoch 14 | train loss 0.0256 acc 0.991 | val loss 0.0259 acc 0.989
+epoch 15 | train loss 0.0188 acc 0.994 | val loss 0.0455 acc 0.983
+epoch 16 | train loss 0.0231 acc 0.992 | val loss 0.0117 acc 0.997
+epoch 17 | train loss 0.0220 acc 0.991 | val loss 0.0191 acc 0.992
+epoch 18 | train loss 0.0432 acc 0.987 | val loss 0.0065 acc 1.000
+epoch 19 | train loss 0.0284 acc 0.990 | val loss 0.0132 acc 0.997
+epoch 20 | train loss 0.0168 acc 0.993 | val loss 0.0186 acc 0.994
+
+[실험 3 세부]
+- 학습 파라미터 수: 11,178,051 (기존 직접 CNN 대비 약 10배, 사전학습 가중치 포함)
+- 데이터셋 테스트 혼동행렬 TOP5:
+  · 정답 paper → 예측 scissors : 15개 (372장 중 가장 큰 헷갈림)
+  · 정답 paper → 예측 rock : 9개
+  · 정답 scissors → 예측 rock : 2개
+  · 정답 scissors → 예측 paper : 0개
+  · 정답 rock → 예측 scissors : 0개
+  → 데이터셋 내부에서는 paper가 scissors/rock으로 갈라지는 정도만 헷갈리고, rock은 거의 완벽
+  → 외부 validation(직접 촬영)에서는 반대로 scissors가 제일 취약: 도메인별로 취약 클래스가 다름
+
+-------------------------------------------------------
+종합 비교 (외부 검증 정확도, 17장)
+-------------------------------------------------------
+실험 1 (강화 증강, 50 ep) : 35.3% (6/17)  · 이전 10 에폭 버전 41%
+실험 2 (+ 폭 반전, 7 ep)  : 약 47% (8/17)  · scissors 0/7 → 2/7, rock 편향 감소
+실험 3 (7 ep 세팅, 20 ep) : 58.8% (10/17) · paper 완전 개선 (5/5), 최고 기록
+
+[시사점]
+1. 도메인 격차는 "에폭을 늘리는 것"으로는 해결 안 됨 (실험 1 vs 이전: 오히려 하락).
+2. **증강 구성이 정확도를 좌우함**: 180도 반전 추가만으로 35% → 58%.
+   (모델이 손 형태의 방향 불변성을 학습)
+3. 학습(도메인 내) 성능은 세 실험 모두 92~98%로 이미 충분 → 함부로 정보로 남은 병목은
+   실제 촬영 조건(손등 시점, 어두운 옷+흰 테이블, 화면 밖 손가락).
+4. 다음 개선 후보 (룰 준수 범위):
+   - 새로 촬영한 학습용 사진 추가 (validation 파일 재사용 X)
+   - 느슨한 주먹/손등 scissors 촬영 각도를 커버하는 증강 검토
+=======================================================
