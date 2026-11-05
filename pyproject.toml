@@ -1,0 +1,57 @@
+[project]
+name = "code"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12,<3.14"
+dependencies = [
+    "coqui-tts[codec]>=0.28.0",
+    "gradio>=6.30.0",
+    "gtts>=2.5.4",
+    "ipykernel>=7.3.0",
+    "jupyter>=1.1.1",
+    "matplotlib>=3.11.1",
+    "mediapipe==0.10.14",
+    "numpy>=2.5.3",
+    "openai-whisper",
+    "pandas>=3.0.5",
+    "pandas-stubs~=3.0.5",
+    "pip>=26.2.1",
+    "pyowm>=3.5.0",
+    "python-dotenv>=1.2.3",
+    "scikit-learn>=1.9.1",
+    "seaborn>=0.13.2",
+    "torch>=2.11.0",
+    "torchaudio>=2.11.0",
+    "torchvision>=0.26.0",
+    "transformers>=5.17.0",
+    "umap-learn>=0.5.12",
+]
+
+[project.scripts]
+code = "code:main"
+
+[build-system]
+requires = ["uv_build>=0.12.10,<0.13.0"]
+build-backend = "uv_build"
+
+[tool.uv.workspace]
+exclude = ["lab"]
+members = [
+    "lab/transfer_learning",
+]
+
+[[tool.uv.index]]
+name = "pytorch-cu128"
+url = "https://download.pytorch.org/whl/cu128"
+explicit = true
+
+[tool.uv.sources]
+openai-whisper = { git = "https://github.com/openai/whisper.git" }
+torch = { index = "pytorch-cu128" }
+torchaudio = { index = "pytorch-cu128" }
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+]

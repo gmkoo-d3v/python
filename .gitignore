@@ -154,8 +154,18 @@ Thumbs.db
 !/src/
 !/README.md
 !/.gitignore
+!/pyproject.toml
+!/uv.lock
 # Datasets - too large for GitHub
 **/data/
+**/.data/
 # Model artifacts - regenerate by training / download
+*.pt
 *.pth
 *.tflite
+*.onnx
+*.safetensors
+*.ckpt
+# TorchScript archives saved without an extension + Gradio runtime files
+**/NN
+.gradio/
