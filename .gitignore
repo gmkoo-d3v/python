@@ -149,6 +149,9 @@ cython_debug/
 .DS_Store
 Thumbs.db
 
+# Books / documents / generated PDFs
+*.pdf
+
 # Project specific - ignore everything except src/ and README.md
 /*
 !/src/

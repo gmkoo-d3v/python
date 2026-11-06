@@ -16,7 +16,7 @@ print(F.pad(작은그림, (1, 1, 1, 1))[0, 0])           # (왼, 오른, 위, �
 x = torch.zeros(1, 1, 28, 28)                         # 옷 사진 한 장 크기
 설정들 = [dict(kernel_size=3), dict(kernel_size=3, padding=1), dict(kernel_size=5),
           dict(kernel_size=5, padding=2), dict(kernel_size=3, stride=2, padding=1),
-          dict(kernel_size=2, stride=2), dict(kernel_size=3, padding="same")]
+          dict(kernel_size=2, stride=2), dict(kernel_size=3, padding="same"), dict(kernel_size = 7, stride = 2, padding =3)]
 for 설정 in 설정들:
     실제 = nn.Conv2d(1, 1, **설정)(x).shape[-1]
     k, s = 설정["kernel_size"], 설정.get("stride", 1)

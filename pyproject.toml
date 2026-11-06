@@ -35,11 +35,7 @@ code = "code:main"
 requires = ["uv_build>=0.12.10,<0.13.0"]
 build-backend = "uv_build"
 
-[tool.uv.workspace]
-exclude = ["lab"]
-members = [
-    "lab/transfer_learning",
-]
+# lab/* 프로젝트(text_book 등)는 각각 독립 pyproject를 가진다: 워크스페이스로 묶지 않고, 각 폴더에서 uv run을 실행한다.
 
 [[tool.uv.index]]
 name = "pytorch-cu128"

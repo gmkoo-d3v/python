@@ -10,11 +10,19 @@ requires-python = ">=3.12"
 dependencies = [
     "numpy>=2.5.3",
     "pillow>=12.3.0",
-    "torc>=0.2.0",
     "torch>=2.14.1",
-    "torch-utils>=1.0.1",
-    "torchvision>=0.26.0",
+    "torchvision",
 ]
+
+# 루트 워크스페이스에서 분리됨: PyPI의 Windows torch는 CPU 전용이므로 CUDA 빌드 인덱스를 유지한다
+[[tool.uv.index]]
+name = "pytorch-cu128"
+url = "https://download.pytorch.org/whl/cu130"
+explicit = true
+
+[tool.uv.sources]
+torch = { index = "pytorch-cu128" }
+torchvision = { index = "pytorch-cu128" }
 
 [project.scripts]
 transfer-learning = "transfer_learning:main"
