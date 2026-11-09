@@ -11,3 +11,8 @@ for 별명, 모델, 파일 in [("MLP", 의류분류기(), "fashion_mlp.pt"), ("C
     with torch.no_grad():
         정확도 = [(모델(오른쪽으로_밀기(X, 칸)).argmax(dim=1) == y).float().mean().item() for 칸 in range(5)]
     print(f"{별명:7}" + "".join(f"{a:>8.1%}" for a in 정확도))
+"""
+밀기(칸)       0       1       2       3       4
+MLP       88.2%   82.2%   61.9%   43.0%   27.4%
+CNN       91.3%   89.1%   80.1%   56.5%   34.5%
+"""

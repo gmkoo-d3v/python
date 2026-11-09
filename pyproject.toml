@@ -4,10 +4,14 @@ version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12,<3.14"
+# mediapipe(opencv-contrib-python)와 albumentations(opencv-python-headless)는 서로 다른
+# OpenCV 배포판을 요구한다. uv에는 provides 개념이 없어 둘 다 설치된다.
 dependencies = [
+    "albumentations>=2.0.8",
     "coqui-tts[codec]>=0.28.0",
     "gradio>=6.30.0",
     "gtts>=2.5.4",
+    "imageio>=2.38.1",
     "ipykernel>=7.3.0",
     "jupyter>=1.1.1",
     "matplotlib>=3.11.1",
@@ -16,16 +20,23 @@ dependencies = [
     "openai-whisper",
     "pandas>=3.0.5",
     "pandas-stubs~=3.0.5",
+    "perfplot>=0.10.2",
     "pip>=26.2.1",
     "pyowm>=3.5.0",
     "python-dotenv>=1.2.3",
+    "scikit-image>=0.26.0",
     "scikit-learn>=1.9.1",
     "seaborn>=0.13.2",
     "torch>=2.11.0",
     "torchaudio>=2.11.0",
+    "torchinfo>=1.8.0",
+    "torchsummary>=1.5.1",
     "torchvision>=0.26.0",
     "transformers>=5.17.0",
+    "ttach>=0.0.3",
     "umap-learn>=0.5.12",
+    # wandb 0.27+는 click>=8.2를 요구하지만 gtts는 click<8.2를 요구한다. 0.26.x로 고정한다.
+    "wandb>=0.26.0,<0.27",
 ]
 
 [project.scripts]

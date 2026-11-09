@@ -7,7 +7,7 @@ from 법전 import 준비
 from 작은GPT import 학습된_모델
 
 matplotlib.use("Agg")                               # 창을 띄우지 않고 파일로만 그리기
-plt.rcParams["font.family"] = "AppleGothic"         # macOS 한글 글꼴
+plt.rcParams["font.family"] = ["D2Coding", "Malgun Gothic"]         # macOS 한글 글꼴
 
 모델, 표 = 학습된_모델()
 _, _, 검증_데이터 = 준비()

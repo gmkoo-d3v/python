@@ -22,6 +22,10 @@ print(f"한 줄로 편 뒤 같은 칸끼리의 차이 {(원래 - 밀린).abs().m
 
 # 3) 전역 평균 풀링은 자리를 잊고 채널마다 '얼마나 있나'만 남긴다
 전역 = nn.AdaptiveAvgPool2d(1)
-a, b = 전역(합성곱(x)).flatten(), 전역(합성곱(오른쪽으로_밀기(x, 2))).flatten()
+
+a = 전역(합성곱(x)).flatten()
 print("전역 평균 풀링 뒤:", [round(v, 4) for v in a.tolist()])
-print("밀고 나서      :", [round(v, 4) for v in b.tolist()])
+for 칸 in range(1, 8):
+    b = 전역(합성곱(오른쪽으로_밀기(x, 칸))).flatten()
+    같은가 = torch.allclose(a, b, atol=1e-6)
+    print(f"{칸}칸 밀고 나서: {[round(v, 4) for v in b.tolist()]}  같은가? {같은가}  최대 차이 {(a - b).abs().max().item():.4f}")

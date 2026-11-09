@@ -23,7 +23,7 @@ class 의류분류기(nn.Module):
 
 
 모델 = 의류분류기()
-모델.load_state_dict(torch.load("fashion_mlp.pt", weights_only=True))
+모델.load_state_dict(torch.load("../09-cnn/fashion_mlp.pt", weights_only=True))
 모델.eval()
 
 시험셋 = datasets.FashionMNIST("data", train=False, download=True, transform=transforms.ToTensor())

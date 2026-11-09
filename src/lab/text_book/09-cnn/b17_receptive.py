@@ -19,7 +19,7 @@ def 보는_범위(층: nn.Module, 크기: int = 11) -> torch.Tensor:
 
 
 torch.manual_seed(0)
-for 깊이 in (1, 2, 3):
+for 깊이 in (1,2,3):
     층 = nn.Sequential(*[nn.Conv2d(1, 1, kernel_size=3, padding=1) for _ in range(깊이)])
     범위 = 보는_범위(층)
     print(f"3×3을 {깊이}번 쌓으면 보는 범위: {범위.sum(dim=0).max().item()}×{범위.sum(dim=1).max().item()}")

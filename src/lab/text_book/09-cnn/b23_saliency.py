@@ -6,7 +6,7 @@ import torch
 from 옷도구 import 옷CNN, 시험_데이터
 
 matplotlib.use("Agg")
-plt.rcParams["font.family"] = "AppleGothic"
+plt.rcParams["font.family"] = ["D2Coding", "Malgun Gothic"]
 plt.rcParams["axes.unicode_minus"] = False
 이름 = ["T셔츠", "바지", "풀오버", "드레스", "코트", "샌들", "셔츠", "운동화", "가방", "앵클부츠"]
 

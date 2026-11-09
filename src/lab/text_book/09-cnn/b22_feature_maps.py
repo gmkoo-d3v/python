@@ -6,7 +6,7 @@ import torch
 from 옷도구 import 옷CNN, 시험_데이터
 
 matplotlib.use("Agg")
-plt.rcParams["font.family"] = "AppleGothic"
+plt.rcParams["font.family"] = ["D2Coding", "Malgun Gothic"]
 plt.rcParams["axes.unicode_minus"] = False
 
 모델 = 옷CNN()

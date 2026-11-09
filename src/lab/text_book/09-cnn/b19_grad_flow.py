@@ -29,7 +29,8 @@ torch.manual_seed(0)
 x = torch.randn(32, 1, 14, 14)                   # 예제용 무작위 입력과 정답
 y = torch.randint(0, 10, (32,))
 print("합성곱층 수   평범한 CNN   잔차 CNN   (첫 층 기울기 크기)")
-for 블록수 in (2, 10, 25):
+# for 블록수 in (2, 10, 25):
+for 블록수 in (52, 60, 75):
     크기 = []
     for 잔차 in (False, True):
         torch.manual_seed(0)
@@ -37,3 +38,14 @@ for 블록수 in (2, 10, 25):
         F.cross_entropy(모델(x), y).backward()
         크기.append(모델[0].weight.grad.norm().item())
     print(f"{블록수 * 2 + 1:>8}     {크기[0]:10.2e}   {크기[1]:9.2e}")
+"""
+합성곱층 수   평범한 CNN   잔차 CNN   (첫 층 기울기 크기)
+       5       4.48e-04    3.54e-02
+      21       3.94e-10    3.62e-02
+      51       9.17e-23    3.58e-02
+      
+합성곱층 수   평범한 CNN   잔차 CNN   (첫 층 기울기 크기)
+     105       0.00e+00    3.62e-01
+     121       0.00e+00    3.45e-01
+     151       0.00e+00    6.64e-01      
+"""

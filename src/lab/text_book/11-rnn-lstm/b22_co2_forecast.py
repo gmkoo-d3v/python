@@ -47,7 +47,7 @@ for 이름, 예측 in [(저장본["종류"] + " 이어 예측", 모델_예측[�
 print(f"연간 증가량: 1959~1990년 평균 {(연평균[1990] - 연평균[1959]) / 31:.2f}ppm, "
       f"1995~2001년 평균 {(연평균[2001] - 연평균[1995]) / 6:.2f}ppm")
 
-plt.rcParams["font.family"] = "AppleGothic"
+plt.rcParams["font.family"] = ["D2Coding", "Malgun Gothic"]
 plt.rcParams["axes.unicode_minus"] = False
 plt.figure(figsize=(7, 3.5))
 보기 = slice(시작 - 48, None)                        # 1992년부터 그린다

@@ -36,7 +36,7 @@ print(f"마지막: 학습률 {학습률들[-1]:.2e}, 손실 {손실들[-1]:.4f}"
 최저 = min(range(len(손실들)), key=손실들.__getitem__)
 print(f"손실이 가장 낮았던 학습률: {학습률들[최저]:.2e}")
 
-plt.rcParams["font.family"] = "AppleGothic"
+plt.rcParams["font.family"] = ["D2Coding", "Malgun Gothic"]
 plt.rcParams["axes.unicode_minus"] = False
 plt.figure(figsize=(7, 3.5))
 plt.plot(학습률들, 손실들)

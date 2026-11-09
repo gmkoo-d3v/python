@@ -16,7 +16,7 @@ for 번호, 클래스 in enumerate(이름):
     중심 = 점[y_시험 == 번호].mean(dim=0)
     print(f"{클래스:5}: 중심 ({중심[0]:6.1f}, {중심[1]:6.1f})")
 
-plt.rcParams["font.family"] = "AppleGothic"     # macOS 한글 글꼴 (윈도우는 8장 참고)
+plt.rcParams["font.family"] = ["D2Coding", "Malgun Gothic"]     # macOS 한글 글꼴 (윈도우는 8장 참고)
 plt.rcParams["axes.unicode_minus"] = False
 plt.figure(figsize=(8, 6))
 for 번호, 클래스 in enumerate(이름):

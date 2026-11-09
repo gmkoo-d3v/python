@@ -13,7 +13,8 @@ torch.manual_seed(0)
 학습_로더 = DataLoader(학습셋, batch_size=64, shuffle=True)
 시험_로더 = DataLoader(시험셋, batch_size=256)
 
-장치 = torch.device("cpu")      # 6장처럼 재현을 위해 CPU. 장치_고르기()로 바꾸면 더 빠르다
+#장치 = torch.device("cpu")      # 6장처럼 재현을 위해 CPU. 장치_고르기()로 바꾸면 더 빠르다
+장치 = torch.device("cuda")      # 6장처럼 재현을 위해 CPU. 장치_고르기()로 바꾸면 더 빠르다
 모델 = 옷CNN().to(장치)
 손실함수 = nn.CrossEntropyLoss()
 옵티마이저 = torch.optim.Adam(모델.parameters(), lr=1e-3)

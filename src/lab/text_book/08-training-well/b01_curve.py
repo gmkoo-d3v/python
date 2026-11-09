@@ -29,7 +29,7 @@ for 에폭 in range(1, 151):
 최저 = min(range(150), key=lambda i: 기록["검증 손실"][i])
 print(f"검증 손실이 가장 낮았던 에폭: {최저 + 1} ({기록['검증 손실'][최저]:.4f})")
 
-plt.rcParams["font.family"] = "AppleGothic"      # macOS 한글 글꼴
+plt.rcParams["font.family"] = ["D2Coding", "Malgun Gothic"]      # macOS 한글 글꼴
 plt.rcParams["axes.unicode_minus"] = False
 plt.figure(figsize=(7, 4))
 for 이름, 값들 in 기록.items():

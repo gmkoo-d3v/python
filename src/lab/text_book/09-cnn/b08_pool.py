@@ -21,3 +21,14 @@ torch.manual_seed(0)
 print(특징맵.shape, "→", 전역.shape)
 print("채널 평균과 같은가?", torch.allclose(전역.flatten(1), 특징맵.mean(dim=(2, 3))))
 print("14×14를 넣어도:", nn.AdaptiveAvgPool2d(1)(torch.randn(8, 128, 14, 14)).shape)
+"""
+최대 풀링: [[4.0, 2.0], [2.0, 7.0]]
+평균 풀링: [[2.5, 0.75], [0.75, 4.75]]
+한 칸 움직여도 같은가? True
+torch.Size([8, 128, 7, 7]) → torch.Size([8, 128, 1, 1])
+채널 평균과 같은가? True
+14×14를 넣어도: torch.Size([8, 128, 1, 1])
+
+
+
+"""

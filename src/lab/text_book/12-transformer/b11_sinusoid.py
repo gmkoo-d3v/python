@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import torch
 
 matplotlib.use("Agg")                               # 창을 띄우지 않고 파일로만 그리기
-plt.rcParams["font.family"] = "AppleGothic"         # macOS 한글 글꼴
+plt.rcParams["font.family"] = ["D2Coding", "Malgun Gothic"]         # macOS 한글 글꼴
 plt.rcParams["axes.unicode_minus"] = False
 torch.set_printoptions(precision=2, sci_mode=False)
 

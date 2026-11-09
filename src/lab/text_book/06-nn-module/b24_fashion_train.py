@@ -70,5 +70,5 @@ for 에폭 in range(1, 11):
     시험_손실, 정확도 = 평가하기(모델, 시험_로더, 손실함수, 장치)
     print(f"에폭 {에폭:2}: 학습 손실 {학습_손실:.4f}, 시험 손실 {시험_손실:.4f}, 시험 정확도 {정확도:.2%}")
 
-torch.save(모델.state_dict(), "fashion_mlp.pt")
+torch.save(모델.state_dict(), "../09-cnn/fashion_mlp.pt")
 print("저장했습니다: fashion_mlp.pt")

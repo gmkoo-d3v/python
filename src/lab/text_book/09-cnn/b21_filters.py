@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import torch
 
 matplotlib.use("Agg")                                  # 창을 띄우지 않고 파일로만 그리기
-plt.rcParams["font.family"] = "AppleGothic"            # macOS 한글 글꼴
+plt.rcParams["font.family"] = ["D2Coding", "Malgun Gothic"]            # macOS 한글 글꼴
 plt.rcParams["axes.unicode_minus"] = False
 
 가중치 = torch.load("fashion_cnn.pt", weights_only=True)    # 9.5절에서 저장한 CNN
@@ -14,7 +14,7 @@ print("둘째 층 필터 묶음:", tuple(가중치["특징.3.weight"].shape))
 
 그림, 칸들 = plt.subplots(4, 8, figsize=(8, 4.4))
 for i, 칸 in enumerate(칸들.flat):
-    필터 = 첫필터[i, 0]
+    필터 = 첫필터[i, 0].cpu()
     한계 = 필터.abs().max()
     칸.imshow(필터, cmap="bwr", vmin=-한계, vmax=한계)    # 빨강은 +, 파랑은 -
     칸.set_title(f"{i}번", fontsize=8)
