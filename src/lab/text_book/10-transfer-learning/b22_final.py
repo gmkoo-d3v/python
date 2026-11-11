@@ -28,6 +28,10 @@ with torch.no_grad():
     예측 = torch.cat([모델(x.to(장치)).argmax(1).cpu() for x, _ in 로더_만들기(시험_사진, 시험_정답)])
 for k in range(10):
     print(f"{이름[k]:5} {(예측[시험_정답 == k] == k).float().mean():5.0%}", end="  " if k % 5 != 4 else "\n")
+클래스별_정확도 = torch.tensor([(예측[시험_정답 == k] == k).float().mean() for k in range(10)])
+낮은_정확도, 낮은_클래스 = 클래스별_정확도.topk(2, largest=False)
+for 정확도값, k in zip(낮은_정확도.tolist(), 낮은_클래스.tolist()):
+    print(f"가장 낮은 정확도: {이름[k]} {정확도값:.1%}")
 혼동 = torch.bincount(시험_정답 * 10 + 예측, minlength=100).reshape(10, 10)   # (정답, 예측) 칸마다 개수
 혼동.fill_diagonal_(0)
 for 위치 in 혼동.flatten().topk(3).indices.tolist():

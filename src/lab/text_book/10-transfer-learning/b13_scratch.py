@@ -12,7 +12,8 @@ from 전이도구 import 로더_만들기, 유로샛_불러오기, 장치_고르
 검증_로더 = 로더_만들기(검증_사진, 검증_정답)
 
 torch.manual_seed(0)
-모델 = models.resnet18(weights=None, num_classes=10).to(장치)   # 같은 구조, 무작위 가중치
+모델 = models.resnet18(weights=models.ResNet18_Weights.DEFAULT, num_classes=1000).to(장치)   # 같은 구조, 무작위 가중치를
+# 모델 = models.resnet18(weights=None, num_classes=10).to(장치)   # 같은 구조, 무작위 가중치를
 옵티마이저 = torch.optim.Adam(모델.parameters(), lr=1e-3)
 for 에폭 in range(1, 31):
     손실 = 한_에폭_학습(모델, 학습_로더, 옵티마이저, 장치)
