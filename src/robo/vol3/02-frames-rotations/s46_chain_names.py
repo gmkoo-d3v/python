@@ -25,11 +25,6 @@ def 변환(R: np.ndarray, p) -> np.ndarray:
     return T
 
 
-def 역변환(T: np.ndarray) -> np.ndarray:
-    R, p = T[:3, :3], T[:3, 3]
-    return 변환(R.T, -R.T @ p)
-
-
 def 깔끔(a, 자리=3):
     return np.round(a, 자리) + 0.0
 
@@ -46,19 +41,16 @@ T_방_카메라 = T_방_로봇 @ T_로봇_카메라            # 안쪽 이름(�
 컵_카메라 = np.array([0.5, -0.017, 1.029, 1.0])
 컵_로봇 = T_로봇_카메라 @ 컵_카메라
 컵_방 = T_방_카메라 @ 컵_카메라
-T_로봇_방 = 역변환(T_방_로봇)
-되돌린_컵 = T_로봇_방 @ [2.0, 1.0, 0.0, 1.0]
 print("T_방_로봇 =\n", 깔끔(T_방_로봇))
 print("T_로봇_카메라 =\n", 깔끔(T_로봇_카메라))
 print("T_방_카메라 = T_방_로봇 @ T_로봇_카메라 =\n", 깔끔(T_방_카메라))
 print("컵_카메라:", 컵_카메라[:3], " 컵_로봇:", 깔끔(컵_로봇[:3]), " 컵_방:", 깔끔(컵_방[:3]))
-print("역변환(T_방_로봇) @ [2, 1, 0] =", 깔끔(되돌린_컵[:3]))
 
 주황, 보라, 파랑, 갈색 = "tab:orange", "tab:purple", "tab:blue", "tab:brown"
 색 = {"방": "dimgray", "로봇": 주황, "카메라": 보라, "a": "dimgray", "b": 파랑, "c": 갈색, "d": "dimgray"}
-그림 = plt.figure(figsize=(12, 12.2))
-판 = 그림.add_axes([0, 0, 1, 1])              # 판서 칠판: 단위 = 인치
-판.set(xlim=(0, 12), ylim=(0, 12.2))
+그림 = plt.figure(figsize=(12, 9.25))
+판 = 그림.add_axes([0, 0, 1, 1])              # 판서 칠판: 단위 = 인치 (④는 s46_chain_names_back.py로)
+판.set(xlim=(0, 12), ylim=(2.95, 12.2))
 판.axis("off")
 H = 0.55                                      # 칸 높이
 
@@ -179,28 +171,6 @@ for i, (이름, c, 값) in enumerate(조각):
         화살((x + 2.6, y + 0.08), (x + 3.7, y + 0.08), "gray")
         판.text(x + 3.15, y + 0.22, ["T_로봇_카메라 @", "T_방_로봇 @"][i], fontsize=10, ha="center",
                va="bottom", color="dimgray")
-
-# ④ 틀린 식, 뒤집기
-단계(0.3, 2.6, "4", "안 맞물리면 틀린 식, 뒤집으면 이름도 뒤집힌다")
-y = 1.55
-w = 0.75
-x1 = 변환칸(0.8, y, "로봇", "카메라", w=w, 코드="T_로봇_카메라")
-기호(x1 + 0.3, y, "@")
-x2 = 변환칸(x1 + 0.6, y, "방", "로봇", w=w, 코드="T_방_로봇")
-판.add_patch(Rectangle((x1 - w - 0.04, y - 0.04), 2 * w + 0.68, H + 0.08, facecolor="none",
-                       edgecolor="tab:red", linewidth=2, linestyle="--"))
-판.text(x2 + 0.35, y + H / 2, "✗", fontsize=22, color="tab:red", va="center", ha="center")
-판.text(0.6, 0.95, "카메라 | 방: 안쪽 글자가 맞물리지 않는다", fontsize=11, color="tab:red",
-       va="center")
-판.text(0.6, 0.6, "numpy는 그래도 숫자를 낸다 → 이름으로 검사", fontsize=11, color="dimgray",
-       va="center")
-
-x1 = 변환칸(6.6, y, "방", "로봇", w=w, 코드="T_방_로봇")
-화살((x1 + 0.12, y + H / 2), (x1 + 0.63, y + H / 2), "black")
-판.text(x1 + 0.375, y + H + 0.12, "역변환", ha="center", va="bottom", fontsize=12)
-변환칸(x1 + 0.75, y, "로봇", "방", w=w, 코드="T_로봇_방")
-판.text(6.5, 0.95, "확인: T_로봇_방 @ 방 기준 컵 [2, 1, 0]", fontsize=11, va="center")
-판.text(6.5, 0.6, f"      = 로봇 기준 컵 {글(되돌린_컵[:3])}", fontsize=11, va="center", color=주황)
 
 그림.savefig("s46_chain_names.png", dpi=200)
 print("저장: s46_chain_names.png")
