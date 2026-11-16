@@ -1,0 +1,3143 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<title>common_track.py — 같은 사람을 잇고 채점하는 상자</title>
+<style>
+
+/* ============================================================
+   common_dino.py 인터랙티브 강의
+   단일 파일 · 외부 의존성 없음 · file:// 동작
+   ============================================================ */
+:root{
+  --paper:#FBF7EF;
+  --paper-2:#F4EDE0;
+  --paper-3:#EEE5D5;
+  --card:#FFFDF8;
+  --ink:#211D18;
+  --muted:#6E6457;
+  --line:#E4DAC8;
+  --line-strong:#D2C3A9;
+  --coral:#E4572E;
+  --coral-soft:#FBE3D9;
+  --teal:#1F7A6C;
+  --teal-soft:#DDEFEA;
+  --mustard:#E9B44C;
+  --mustard-soft:#FBF0D3;
+  --code:#191613;
+  --code-ink:#F3ECDF;
+  --code-muted:#A99E8C;
+  --radius:18px;
+  --radius-sm:12px;
+  --shadow:0 14px 34px rgba(48,38,22,.09), 0 2px 6px rgba(48,38,22,.05);
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+  --sans:"Pretendard Variable",Pretendard,-apple-system,BlinkMacSystemFont,"Segoe UI","Malgun Gothic","Apple SD Gothic Neo",sans-serif;
+}
+*,*::before,*::after{box-sizing:border-box}
+[hidden]{display:none!important}
+html{scroll-behavior:smooth}
+body{
+  margin:0;
+  color:var(--ink);
+  font-family:var(--sans);
+  font-size:16.5px;
+  line-height:1.72;
+  background-color:var(--paper);
+  background-image:radial-gradient(rgba(33,29,24,.055) 1px,transparent 1px);
+  background-size:22px 22px;
+  word-break:keep-all;
+  overflow-wrap:anywhere;
+}
+::selection{background:var(--mustard);color:var(--ink)}
+a{color:var(--teal);text-underline-offset:3px}
+a:hover{color:var(--coral)}
+code{font-family:var(--mono);font-size:.88em;background:var(--paper-2);border:1px solid var(--line);border-radius:6px;padding:.1em .35em}
+h1,h2,h3,h4{line-height:1.24;letter-spacing:-.022em;margin:0}
+p{margin:0 0 1em}
+ul,ol{margin:0 0 1em;padding-left:1.35em}
+li{margin:.28em 0}
+strong{font-weight:800}
+:focus-visible{outline:3px solid var(--coral);outline-offset:2px;border-radius:5px}
+.skip{position:fixed;left:12px;top:-60px;z-index:200;background:var(--ink);color:var(--paper);padding:10px 16px;border-radius:10px;text-decoration:none;transition:top .2s}
+.skip:focus{top:12px}
+/* ---------- top bar ---------- */
+.topbar{position:fixed;inset:0 0 auto 0;height:58px;z-index:100;background:rgba(251,247,239,.9);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
+.topbar-inner{max-width:1320px;height:100%;margin:0 auto;padding:0 22px;display:flex;align-items:center;justify-content:space-between;gap:14px}
+.brand{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--ink);font-weight:850;letter-spacing:-.02em;font-size:.95rem;min-width:0}
+.brand .logo{width:28px;height:28px;border-radius:9px;background:var(--ink);color:var(--paper);display:grid;place-items:center;font-size:14px;flex:none}
+.brand span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.topmeta{display:flex;align-items:center;gap:8px;font-size:.72rem;color:var(--muted);white-space:nowrap}
+.topmeta .chip{padding:4px 9px}
+#progress{position:absolute;left:0;bottom:-1px;height:3px;width:0;background:linear-gradient(90deg,var(--coral),var(--mustard));transition:width .08s linear}
+/* ---------- layout ---------- */
+.layout{max-width:1320px;margin:0 auto;padding:58px 24px 0;display:grid;grid-template-columns:236px minmax(0,1fr);gap:54px}
+.sidenav{position:sticky;top:82px;align-self:start;max-height:calc(100vh - 104px);overflow:auto;padding:18px 2px 30px;scrollbar-width:thin}
+.navlabel{font-size:.66rem;font-weight:850;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);padding:0 12px;margin:0 0 8px}
+.toc{display:grid;gap:2px}
+.toc a{display:flex;align-items:center;gap:9px;padding:6px 10px;border-radius:9px;color:var(--muted);text-decoration:none;font-size:.83rem;font-weight:650;line-height:1.35;transition:background .15s,color .15s}
+.toc a .num{font-size:.66rem;font-variant-numeric:tabular-nums;opacity:.55;width:1.5em;flex:none;font-weight:800}
+.toc a:hover{background:var(--paper-2);color:var(--ink)}
+.toc a.active{background:var(--ink);color:var(--paper)}
+.toc a.active .num{opacity:.75}
+.navfoot{margin-top:18px;padding:12px;border:1px dashed var(--line-strong);border-radius:12px;font-size:.72rem;color:var(--muted);line-height:1.55}
+main{max-width:900px;min-width:0;padding:26px 0 100px}
+section{scroll-margin-top:86px;margin:0 0 62px}
+.sec-head{margin:0 0 22px}
+.sec-kicker{display:flex;align-items:center;gap:8px;margin:0 0 8px;font-size:.68rem;font-weight:850;letter-spacing:.16em;text-transform:uppercase;color:var(--coral)}
+.sec-kicker::before{content:"";width:18px;height:2px;background:var(--coral);border-radius:2px}
+h2{font-size:clamp(1.55rem,3.1vw,2.1rem);font-weight:900}
+h3{font-size:1.12rem;font-weight:850;margin:0 0 10px}
+h4{font-size:.95rem;font-weight:800;margin:0 0 6px}
+.sub{color:var(--muted);font-size:.95rem;margin:8px 0 0;max-width:70ch}
+/* ---------- hero ---------- */
+.hero{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(260px,.75fr);gap:28px;align-items:stretch;margin-bottom:54px}
+.hero-copy{background:var(--card);border:1px solid var(--line);border-radius:26px;padding:34px 36px;box-shadow:var(--shadow);position:relative;overflow:hidden}
+.hero-copy::after{content:"";position:absolute;width:220px;height:220px;right:-100px;top:-110px;border-radius:50%;background:radial-gradient(circle,var(--mustard-soft),transparent 68%)}
+.eyebrow{display:inline-flex;align-items:center;gap:8px;font-size:.7rem;font-weight:850;letter-spacing:.1em;text-transform:uppercase;color:var(--teal);margin:0 0 14px}
+.eyebrow .dot{width:8px;height:8px;border-radius:50%;background:var(--coral);box-shadow:0 0 0 4px var(--coral-soft)}
+h1{font-size:clamp(2.15rem,5vw,3.4rem);font-weight:950;letter-spacing:-.045em;margin:0 0 16px}
+h1 mark{background:linear-gradient(180deg,transparent 56%,var(--mustard) 56%,var(--mustard) 92%,transparent 92%);color:inherit;padding:0 .05em}
+.lead{font-size:1.06rem;color:var(--ink);margin:0 0 10px;font-weight:650}
+.hero-desc{color:var(--muted);font-size:.93rem;margin:0 0 20px}
+.chips{display:flex;flex-wrap:wrap;gap:7px}
+.chip{display:inline-flex;align-items:center;gap:5px;padding:5px 10px;border-radius:999px;background:var(--paper-2);border:1px solid var(--line);font-size:.71rem;font-weight:750;color:var(--muted);white-space:nowrap}
+.chip.dark{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.chip.coral{background:var(--coral-soft);border-color:#F2C6B6;color:#9C3416}
+.chip.teal{background:var(--teal-soft);border-color:#BFDDD5;color:#155A4F}
+.hero-art{background:var(--ink);color:var(--paper);border-radius:26px;padding:24px 22px;position:relative;overflow:hidden;box-shadow:var(--shadow);display:flex;flex-direction:column;justify-content:center;min-height:330px}
+.hero-art::before{content:"";position:absolute;inset:0;background-image:radial-gradient(rgba(255,255,255,.09) 1px,transparent 1px);background-size:18px 18px;opacity:.7}
+.hero-art .doodle{position:absolute;opacity:.55;color:var(--mustard)}
+.flow{position:relative;z-index:1;display:grid;gap:4px}
+.flow-node{display:flex;align-items:center;gap:11px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.13);border-radius:13px;padding:9px 12px}
+.flow-node .ficon{font-size:1.1rem;width:30px;height:30px;display:grid;place-items:center;background:rgba(255,255,255,.09);border-radius:9px;flex:none}
+.flow-node b{font-size:.85rem;display:block;line-height:1.2}
+.flow-node small{display:block;font-family:var(--mono);font-size:.62rem;color:#C9BEAA;line-height:1.4}
+.flow-link{justify-self:center;color:var(--mustard);font-size:.85rem;line-height:1;padding:2px 0;opacity:.8}
+.hero-note{position:relative;z-index:1;margin:14px 0 0;font-size:.68rem;color:#BDB29E;line-height:1.5}
+/* ---------- generic cards ---------- */
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:22px 24px;box-shadow:var(--shadow)}
+.card + .card{margin-top:14px}
+.card.flat{box-shadow:none}
+.grid-2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.grid-3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.grid-4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.layer{border-radius:14px;padding:14px 16px;border:1px solid;margin:12px 0}
+.layer p:last-child{margin-bottom:0}
+.layer .tag{display:inline-flex;align-items:center;gap:6px;font-size:.64rem;font-weight:900;letter-spacing:.1em;text-transform:uppercase;margin-bottom:5px}
+.analogy{background:var(--mustard-soft);border-color:#EAD6A5}
+.analogy .tag{color:#8A6412}
+.precise{background:var(--teal-soft);border-color:#C2DFD7}
+.precise .tag{color:#155A4F}
+.gotcha{background:var(--coral-soft);border-color:#F2C6B6}
+.gotcha .tag{color:#9C3416}
+.callout{display:flex;gap:13px;padding:15px 17px;border-radius:14px;background:var(--paper-2);border:1px dashed var(--line-strong);margin:14px 0}
+.callout .ico{font-size:1.15rem;line-height:1.4;flex:none}
+.callout p:last-child{margin-bottom:0}
+.callout.warn{background:var(--coral-soft);border-color:#EAB6A3}
+.callout.ok{background:var(--teal-soft);border-color:#B8D8CE}
+.note{font-size:.8rem;color:var(--muted);line-height:1.6}
+.note strong{color:var(--ink)}
+.kicker-inline{font-size:.68rem;font-weight:900;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin:0 0 6px}
+/* ---------- table ---------- */
+.scroll-x{overflow-x:auto;border:1px solid var(--line);border-radius:14px;background:var(--card)}
+.table{width:100%;border-collapse:collapse;font-size:.86rem;min-width:520px}
+.table th,.table td{padding:10px 13px;text-align:left;vertical-align:top;border-bottom:1px solid var(--line)}
+.table th{font-size:.64rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);background:var(--paper-2);font-weight:900;white-space:nowrap}
+.table tr:last-child td{border-bottom:0}
+.table td code{white-space:nowrap}
+.table.compact{min-width:420px}
+/* ---------- code ---------- */
+.code{background:var(--code);color:var(--code-ink);border:1px solid #2A2622;border-radius:14px;padding:17px 19px;overflow:auto;font-family:var(--mono);font-size:12.6px;line-height:1.7;margin:14px 0;tab-size:4;scrollbar-width:thin}
+.code code{font:inherit;background:none;border:0;padding:0;white-space:pre;display:block;min-width:max-content}
+.tok-k{color:#F0A868}
+.tok-str{color:#A8D8B9}
+.tok-doc{color:#93A8A1;font-style:italic}
+.tok-n{color:#E9C46A}
+.tok-fn{color:#8ECAE6}
+.tok-dec{color:#D8A7E8}
+.tok-com{color:#8C8272;font-style:italic}
+.code-cap{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:16px 0 -4px;font-size:.69rem;font-weight:850;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.code-cap span:last-child{font-weight:600;letter-spacing:0;text-transform:none;color:var(--muted)}
+.codewrap{display:grid;grid-template-columns:54px minmax(0,1fr);background:var(--code);border:1px solid #2A2622;border-radius:14px;overflow:hidden;margin-top:12px}
+.gutter{padding:17px 9px 17px 0;text-align:right;color:#6E6457;border-right:1px solid #2A2622;font-family:var(--mono);font-size:12.6px;line-height:1.7;user-select:none;white-space:pre;background:#151210}
+.codewrap .code{border:0;border-radius:0;margin:0;padding:17px 19px;max-height:560px}
+/* ---------- steps ---------- */
+.steps{counter-reset:step;display:grid;gap:9px;margin:14px 0}
+.step{position:relative;padding:11px 14px 11px 46px;background:var(--paper);border:1px solid var(--line);border-radius:12px;font-size:.88rem;line-height:1.6}
+.step::before{counter-increment:step;content:counter(step);position:absolute;left:11px;top:11px;width:25px;height:25px;border-radius:50%;background:var(--ink);color:var(--paper);display:grid;place-items:center;font-size:.7rem;font-weight:900}
+.step p{margin:0}
+.step b{font-weight:850}
+/* ---------- interactive panels ---------- */
+.panel{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:20px 22px;box-shadow:var(--shadow);margin:18px 0}
+.panel-head{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;margin-bottom:12px}
+.panel-head h3{margin:0;display:flex;align-items:center;gap:8px}
+.panel-head .badge{font-size:.6rem;font-weight:900;letter-spacing:.08em;text-transform:uppercase;background:var(--mustard-soft);border:1px solid #E6D09B;color:#7A5810;padding:3px 8px;border-radius:999px;white-space:nowrap}
+.controls{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin:10px 0}
+.controls label{font-size:.78rem;font-weight:750;color:var(--muted);display:inline-flex;align-items:center;gap:7px}
+.controls label.range-label{display:grid;grid-template-columns:auto minmax(80px,1fr) 3.4em;gap:9px;align-items:center;flex:1 1 320px;max-width:430px;white-space:nowrap}
+.controls label.range-label input[type=range]{width:100%;max-width:none}
+.controls label.range-label b{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+.btn{font:inherit;font-size:.78rem;font-weight:800;border-radius:10px;padding:8px 14px;border:1px solid var(--line-strong);background:var(--card);color:var(--ink);cursor:pointer;transition:transform .12s,background .15s,border-color .15s;text-decoration:none;display:inline-flex;align-items:center;gap:6px}
+.btn:hover{transform:translateY(-1px);border-color:var(--ink)}
+.btn:active{transform:translateY(0)}
+.btn.primary{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.btn.primary:hover{background:#000}
+.btn.soft{background:var(--paper-2)}
+.btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
+input[type=range]{accent-color:var(--coral);width:100%;max-width:240px;cursor:pointer}
+input[type=text],select{font:inherit;font-size:.8rem;padding:7px 10px;border:1px solid var(--line-strong);border-radius:9px;background:var(--card);color:var(--ink);max-width:100%}
+input[type=checkbox]{accent-color:var(--teal);width:17px;height:17px}
+.switch{display:inline-flex;align-items:center;gap:8px;font-size:.78rem;font-weight:750;color:var(--ink);cursor:pointer;user-select:none}
+.readout{display:grid;grid-template-columns:repeat(auto-fit,minmax(112px,1fr));gap:8px;margin-top:12px}
+.stat{background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:8px 10px;min-width:0}
+.stat .k{display:block;font-size:.62rem;font-weight:850;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);line-height:1.3}
+.stat b{display:block;font-size:1.02rem;font-variant-numeric:tabular-nums;line-height:1.4;letter-spacing:-.02em}
+.stat.hot b{color:var(--coral)}
+.stat.cool b{color:var(--teal)}
+.formula{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:12px 14px;font-family:var(--mono);font-size:.8rem;line-height:1.8;overflow-x:auto}
+.formula .hl{color:var(--coral);font-weight:800}
+.canvas-box{position:relative;background:var(--paper);border:1px solid var(--line);border-radius:14px;overflow:hidden;margin-top:10px}
+#cosCanvas{display:block;width:100%;height:320px;touch-action:none;cursor:crosshair}
+.canvas-hint{position:absolute;left:12px;bottom:10px;font-size:.66rem;color:var(--muted);background:rgba(251,247,239,.85);border:1px solid var(--line);border-radius:8px;padding:3px 8px;pointer-events:none}
+.presets{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.presets .btn{font-size:.7rem;padding:6px 10px}
+/* ---------- normalization ---------- */
+.norm-grid{display:grid;grid-template-columns:minmax(0,1fr) 170px;gap:18px;align-items:start}
+.norm-row{display:grid;grid-template-columns:58px minmax(0,1fr) 62px;gap:10px;align-items:center;margin:7px 0;font-size:.76rem}
+.norm-row span:last-child{text-align:right;font-variant-numeric:tabular-nums;font-weight:800}
+.swatch{height:100px;border-radius:14px;border:1px solid var(--line-strong);display:grid;place-items:end center;padding:8px;font-size:.65rem;font-weight:800;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.55);background:#888}
+.norm-table{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:10px}
+.norm-table .stat b{font-size:.92rem}
+/* ---------- batch ---------- */
+.batch-visual{display:flex;flex-wrap:wrap;gap:3px;margin-top:12px;min-height:18px}
+.batch-visual i{display:block;width:14px;height:18px;border-radius:4px;background:var(--teal);opacity:.85}
+.batch-visual i:last-child{background:var(--coral)}
+.batch-visual .more{font-size:.7rem;color:var(--muted);align-self:center;margin-left:4px}
+/* ---------- eurosat ---------- */
+.split{display:grid;gap:7px;margin-top:12px}
+.split-row{display:grid;grid-template-columns:170px minmax(0,1fr) 82px;gap:10px;align-items:center}
+.split-name{font-size:.74rem;font-weight:750;line-height:1.3;min-width:0}
+.split-name em{display:block;font-style:normal;font-weight:600;font-size:.64rem;color:var(--muted)}
+.blocks{display:flex;gap:3px;height:20px}
+.block{flex:1;border-radius:4px;background:#E9E1D2;transition:background .35s ease,transform .35s ease;transform-origin:center}
+.block.pool{background:var(--coral)}
+.block.test{background:var(--teal)}
+.block.unused{background:#E9E1D2}
+.blocks.shuffling .block{transform:scaleY(.35)}
+.split-count{font-size:.66rem;color:var(--muted);text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.legend{display:flex;flex-wrap:wrap;gap:12px;margin-top:12px;font-size:.7rem;color:var(--muted)}
+.legend i{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+.legend .p{background:var(--coral)}.legend .t{background:var(--teal)}.legend .u{background:#E9E1D2;border:1px solid var(--line-strong)}
+.split-result{font-size:.78rem;font-weight:750;margin-top:10px}
+.split-result.ok{color:var(--teal)}
+.split-result.bad{color:var(--coral)}
+/* ---------- cache ---------- */
+.cache-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);gap:14px}
+.log{background:var(--code);color:var(--code-ink);border-radius:12px;padding:12px 14px;font-family:var(--mono);font-size:11.8px;line-height:1.75;min-height:122px;max-height:180px;overflow:auto;white-space:pre-wrap;margin:0}
+.log .hit{color:#A8D8B9}.log .miss{color:#F0A868}.log .warnline{color:#F2A08A}.log .dim{color:#8C8272}
+.cache-warn{display:none;margin-top:10px;padding:10px 12px;border-radius:10px;background:var(--coral-soft);border:1px solid #EAB6A3;font-size:.76rem;line-height:1.55}
+.cache-warn.show{display:block}
+/* ---------- patch grid ---------- */
+.patch-layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:18px;align-items:start}
+.patch-wrap{position:relative;aspect-ratio:1/1;max-width:420px;border-radius:12px;overflow:hidden;border:1px solid var(--line-strong);background:#5B7A4C}
+.patch-bg{position:absolute;inset:0;background:
+  radial-gradient(circle at 20% 26%,rgba(110,139,74,.95) 0 14%,transparent 15%),
+  radial-gradient(circle at 76% 64%,rgba(183,163,106,.9) 0 20%,transparent 21%),
+  radial-gradient(circle at 38% 82%,rgba(72,104,62,.9) 0 17%,transparent 18%),
+  repeating-linear-gradient(34deg,rgba(255,255,255,.11) 0 2px,transparent 2px 15px),
+  repeating-linear-gradient(-18deg,rgba(0,0,0,.08) 0 1px,transparent 1px 19px),
+  linear-gradient(135deg,#4E6B3A,#8FA36A 42%,#C2B280 72%,#5B7A4C);}
+.patch-grid{position:absolute;inset:0;display:grid;grid-template-columns:repeat(14,1fr);grid-template-rows:repeat(14,1fr)}
+.patch{border:1px solid rgba(255,255,255,.19);background:transparent;padding:0;cursor:pointer;transition:background .12s}
+.patch:hover,.patch:focus-visible{background:rgba(228,87,46,.38);outline:2px solid #fff;outline-offset:-2px}
+.patch.sel{background:rgba(31,122,108,.5);box-shadow:inset 0 0 0 2px #fff}
+.prefix-strip{display:none;flex-wrap:wrap;gap:5px;margin:10px 0 0;align-items:center}
+.prefix-strip.show{display:flex}
+.prefix-strip .tok{font-size:.64rem;font-weight:850;padding:4px 8px;border-radius:7px;background:var(--coral-soft);border:1px solid #F0C2B1;color:#9C3416;white-space:nowrap}
+.prefix-strip .tok.patchtok{background:var(--teal-soft);border-color:#BFDDD5;color:#155A4F}
+.prefix-strip .arrow{color:var(--muted);font-size:.7rem}
+.patch-readout{background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:9px 12px;font-size:.76rem;line-height:1.55;margin-top:10px;min-height:58px}
+.patch-readout b{color:var(--coral)}
+/* ---------- quiz ---------- */
+.quiz-top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
+.quiz-count{font-size:.72rem;font-weight:850;color:var(--muted);letter-spacing:.06em}
+.quiz-track{height:6px;border-radius:999px;background:var(--paper-3);overflow:hidden;flex:1;max-width:220px}
+.quiz-track i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--coral),var(--mustard));transition:width .3s}
+.quiz-q{font-size:1.02rem;font-weight:850;line-height:1.5;margin:0 0 13px}
+.quiz-opts{display:grid;gap:8px}
+.opt{font:inherit;font-size:.86rem;line-height:1.5;text-align:left;padding:11px 14px;border:1px solid var(--line-strong);border-radius:11px;background:var(--card);color:var(--ink);cursor:pointer;display:flex;gap:10px;align-items:flex-start;transition:border-color .15s,transform .12s,background .15s}
+.opt:hover:not(:disabled){border-color:var(--ink);transform:translateY(-1px)}
+.opt .ltr{font-size:.66rem;font-weight:900;width:20px;height:20px;border-radius:50%;background:var(--paper-2);border:1px solid var(--line);display:grid;place-items:center;flex:none;margin-top:1px}
+.opt.correct{background:var(--teal-soft);border-color:var(--teal)}
+.opt.correct .ltr{background:var(--teal);color:#fff;border-color:var(--teal)}
+.opt.wrong{background:var(--coral-soft);border-color:var(--coral)}
+.opt.wrong .ltr{background:var(--coral);color:#fff;border-color:var(--coral)}
+.opt:disabled{cursor:default}
+.quiz-fb{display:none;margin-top:12px;padding:12px 14px;border-radius:11px;font-size:.82rem;line-height:1.6;background:var(--paper-2);border:1px solid var(--line)}
+.quiz-fb.show{display:block}
+.quiz-fb.ok{background:var(--teal-soft);border-color:#B8D8CE}
+.quiz-fb.no{background:var(--coral-soft);border-color:#EAB6A3}
+.quiz-fb b{display:block;margin-bottom:2px}
+.quiz-actions{display:flex;justify-content:flex-end;margin-top:12px}
+.quiz-result{text-align:center;padding:12px 0}
+.quiz-result .score{font-size:3rem;font-weight:950;letter-spacing:-.05em;line-height:1;color:var(--coral)}
+.quiz-result .score small{font-size:1rem;color:var(--muted);font-weight:750}
+/* ---------- accordion ---------- */
+.acc{background:var(--card);border:1px solid var(--line);border-radius:12px;margin-bottom:7px;overflow:hidden}
+.acc summary{cursor:pointer;padding:11px 15px;font-size:.86rem;font-weight:800;list-style:none;display:flex;align-items:center;justify-content:space-between;gap:10px}
+.acc summary::-webkit-details-marker{display:none}
+.acc summary::after{content:"+";font-size:1rem;color:var(--coral);font-weight:900;flex:none}
+.acc[open] summary::after{content:"−"}
+.acc[open] summary{background:var(--paper);border-bottom:1px solid var(--line)}
+.acc .body{padding:11px 15px 13px;font-size:.82rem;color:var(--muted);line-height:1.65}
+.acc .body p:last-child{margin-bottom:0}
+.acc .body code{font-size:.84em}
+/* ---------- misc ---------- */
+.arrow-list{list-style:none;padding:0;margin:10px 0}
+.arrow-list li{position:relative;padding-left:20px;margin:6px 0;font-size:.87rem}
+.arrow-list li::before{content:"→";position:absolute;left:0;color:var(--coral);font-weight:900}
+.mini-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:9px;margin:12px 0}
+.mini{background:var(--paper);border:1px solid var(--line);border-radius:11px;padding:10px 12px;font-size:.76rem;line-height:1.5}
+.mini b{display:block;font-size:.86rem;margin-bottom:2px}
+.mini .mono{font-family:var(--mono);font-size:.68rem;color:var(--muted)}
+.quote{border-left:3px solid var(--mustard);padding:2px 0 2px 14px;color:var(--muted);font-size:.9rem;margin:12px 0}
+.tag-list{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}
+.footer{border-top:1px solid var(--line);margin-top:20px;padding:30px 24px 44px;background:var(--paper-2)}
+.footer-inner{max-width:900px;margin:0 auto;font-size:.76rem;color:var(--muted);line-height:1.7}
+.footer-inner strong{color:var(--ink)}
+.footer-links{display:flex;flex-wrap:wrap;gap:14px;margin-top:8px}
+/* ---------- responsive ---------- */
+@media (max-width:1080px){
+  .layout{grid-template-columns:minmax(0,1fr);gap:0;padding-top:58px}
+  .sidenav{position:sticky;top:58px;z-index:40;max-height:none;min-width:0;overflow:visible;background:rgba(251,247,239,.96);backdrop-filter:blur(10px);border-bottom:1px solid var(--line);padding:8px 0;margin:0 -24px;padding-left:24px;padding-right:24px}
+  .navlabel,.navfoot{display:none}
+  .toc{display:flex;gap:5px;overflow-x:auto;padding-bottom:3px;scrollbar-width:thin;max-width:100%}
+  .toc a{white-space:nowrap;padding:5px 9px;font-size:.75rem;border:1px solid var(--line)}
+  .toc a.active{border-color:var(--ink)}
+  main{max-width:none;padding-top:26px}
+}
+@media (max-width:820px){
+  .hero{grid-template-columns:1fr}
+  .hero-art{min-height:0}
+  .grid-3,.grid-4{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .patch-layout,.cache-grid,.norm-grid{grid-template-columns:1fr}
+  .swatch{height:64px}
+  .split-row{grid-template-columns:120px minmax(0,1fr) 62px;gap:8px}
+}
+@media (max-width:620px){
+  body{font-size:15.5px}
+  .layout{padding-left:16px;padding-right:16px}
+  .sidenav{margin:0 -16px;padding-left:16px;padding-right:16px}
+  .hero-copy{padding:24px 20px}
+  .hero-art{padding:18px}
+  .card,.panel{padding:17px 16px}
+  .grid-2,.grid-3,.grid-4{grid-template-columns:1fr}
+  .split-row{grid-template-columns:98px minmax(0,1fr)}
+  .split-count{display:none}
+  .code{font-size:11.6px;padding:14px}
+  .codewrap{grid-template-columns:42px minmax(0,1fr)}
+  .gutter{font-size:11.6px;padding-right:7px}
+  .codewrap .code{max-height:420px}
+  h1{font-size:2.1rem}
+  .topmeta .chip:not(.keep){display:none}
+  .step{padding-left:42px}
+}
+@media (prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+  *,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}
+}
+
+#iouCanvas{display:block;width:100%;touch-action:none;cursor:crosshair}
+.match-grid-wrap{overflow-x:auto;margin-top:10px;border:1px solid var(--line);border-radius:12px;background:var(--card)}
+.match-grid{border-collapse:collapse;width:100%;min-width:360px;font-family:var(--mono);font-size:.76rem;text-align:center}
+.match-grid th,.match-grid td{padding:9px 8px;border:1px solid var(--line)}
+.match-grid th{background:var(--paper-2);color:var(--muted);font-size:.64rem;letter-spacing:.06em}
+.match-grid td{background:var(--card);color:var(--ink);font-variant-numeric:tabular-nums}
+.match-grid td.hp{background:var(--teal-soft);box-shadow:inset 0 0 0 2px var(--teal);font-weight:850}
+.match-grid td.gp:not(.hp){background:var(--mustard-soft);box-shadow:inset 0 0 0 2px var(--mustard);font-weight:850}
+.match-results{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}
+.match-box{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:11px 13px;font-size:.78rem;line-height:1.6}
+.match-box h4{margin:0 0 4px;font-size:.8rem}
+.match-box p{margin:0 0 4px}
+.match-box .note{font-size:.68rem;color:var(--muted)}
+@media(max-width:720px){.match-results{grid-template-columns:1fr}}
+
+</style>
+</head>
+<body>
+<a class="skip" href="#main">본문으로 건너뛰기</a>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <a class="brand" href="#hero"><span class="logo">T</span><span>common_track.py 강의</span></a>
+    <div class="topmeta">
+      <span class="chip keep">3일차 · 추적</span>
+      <span class="chip">약 45분</span>
+    </div>
+  </div>
+  <div id="progress" aria-hidden="true"></div>
+</header>
+
+<div class="layout">
+  <aside class="sidenav" aria-label="강의 목차">
+    <p class="navlabel">Lecture map</p>
+    <nav class="toc" id="toc">
+      <a href="#hero"><span class="num">00</span>시작</a>
+      <a href="#map"><span class="num">01</span>파일 지도</a>
+      <a href="#constants"><span class="num">02</span>상수</a>
+      <a href="#synth"><span class="num">03</span>합성 영상</a>
+      <a href="#cache"><span class="num">04</span>검출 캐시</a>
+      <a href="#iou"><span class="num">05</span>IoU·매칭</a>
+      <a href="#evaluate"><span class="num">06</span>MOTA·IDF1</a>
+      <a href="#lab12"><span class="num">07</span>lab12 세기</a>
+      <a href="#lab13"><span class="num">08</span>lab13 IoU</a>
+      <a href="#lab14"><span class="num">09</span>lab14 SORT</a>
+      <a href="#lab15"><span class="num">10</span>lab15 ByteTrack</a>
+      <a href="#lab16"><span class="num">11</span>lab16 선 넘기</a>
+      <a href="#lab20"><span class="num">12</span>lab20 ReID</a>
+      <a href="#fullcode"><span class="num">13</span>전체 코드</a>
+      <a href="#quiz"><span class="num">14</span>퀴즈</a>
+      <a href="#glossary"><span class="num">15</span>용어 사전</a>
+      <a href="#cheatsheet"><span class="num">16</span>치트시트</a>
+    </nav>
+    <div class="navfoot">
+      <strong>한 줄도 생략 없음.</strong><br>
+      합성 영상·검출 캐시부터 MOTA/IDF1·IoU 추적·SORT·ByteTrack·ReID까지, lab12~16·20을 전부 해설합니다.
+    </div>
+  </aside>
+
+  <main id="main">
+    <section id="hero" class="hero" data-lecture-section="hero">
+      <div class="hero-copy">
+        <p class="eyebrow"><span class="dot"></span> YOLO 특강 · 3일차 · 추적</p>
+        <h1>사람을 세는 대신,<br><mark>같은 사람을 잇는</mark> 상자</h1>
+        <p class="lead"><code>common_track.py</code>를 5살에게 설명하듯 — 하지만 <strong>한 줄도 빼먹지 않고</strong> 읽는 강의.</p>
+        <p class="hero-desc">정답 ID가 있는 합성 영상을 만들고, lab5의 <code>best.pt</code>로 검출을 캐시하고, IoU·헝가리안 매칭·MOTA·IDF1로 추적기를 채점합니다. lab12~16과 lab20이 이 상자를 씁니다.</p>
+        <div class="chips">
+          <span class="chip dark">298줄</span>
+          <span class="chip">함수 15개</span>
+          <span class="chip teal">640×360 · 160장면</span>
+          <span class="chip">사람 12명 · seed 11</span>
+          <span class="chip coral">lab12–16 · lab20</span>
+        </div>
+      </div>
+      <div class="hero-art" aria-hidden="true">
+        <svg class="doodle" style="right:14px;top:14px" width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2l2.4 7.6L22 12l-7.6 2.4L12 22l-2.4-7.6L2 12l7.6-2.4z"/></svg>
+        <div class="flow">
+          <div class="flow-node"><span class="ficon">🎬</span><div><b>합성 영상</b><small>사람 12명 · 16초</small></div></div>
+          <div class="flow-link">↓</div>
+          <div class="flow-node"><span class="ficon">🔎</span><div><b>검출 캐시</b><small>dets.npz</small></div></div>
+          <div class="flow-link">↓</div>
+          <div class="flow-node"><span class="ficon">🔗</span><div><b>매칭</b><small>IoU · 헝가리안</small></div></div>
+          <div class="flow-link">↓</div>
+          <div class="flow-node"><span class="ficon">🏁</span><div><b>채점</b><small>MOTA · IDF1 · ID 바뀜</small></div></div>
+        </div>
+        <p class="hero-note">“누가 누구인지” 정답을 알기 때문에, 추적기의 실수를 숫자로 셀 수 있습니다.</p>
+      </div>
+    </section>
+
+    <section id="map" data-lecture-section="map">
+      <div class="sec-head">
+        <p class="sec-kicker">01 · 파일 지도</p>
+        <h2>검출만으로는 사람을 셀 수 없다</h2>
+        <p class="sub">같은 사람이 장면마다 다시 검출되고, 한 장면에 모두가 함께 나오지도 않습니다. “이 상자와 저 상자가 같은 사람인가”를 잇는 일이 추적입니다.</p>
+      </div>
+
+      <div class="scroll-x">
+        <table class="table">
+          <thead><tr><th>실습</th><th>가져다 쓰는 것</th><th>하는 일</th></tr></thead>
+          <tbody>
+            <tr><td><code>lab12_count.py</code></td><td><code>FPS</code>, <code>FRAMES</code>, <code>PEOPLE</code>, <code>VIDEO</code>, <code>synth</code>, <code>synth_detections</code></td><td>검출만으로 “몇 명이 지나갔나”를 세려는 시도와 실패</td></tr>
+            <tr><td><code>lab13_iou_track.py</code></td><td><code>evaluate</code>, <code>iou_matrix</code>, <code>match</code>, <code>run_tracker</code>, <code>show</code>, <code>synth</code>, <code>synth_detections</code></td><td>IoU + 헝가리안 매칭, 가장 단순한 추적기</td></tr>
+            <tr><td><code>lab14_sort.py</code></td><td>같은 묶음</td><td>칼만 필터로 예측하는 SORT, max_age 실험</td></tr>
+            <tr><td><code>lab15_bytetrack.py</code></td><td>같은 묶음</td><td>낮은 점수 검출로 2차 짝짓기, 세 추적기 비교</td></tr>
+            <tr><td><code>lab16_line_count.py</code></td><td><code>OUT</code>, <code>PEOPLE</code>, <code>detect_frames</code>, <code>evaluate</code>, <code>load_video</code>, <code>run_tracker</code>, <code>save_video</code>, <code>show</code>, <code>synth</code>, <code>synth_detections</code></td><td>선 넘기 세기, 결과 영상, 내 영상</td></tr>
+            <tr><td><code>lab20_reid.py</code></td><td><code>PEOPLE</code>, <code>WIDTH</code>, <code>evaluate</code>, <code>run_tracker</code>, <code>show</code>, <code>synth</code>, <code>synth_detections</code></td><td>DINOv3 겉모습으로 끊긴 트랙 잇기</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="layer precise">
+        <span class="tag">🔬 정확히는 — 산출물</span>
+        <p><code>runs/track/synth.mp4</code>(눈으로 보는 사본), <code>truth.json</code>(장면별 정답 ID·상자·보이는 비율), <code>dets.npz</code>(장면별 검출 <code>(N,5)</code>). 검출은 <strong>손실 압축된 mp4를 다시 읽지 않고</strong> 원본 프레임에 합니다. mp4는 사람이 보라고 남기는 사본이에요.</p>
+      </div>
+
+      <div class="layer analogy">
+        <span class="tag">🍭 5살 비유</span>
+        <p>운동장에 친구 12명이 지나가요. 사진을 한 장씩 찍으면 매번 “사람 한 명”으로 보이지만, <strong>같은 친구인지</strong>는 이름표가 없으면 알 수 없죠. 우리는 누가 누구인지 미리 정해 둔 영상을 만들어서, 추적기가 이름표를 몇 번 바꾸는지 세는 거예요.</p>
+      </div>
+    </section>
+
+    <section id="constants" data-lecture-section="constants">
+      <div class="sec-head">
+        <p class="sec-kicker">02 · 상수</p>
+        <h2>영상의 모든 약속</h2>
+        <p class="sub">크기·길이·사람 수·기둥 위치·문턱값. 여기 숫자를 바꾸면 lab12~16의 결과가 전부 달라집니다.</p>
+      </div>
+
+      <div class="code-cap"><span>common_track.py · 21–37행</span><span>원문 그대로</span></div>
+      <pre class="code"><code>HERE = Path(__file__).resolve().parent
+PENN = HERE / "data" / "PennFudanPed"
+OUT = HERE / "runs" / "track"
+VIDEO = OUT / "synth.mp4"
+TRUTH = OUT / "truth.json"
+DETS = OUT / "dets.npz"
+
+WIDTH, HEIGHT = 640, 360
+FPS = 10
+FRAMES = 160
+PEOPLE = 12
+SEED = 11
+PILLAR = (392, 432)        # 기둥의 x 범위. 그 뒤를 지나는 사람은 잠깐 완전히 가려진다
+MIN_VISIBLE = 0.3          # 보이는 부분이 이보다 적으면 정답에서 뺀다(사람도 못 알아볼 만큼 가려짐)
+MIN_TRUTH_HEIGHT = 40
+DET_CONF = 0.05            # 낮은 점수 검출도 남겨 둔다(ByteTrack이 쓴다)
+MATCH_IOU = 0.5            # 지표에서 "같은 사람을 짚었다"로 칠 IoU</code></pre>
+
+      <div class="grid-3" style="margin-top:14px">
+        <div class="mini"><b>640 × 360</b><span class="mono">16:9</span>가로 영상. 사람은 아래쪽 바닥을 걷습니다.</div>
+        <div class="mini"><b>10 fps · 160장면</b><span class="mono">16초</span>한 장면이 0.1초.</div>
+        <div class="mini"><b>사람 12명</b><span class="mono">PEOPLE</span>각자 고유 ID 1~12.</div>
+        <div class="mini"><b>seed 11</b><span class="mono">재현</span>배경 잡음·사람 배치·시작 시각 고정.</div>
+        <div class="mini"><b>기둥 x=392~432</b><span class="mono">가림</span>사람 앞에 있어 잠깐 완전히 가립니다.</div>
+        <div class="mini"><b>MIN_VISIBLE 0.3</b><span class="mono">정답 필터</span>30% 미만 보이면 정답에서 제외.</div>
+        <div class="mini"><b>DET_CONF 0.05</b><span class="mono">낮은 검출</span>ByteTrack 2차 매칭용으로 남김.</div>
+        <div class="mini"><b>MATCH_IOU 0.5</b><span class="mono">채점 기준</span>정답과 트랙이 같은 사람인지 판정.</div>
+        <div class="mini"><b>MIN_TRUTH_HEIGHT 40</b><span class="mono">정답 필터</span>40px보다 작으면 너무 멀리 있어 제외.</div>
+      </div>
+
+      <div class="layer gotcha">
+        <span class="tag">⚠️ 함정</span>
+        <ul class="arrow-list" style="margin-bottom:0">
+          <li><code>PILLAR</code>는 x 범위만 지정합니다. y는 전체 높이. 기둥이 사람을 <strong>완전히</strong> 가리는 구간이 생깁니다.</li>
+          <li><code>MIN_VISIBLE</code>은 “화면 안에 들어온 사람 픽셀 중 기둥에 가리지 않고 남은 비율”. 화면 밖으로 잘린 부분은 crop에서 이미 빠지므로, 가장자리 잘림은 별도로 처리합니다(lab20의 <code>inside</code>).</li>
+          <li><code>FRAMES/FPS = 16초</code>. lab12 설명의 “16초”와 일치.</li>
+          <li>seed는 <code>np.random.default_rng(SEED)</code>로 배경·사람 배치에 쓰입니다. 검출 모델 자체의 무작위성과는 별개.</li>
+        </ul>
+      </div>
+    </section>
+
+    <section id="synth" data-lecture-section="synth">
+      <div class="sec-head">
+        <p class="sec-kicker">03 · 합성 영상</p>
+        <h2>사람을 오려서 걷게 만들기</h2>
+        <p class="sub">Penn-Fudan 검증 사진의 사람을 마스크로 오려 RGBA 스프라이트를 만들고, 배경 위를 걷게 합니다. 누가 누구인지 우리가 아니까 정답 ID를 붙일 수 있어요.</p>
+      </div>
+
+      <div class="code-cap"><span>common_track.py · 42–98행</span><span>핵심 발췌</span></div>
+      <pre class="code"><code>def _sprites() -> list[np.ndarray]:
+    """검증 사진의 사람을 마스크로 오려 RGBA 조각으로 만든다. 사진 가장자리에 잘린 사람은 뺀다."""
+    sprites = []
+    for image in sorted((YOLO_ROOT / "valid" / "images").glob("*.png")):
+        rgb = np.array(Image.open(PENN / "PNGImages" / image.name).convert("RGB"))
+        mask = np.array(Image.open(PENN / "PedMasks" / f"{image.stem}_mask.png"))
+        for k in range(1, int(mask.max()) + 1):
+            ys, xs = np.nonzero(mask == k)
+            if len(ys) == 0:
+                continue
+            y1, y2, x1, x2 = ys.min(), ys.max() + 1, xs.min(), xs.max() + 1
+            touches = x1 == 0 or y1 == 0 or x2 == mask.shape[1] or y2 == mask.shape[0]
+            if touches or y2 - y1 < 150:
+                continue
+            alpha = (mask[y1:y2, x1:x2] == k).astype(np.uint8) * 255
+            sprites.append(np.dstack([rgb[y1:y2, x1:x2], alpha]))
+    return sprites
+
+
+def _plan_walkers(rng: np.random.Generator, count: int) -> list[dict]:
+    """사람마다 걷는 방향, 빠르기, 발 높이(가까울수록 아래·크게), 나타나는 시각을 정한다."""
+    walkers = []
+    for i in range(count):
+        foot = int(rng.choice([250, 275, 300, 330, 355]))     # 같은 줄을 마주 걷는 사람끼리 겹친다
+        height = int(110 + (foot - 250) * 1.0)
+        walkers.append({"id": i + 1, "dir": 1 if i % 2 == 0 else -1, "speed": float(rng.uniform(5, 11)),
+                        "foot": foot, "height": height, "start": int(rng.integers(0, FRAMES - 70)),
+                        "phase": float(rng.uniform(0, 6.28))})
+    return walkers</code></pre>
+
+      <div class="steps">
+        <div class="step"><p><b>스프라이트</b>: 검증 사진 34장에서 사람별 RGBA 조각. 마스크의 사람 픽셀만 alpha=255.</p></div>
+        <div class="step"><p><b>가장자리·작은 사람 제외</b>: 사진 밖으로 잘린 사람(<code>touches</code>)과 높이 150px 미만은 뺍니다.</p></div>
+        <div class="step"><p><b>걷는 계획</b>: 발 높이 5줄 중 하나, 키는 발 높이에 비례(110~215px).</p></div>
+        <div class="step"><p><b>방향·속도</b>: 짝수 ID는 오른쪽, 홀수는 왼쪽. 속도 5~11 px/장면.</p></div>
+        <div class="step"><p><b>시작·위상</b>: 0~90장면 사이에 등장, 걸음 오르내림 위상은 무작위.</p></div>
+        <div class="step"><p><b>그리기</b>: 먼 사람부터(발 높이 오름차순) 그려 앞 사람이 뒤 사람을 덮게. 기둥은 마지막에.</p></div>
+      </div>
+
+      <div class="code-cap"><span>common_track.py · 101–139행</span><span>핵심 발췌</span></div>
+      <pre class="code"><code>def make_video() -> tuple[list[np.ndarray], list[list[dict]]]:
+    """합성 영상의 장면들과 장면마다의 정답(ID, 보이는 부분의 상자, 보이는 비율)을 만든다."""
+    sprites = _sprites()
+    rng = np.random.default_rng(SEED)
+    order = rng.permutation(len(sprites))[:PEOPLE]
+    walkers = _plan_walkers(rng, PEOPLE)
+    background = _background()
+    frames, truth = [], []
+    for t in range(FRAMES):
+        frame = background.copy()
+        owner = np.zeros((HEIGHT, WIDTH), np.int16)           # 픽셀마다 맨 앞에 보이는 사람의 ID
+        full = {}
+        for walker in sorted(walkers, key=lambda w: w["foot"]):    # 먼 사람부터 그린다
+            placed = _place(walker, sprites[order[walker["id"] - 1]], t)
+            if placed is None:
+                continue
+            x, y, piece = placed
+            fx1, fy1 = max(x, 0), max(y, 0)
+            fx2, fy2 = min(x + piece.shape[1], WIDTH), min(y + piece.shape[0], HEIGHT)
+            if fx2 <= fx1 or fy2 <= fy1:
+                continue
+            crop = piece[fy1 - y:fy2 - y, fx1 - x:fx2 - x]
+            alpha = crop[..., 3:4] / 255.0
+            region = frame[fy1:fy2, fx1:fx2]
+            frame[fy1:fy2, fx1:fx2] = (alpha * crop[..., :3] + (1 - alpha) * region).astype(np.uint8)
+            owner[fy1:fy2, fx1:fx2][crop[..., 3] > 127] = walker["id"]
+            full[walker["id"]] = int((crop[..., 3] > 127).sum())
+        frame[:, PILLAR[0]:PILLAR[1]] = (70, 72, 78)          # 기둥은 사람 앞에 있다
+        owner[:, PILLAR[0]:PILLAR[1]] = 0
+        boxes = []
+        for pid, total in full.items():
+            ys, xs = np.nonzero(owner == pid)
+            if len(ys) == 0 or len(ys) / total < MIN_VISIBLE or ys.max() - ys.min() < MIN_TRUTH_HEIGHT:
+                continue
+            boxes.append({"id": pid, "box": [int(xs.min()), int(ys.min()), int(xs.max()) + 1, int(ys.max()) + 1],
+                          "visible": round(len(ys) / total, 3)})
+        frames.append(frame)
+        truth.append(boxes)
+    return frames, truth</code></pre>
+
+      <div class="layer precise">
+        <span class="tag">🔬 정확히는 — alpha 합성과 owner</span>
+        <p><code>frame = alpha * 사람 + (1-alpha) * 배경</code>으로 가장자리를 부드럽게 합칩니다. <code>owner</code>는 “이 픽셀을 마지막으로 덮은 사람 ID”입니다. 기둥을 그린 뒤 <code>owner[:, 392:432]=0</code>으로 지우면, 기둥 뒤 픽셀은 정답에서 사라집니다. 그래서 <code>visible</code>이 줄어요.</p>
+      </div>
+
+      <div class="layer gotcha">
+        <span class="tag">⚠️ 함정</span>
+        <ul class="arrow-list" style="margin-bottom:0">
+          <li><code>int(mask.max())+1</code> 범위로 사람 ID를 순회. 마스크에 빈 ID가 있으면 건너뜁니다.</li>
+          <li><code>_place</code>는 아직 등장 전이거나 화면을 완전히 지나갔으면 <code>None</code>. <code>start</code>가 늦으면 영상에 못 나올 수도.</li>
+          <li>기둥은 <strong>모든 사람 앞</strong>에 그려집니다. 기둥 뒤 사람은 잠깐 완전히 사라져 검출도 안 됩니다.</li>
+          <li>정답 박스는 “보이는 픽셀” 기준. 가려진 사람의 박스는 실제 몸보다 작습니다.</li>
+          <li>배경·사람 배치는 seed 11로 고정. <code>make_video</code>를 다시 불러도 같은 영상.</li>
+        </ul>
+      </div>
+    </section>
+
+    <section id="cache" data-lecture-section="cache">
+      <div class="sec-head">
+        <p class="sec-kicker">04 · synth() · detect_frames() · synth_detections()</p>
+        <h2>영상은 한 번, 검출은 캐시에</h2>
+        <p class="sub">합성 영상과 정답은 파일로 남기고, 검출 결과는 <code>dets.npz</code>에 장면별로 저장합니다. 추적 실험은 이 캐시를 재사용해 빠르게 돌아갑니다.</p>
+      </div>
+
+      <div class="code-cap"><span>common_track.py · 166–204행</span><span>원문 그대로</span></div>
+      <pre class="code"><code>def synth() -> tuple[list[np.ndarray], list[list[dict]]]:
+    """합성 영상과 정답. 씨앗이 정해져 있어 매번 같은 장면이 나온다.
+
+    mp4는 손실 압축이라 다시 읽으면 원본과 조금 다르므로, 검출은 늘 다시 그린 원본 장면에 한다.
+    runs/track의 synth.mp4와 truth.json은 눈으로 보고 열어 보라고 남기는 사본이다.
+    """
+    frames, truth = make_video()
+    if not VIDEO.exists():
+        save_video(frames, VIDEO)
+        TRUTH.write_text(json.dumps(truth))
+    return frames, truth
+
+
+def detect_frames(frames: list[np.ndarray], conf: float = DET_CONF) -> list[np.ndarray]:
+    """장면마다 2일차 best.pt로 사람을 찾는다. 결과는 (N, 5) = x1, y1, x2, y2, 점수."""
+    require_lab5()
+    from ultralytics import YOLO
+    model = YOLO(str(BEST))
+    device = pick_device()
+    results = []
+    for frame in frames:
+        r = model.predict(frame, imgsz=IMAGE_SIZE, conf=conf, device=device, verbose=False)[0]
+        boxes = r.boxes.xyxy.cpu().numpy()
+        scores = r.boxes.conf.cpu().numpy()[:, None]
+        results.append(np.hstack([boxes, scores]).astype(np.float32))
+    return results
+
+
+def synth_detections() -> list[np.ndarray]:
+    """합성 영상의 검출 결과. 한 번 돌려 runs/track/dets.npz에 두고 다시 쓴다."""
+    if DETS.exists():
+        saved = np.load(DETS)
+        return [saved[f"f{t}"] for t in range(FRAMES)]
+    frames, _ = synth()
+    dets = detect_frames(frames)
+    np.savez(DETS, **{f"f{t}": d for t, d in enumerate(dets)})
+    return dets</code></pre>
+
+      <div class="steps">
+        <div class="step"><p><b>매번 다시 그리기</b>: <code>synth()</code>는 항상 <code>make_video()</code>로 원본 프레임을 새로 만듭니다(결정적).</p></div>
+        <div class="step"><p><b>사본은 한 번만</b>: <code>synth.mp4</code>와 <code>truth.json</code>이 없을 때만 저장.</p></div>
+        <div class="step"><p><b>검출은 원본에</b>: mp4를 다시 읽으면 압축 오차가 섞입니다. 검출은 새로 그린 RGB 프레임에.</p></div>
+        <div class="step"><p><b>N×5</b>: <code>xyxy + score</code>. ByteTrack이 낮은 점수도 쓰도록 <code>conf=0.05</code>.</p></div>
+        <div class="step"><p><b>캐시</b>: <code>dets.npz</code>에 <code>f0</code>…<code>f159</code> 키로 저장. 다음 실행은 <code>np.load</code>로 바로.</p></div>
+        <div class="step"><p><b>주의</b>: 캐시가 있으면 모델을 바꿔도 옛 검출을 씁니다. <code>dets.npz</code>를 지워야 재검출.</p></div>
+      </div>
+
+      <div class="layer gotcha">
+        <span class="tag">⚠️ 함정</span>
+        <ul class="arrow-list" style="margin-bottom:0">
+          <li><code>synth()</code>는 파일이 이미 있으면 <strong>갱신하지 않습니다</strong>. 상수(PEOPLE, PILLAR 등)를 바꾸면 mp4/truth가 옛 버전으로 남습니다. 지우고 다시 실행.</li>
+          <li><code>np.savez</code>는 압축하지 않는 <code>.npz</code>. 160장면 × 검출 수 × 5 float32.</li>
+          <li><code>detect_frames</code>는 <code>require_lab5()</code>를 호출하고 ultralytics를 <strong>함수 안에서</strong> import. common_track import만으로는 ultralytics가 필요 없습니다.</li>
+          <li><code>saved[f"f{t}"]</code>는 160개 키를 가정. FRAMES를 바꾸면 기존 캐시와 길이가 안 맞습니다.</li>
+          <li>검출 캐시를 공유하므로 lab12~16이 같은 검출을 씁니다. 공정 비교의 기반.</li>
+        </ul>
+      </div>
+
+      <div class="layer analogy">
+        <span class="tag">🍭 5살 비유</span>
+        <p>영상은 <strong>한 번 찍어 두고</strong>, “사람이 어디 있더라” 메모는 서랍(<code>dets.npz</code>)에 넣어 둬요. 추적기 놀이를 여러 번 해도 매번 사진을 다시 찍지 않습니다. 단, 메모를 낡은 채로 두면 옛날 사람 위치로 놀게 돼요.</p>
+      </div>
+    </section>
+
+    <section id="iou" data-lecture-section="iou">
+      <div class="sec-head">
+        <p class="sec-kicker">05 · iou_matrix() · match()</p>
+        <h2>겹침 표와 최고의 짝</h2>
+        <p class="sub">모든 “이전 상자 × 이번 상자”의 IoU를 한 번에 계산하고, 합이 가장 큰 1:1 짝을 헝가리안 방법으로 찾습니다.</p>
+      </div>
+
+      <div class="code-cap"><span>common_track.py · 209–231행</span><span>원문 그대로</span></div>
+      <pre class="code"><code>def iou_matrix(a: np.ndarray, b: np.ndarray) -> np.ndarray:
+    """(N,4)와 (M,4) xyxy 상자의 IoU 표(1일차 lab1과 같은 계산)."""
+    if len(a) == 0 or len(b) == 0:
+        return np.zeros((len(a), len(b)))
+    x1 = np.maximum(a[:, None, 0], b[None, :, 0])
+    y1 = np.maximum(a[:, None, 1], b[None, :, 1])
+    x2 = np.minimum(a[:, None, 2], b[None, :, 2])
+    y2 = np.minimum(a[:, None, 3], b[None, :, 3])
+    inter = np.clip(x2 - x1, 0, None) * np.clip(y2 - y1, 0, None)
+    area_a = (a[:, 2] - a[:, 0]) * (a[:, 3] - a[:, 1])
+    area_b = (b[:, 2] - b[:, 0]) * (b[:, 3] - b[:, 1])
+    return inter / (area_a[:, None] + area_b[None, :] - inter)
+
+
+def match(iou: np.ndarray, min_iou: float) -> tuple[list[tuple[int, int]], list[int], list[int]]:
+    """IoU 합이 가장 큰 짝을 헝가리안 방법으로 찾고, min_iou 아래인 짝은 버린다."""
+    if iou.size == 0:
+        return [], list(range(iou.shape[0])), list(range(iou.shape[1]))
+    rows, cols = linear_sum_assignment(-iou)
+    pairs = [(r, c) for r, c in zip(rows, cols) if iou[r, c] >= min_iou]
+    left_rows = sorted(set(range(iou.shape[0])) - {r for r, _ in pairs})
+    left_cols = sorted(set(range(iou.shape[1])) - {c for _, c in pairs})
+    return pairs, left_rows, left_cols</code></pre>
+
+      <div class="panel" id="iouPanel">
+        <div class="panel-head"><h3>📦 IoU 놀이터</h3><span class="badge">상자를 끌어보세요</span></div>
+        <p class="note" style="margin-top:0">두 상자를 마우스/손가락으로 움직여 보세요. 교집합은 진한 색, 합집합은 두 상자 전체입니다. IoU = 교집합 / 합집합.</p>
+        <div class="canvas-box">
+          <canvas id="iouCanvas" tabindex="0" aria-label="두 상자를 끌어 IoU를 계산하는 놀이터"></canvas>
+          <span class="canvas-hint">상자 안을 끌어 이동</span>
+        </div>
+        <div class="readout">
+          <div class="stat"><span class="k">교집합</span><b id="iouInter">-</b></div>
+          <div class="stat"><span class="k">합집합</span><b id="iouUnion">-</b></div>
+          <div class="stat hot"><span class="k">IoU</span><b id="iouValue">-</b></div>
+          <div class="stat cool"><span class="k">판정 (0.5)</span><b id="iouVerdict">-</b></div>
+        </div>
+        <div class="presets">
+          <button class="btn soft" type="button" data-iou="overlap">겹치게</button>
+          <button class="btn soft" type="button" data-iou="apart">떨어지게</button>
+          <button class="btn soft" type="button" data-iou="same">거의 포개기</button>
+        </div>
+      </div>
+
+      <div class="panel" id="matchPanel">
+        <div class="panel-head"><h3>🔗 매칭 놀이터</h3><span class="badge">헝가리안 vs 탐욕</span></div>
+        <p class="note" style="margin-top:0">이전 트랙 4개와 새 검출 4개의 IoU 표가 고정되어 있습니다. <code>min_iou</code>를 움직이며 <strong>전체 합을 최대화하는 짝</strong>과 <strong>큰 것부터 집는 탐욕</strong>이 어떻게 달라지는지 보세요.</p>
+        <div class="controls">
+          <label class="range-label">min_iou <input type="range" id="matchMin" min="0.1" max="0.9" step="0.05" value="0.3"><b id="matchMinVal">0.30</b></label>
+        </div>
+        <div class="match-grid-wrap"><table class="match-grid" id="matchGrid"></table></div>
+        <div class="match-results">
+          <div class="match-box"><h4>헝가리안 (전체 합 최대)</h4><div id="hungarianOut"></div></div>
+          <div class="match-box"><h4>탐욕 (큰 IoU부터)</h4><div id="greedyOut"></div></div>
+        </div>
+      </div>
+
+      <div class="layer precise">
+        <span class="tag">🔬 정확히는 — 헝가리안</span>
+        <p><code>linear_sum_assignment(-iou)</code>는 “행마다 하나, 열마다 하나” 짝 중 <strong>합이 최대</strong>가 되는 조합을 찾습니다. <code>-iou</code>를 넣는 이유는 이 함수가 최소화 문제를 풀기 때문. 짝을 지은 뒤 <code>min_iou</code> 미만은 버리고, 남은 행/열을 “짝 없는 트랙/검출”로 돌려줍니다. 탐욕법은 큰 IoU부터 집어서 <strong>전체 합이 최적이 아닐 수</strong> 있습니다.</p>
+      </div>
+
+      <div class="layer gotcha">
+        <span class="tag">⚠️ 함정</span>
+        <ul class="arrow-list" style="margin-bottom:0">
+          <li>빈 배열이면 <code>np.zeros((0,M))</code> 또는 <code>(N,0)</code>을 반환. <code>match</code>도 빈 경우를 따로 처리.</li>
+          <li><code>min_iou</code> 필터는 할당 <strong>후</strong>에 합니다. 먼저 버리면 최적 조합이 달라질 수 있어요.</li>
+          <li>IoU 행렬은 (이전 트랙, 새 검출) 순서. <code>match</code>의 반환도 (행, 열).</li>
+          <li>박스가 (0,0,0,0)이면 area 0 → 0으로 나눌 수 있습니다. 실제 검출은 보통 양수 크기.</li>
+          <li>lab13은 <code>min_iou=0.3</code>, lab15는 1차 0.2 / 2차 0.5로 <strong>다른 문턱</strong>을 씁니다.</li>
+        </ul>
+      </div>
+    </section>
+
+    <section id="evaluate" data-lecture-section="evaluate">
+      <div class="sec-head">
+        <p class="sec-kicker">06 · run_tracker() · evaluate() · show()</p>
+        <h2>추적기를 채점하는 세 숫자</h2>
+        <p class="sub">MOTA는 “놓침·헛짚음·ID 바뀜”을 정답 수로 나눈 종합 점수, IDF1은 “영상 전체에서 같은 사람을 같은 트랙으로 유지했는가”입니다.</p>
+      </div>
+
+      <div class="code-cap"><span>common_track.py · 241–293행</span><span>핵심 발췌</span></div>
+      <pre class="code"><code>def evaluate(truth: list[list[dict]], tracks: list[list[tuple[int, list[float]]]], thr: float = MATCH_IOU) -> dict:
+    """CLEAR MOT(MOTA, ID 바뀜)과 IDF1을 계산한다.
+
+    MOTA: 장면마다 정답과 트랙을 짝짓는다. 앞 장면의 짝이 아직 겹치면 그대로 두고, 나머지를 헝가리안으로.
+          정답의 짝이 앞에서 짝이던 트랙과 다르면 ID 바뀜 1번. MOTA = 1 - (놓침 + 헛짚음 + ID 바뀜) / 정답 수.
+    IDF1: 영상 전체에서 정답 한 사람과 트랙 하나를 1:1로 묶어(겹친 장면 수가 가장 많게), 그 짝이 맞힌 장면 비율.
+    """
+    last, fn, fp, switches, total = {}, 0, 0, 0, 0
+    overlap: dict[tuple[int, int], int] = {}
+    gt_count: dict[int, int] = {}
+    trk_count: dict[int, int] = {}
+    for gt, trk in zip(truth, tracks):
+        g_ids = [g["id"] for g in gt]
+        g_boxes = np.array([g["box"] for g in gt], float).reshape(-1, 4)
+        t_ids = [i for i, _ in trk]
+        t_boxes = np.array([b for _, b in trk], float).reshape(-1, 4)
+        iou = iou_matrix(g_boxes, t_boxes)
+        total += len(gt)
+        for gi in g_ids:
+            gt_count[gi] = gt_count.get(gi, 0) + 1
+        for ti in t_ids:
+            trk_count[ti] = trk_count.get(ti, 0) + 1
+        for r, c in zip(*np.nonzero(iou >= thr)):
+            overlap[(g_ids[r], t_ids[c])] = overlap.get((g_ids[r], t_ids[c]), 0) + 1
+        pairs = []
+        free_g, free_t = set(range(len(gt))), set(range(len(trk)))
+        for r, gi in enumerate(g_ids):                      # 앞 장면의 짝을 먼저 이어 간다
+            if gi in last and last[gi] in t_ids:
+                c = t_ids.index(last[gi])
+                if c in free_t and iou[r, c] >= thr:
+                    pairs.append((r, c))
+                    free_g.discard(r)
+                    free_t.discard(c)
+        rows, cols = sorted(free_g), sorted(free_t)
+        sub_pairs, _, _ = match(iou[np.ix_(rows, cols)], thr)
+        for r, c in sub_pairs:
+            gi, ti = g_ids[rows[r]], t_ids[cols[c]]
+            if gi in last and last[gi] != ti:
+                switches += 1
+            pairs.append((rows[r], cols[c]))
+        for r, c in pairs:
+            last[g_ids[r]] = t_ids[c]
+        fn += len(gt) - len(pairs)
+        fp += len(trk) - len(pairs)
+    g_list, t_list = sorted(gt_count), sorted(trk_count)
+    score = np.zeros((len(g_list), len(t_list)))
+    for (gi, ti), n in overlap.items():
+        score[g_list.index(gi), t_list.index(ti)] = n
+    rows, cols = linear_sum_assignment(-score) if score.size else ([], [])
+    idtp = float(score[rows, cols].sum()) if score.size else 0.0
+    idf1 = 2 * idtp / (sum(gt_count.values()) + sum(trk_count.values())) if total else 0.0
+    return {"MOTA": 1 - (fn + fp + switches) / total, "IDF1": idf1, "ID바뀜": switches,
+            "놓침": fn, "헛짚음": fp, "트랙수": len(trk_count), "정답": total}</code></pre>
+
+      <div class="steps">
+        <div class="step"><p><b>장면별 매칭</b>: 정답 박스와 트랙 박스의 IoU 표. <code>thr=0.5</code> 이상만 후보.</p></div>
+        <div class="step"><p><b>연속성 우선</b>: 정답 <code>gi</code>가 앞 장면에서 트랙 <code>last[gi]</code>와 짝이었다면, 이번에도 그 트랙이 겹칠 때 먼저 잇습니다.</p></div>
+        <div class="step"><p><b>나머지는 헝가리안</b>: 자유로운 정답/트랙끼리 <code>match</code>.</p></div>
+        <div class="step"><p><b>ID 바뀜</b>: 정답이 이전에 다른 트랙과 짝이었는데 이번에 새 트랙으로 바뀌면 +1.</p></div>
+        <div class="step"><p><b>놓침/헛짚음</b>: 짝이 없는 정답 수, 짝이 없는 트랙 수를 누적.</p></div>
+        <div class="step"><p><b>MOTA</b>: <code>1 - (FN+FP+IDSW)/정답수</code>. 1에 가까울수록 좋고, 음수도 가능.</p></div>
+        <div class="step"><p><b>IDF1</b>: 영상 전체에서 정답-트랙 쌍의 겹친 장면 수를 점수로 두고, 헝가리안으로 1:1 묶음. <code>2*IDTP/(정답수+트랙수)</code>.</p></div>
+      </div>
+
+      <div class="layer precise">
+        <span class="tag">🔬 정확히는 — MOTA vs IDF1</span>
+        <p>MOTA는 <strong>장면 단위</strong>의 검출·연결 실수를 모두 벌점으로 줍니다. IDF1은 <strong>영상 전체</strong>에서 “정답 한 사람이 트랙 하나에 얼마나 오래 붙어 있었나”를 봅니다. ID가 자주 바뀌면 MOTA도 떨어지지만 IDF1이 더 민감하게 반응해요. 두 숫자를 같이 봐야 합니다.</p>
+      </div>
+
+      <div class="layer gotcha">
+        <span class="tag">⚠️ 함정</span>
+        <ul class="arrow-list" style="margin-bottom:0">
+          <li><code>last[gi]</code>는 정답 ID별 “마지막으로 짝지은 트랙”. 영상 전체에서 유지됩니다.</li>
+          <li>ID 바뀜은 “이전과 다른 트랙”일 때만 셉니다. 같은 트랙이 잠깐 끊겼다 돌아오면? 새 트랙 ID면 바뀜.</li>
+          <li><code>total=0</code>이면 MOTA 계산에서 0으로 나눌 수 있습니다. 실제로는 정답이 있습니다.</li>
+          <li><code>IDF1</code>의 <code>score</code>는 “겹친 장면 수”이지 IoU 합이 아닙니다. 매칭의 질보다 <strong>지속성</strong>을 봅니다.</li>
+          <li><code>show()</code>는 <code>PEOPLE</code>을 “실제 사람 수”로 출력. 트랙 수와 비교해 과분할을 봅니다.</li>
+        </ul>
+      </div>
+
+      <div class="layer analogy">
+        <span class="tag">🍭 5살 비유</span>
+        <p>MOTA는 <strong>받아쓰기 점수</strong>예요. 빠뜨린 글자(놓침), 없는 글자(헛짚음), 이름표를 바꾼 횟수(ID 바뀜)를 모두 감점. IDF1은 <strong>“한 친구를 끝까지 같은 이름으로 불렀나”</strong>를 보는 점수입니다.</p>
+      </div>
+    </section>
+
+    <section id="lab12" data-lecture-section="lab12">
+      <div class="sec-head">
+        <p class="sec-kicker">07 · lab12_count.py</p>
+        <h2>검출만으로 세면 왜 안 될까</h2>
+        <p class="sub">장면마다 찾은 수를 더하면 같은 사람을 계속 다시 셉니다. 가장 많이 찾은 장면을 골라도 전체 인원이 아닙니다. 이 실패를 직접 보여 주는 lab.</p>
+      </div>
+
+      <div class="code-cap"><span>lab12_count.py · 11–28행</span><span>원문 그대로</span></div>
+      <pre class="code"><code>CONF = 0.5
+
+
+def main() -> None:
+    frames, truth = synth()
+    dets = synth_detections()
+    per_frame = [int((d[:, 4] >= CONF).sum()) for d in dets]
+    truth_per_frame = [len(t) for t in truth]
+    print(f"합성 영상: {len(frames)}장면, {FPS}fps({FRAMES / FPS:.0f}초), 실제로 지나간 사람 {PEOPLE}명 → {VIDEO.name}")
+    print(f"장면마다 보이는 사람(정답): 평균 {np.mean(truth_per_frame):.1f}명, 가장 많을 때 {max(truth_per_frame)}명")
+    print(f"장면마다 찾은 사람(conf {CONF}): 평균 {np.mean(per_frame):.1f}명, 가장 많을 때 {max(per_frame)}명")
+    print()
+    print("'몇 명이 지나갔나'를 검출만으로 답해 보기")
+    print(f"  장면마다 찾은 수를 모두 더하기 : {sum(per_frame)}명")
+    print(f"  가장 많이 찾은 장면의 수       : {max(per_frame)}명")
+    print(f"  정답                          : {PEOPLE}명")</code></pre>
+
+      <div class="layer precise">
+        <span class="tag">🔬 정확히는</span>
+        <p>정답은 “영상 전체를 통틀어 등장한 사람 12명”입니다. 검출은 “이 장면에 보이는 사람 수”라서, 같은 사람이 100장면에 나오면 100번 세집니다. <strong>시간축에서 같은 사람을 하나로 묶는 것</strong>이 추적이고, lab13부터 그걸 합니다.</p>
+      </div>
+
+      <div class="layer analogy">
+        <span class="tag">🍭 5살 비유</span>
+        <p>문 앞을 지나가는 사람을 1초마다 사진 찍어서 “사진 속 사람 수”를 다 더하면, 한 명이 10초 동안 지나갈 때 <strong>10명</strong>이라고 세게 돼요. 진짜는 1명인데요.</p>
+      </div>
+    </section>
+
+    <section id="lab13" data-lecture-section="lab13">
+      <div class="sec-head">
+        <p class="sec-kicker">08 · lab13_iou_track.py</p>
+        <h2>가장 단순한 추적기: IoU로 잇기</h2>
+        <p class="sub">앞 장면의 상자와 이번 장면의 상자 중 IoU 합이 가장 큰 짝을 같은 사람으로 봅니다. 짝이 없는 트랙은 그 자리에서 버립니다(기억 없음).</p>
+      </div>
+
+      <div class="code-cap"><span>lab13_iou_track.py · 10–29행</span><span>원문 그대로</span></div>
+      <pre class="code"><code>CONF = 0.5        # 이 점수 이상의 검출만 쓴다
+MIN_IOU = 0.3     # 이보다 덜 겹치면 같은 사람으로 보지 않는다
+
+
+class IoUTracker:
+    def __init__(self, conf: float = CONF, min_iou: float = MIN_IOU):
+        self.conf, self.min_iou = conf, min_iou
+        self.tracks: dict[int, np.ndarray] = {}     # ID → 마지막 상자
+        self.next_id = 1
+
+    def update(self, dets: np.ndarray) -> list[tuple[int, list[float]]]:
+        boxes = dets[dets[:, 4] >= self.conf, :4]
+        ids = list(self.tracks)
+        old = np.array([self.tracks[i] for i in ids]).reshape(-1, 4)
+        pairs, _, new = match(iou_matrix(old, boxes), self.min_iou)
+        self.tracks = {ids[r]: boxes[c] for r, c in pairs}          # 짝이 없는 트랙은 사라진다
+        for c in new:
+            self.tracks[self.next_id] = boxes[c]
+            self.next_id += 1
+        return [(i, b.tolist()) for i, b in self.tracks.items()]</code></pre>
+
+      <div class="steps">
+        <div class="step"><p><b>점수 거르기</b>: conf 0.5 미만은 버림. ByteTrack과 달리 낮은 점수를 쓰지 않음.</p></div>
+        <div class="step"><p><b>이전 상자들</b>: <code>tracks</code> dict의 값들을 (N,4)로.</p></div>
+        <div class="step"><p><b>매칭</b>: <code>match(iou_matrix(old, boxes), 0.3)</code>. 짝/남은 트랙/새 검출.</p></div>
+        <div class="step"><p><b>트랙 갱신</b>: 짝지은 트랙만 새 상자로 교체. <strong>짝 없는 트랙은 삭제</strong>.</p></div>
+        <div class="step"><p><b>새 ID</b>: 짝 없는 검출마다 <code>next_id</code> 부여.</p></div>
+        <div class="step"><p><b>출력</b>: 이번 장면의 (ID, 상자) 목록.</p></div>
+      </div>
+
+      <div class="layer gotcha">
+        <span class="tag">⚠️ 함정</span>
+        <ul class="arrow-list" style="margin-bottom:0">
+          <li>한 장면만 놓쳐도 트랙이 삭제되어 <strong>새 ID</strong>로 다시 태어납니다. 기둥 뒤 가림에 특히 약함.</li>
+          <li>IoU가 0.3 미만이면 같은 사람이라도 다른 사람으로 봄. 빠르게 움직이면 IoU가 작아집니다.</li>
+          <li><code>min_iou</code>를 0.1로 낮추면 더 잘 잇지만, 다른 사람과 섞일 위험이 커집니다. lab13이 0.1/0.5를 비교.</li>
+          <li><code>lost</code> 계산은 “앞 장면에 있다가 이번 장면에 없는 ID”를 셈. 트랙이 끊긴 횟수.</li>
+        </ul>
+      </div>
+
+      <div class="layer analogy">
+        <span class="tag">🍭 5살 비유</span>
+        <p>“방금 전 사진의 상자와 지금 상자가 많이 겹치면 같은 사람”이라고 정하는 거예요. <strong>한 번이라도 사라지면 이름표를 잊어버리는</strong> 아주 짧은 기억의 추적기입니다.</p>
+      </div>
+    </section>
+
+    <section id="lab14" data-lecture-section="lab14">
+      <div class="sec-head">
+        <p class="sec-kicker">09 · lab14_sort.py</p>
+        <h2>다음에 어디 있을지 예측하기 (SORT)</h2>
+        <p class="sub">트랙마다 칼만 필터로 다음 위치를 예측하고, 예측과 검출을 IoU로 짝짓습니다. 못 찾아도 max_age 장면 동안 기다립니다.</p>
+      </div>
+
+      <div class="code-cap"><span>lab14_sort.py · 13–56행</span><span>원문 그대로</span></div>
+      <pre class="code"><code>MAX_AGE = 15      # 이만큼(1.5초) 못 찾으면 트랙을 버린다
+MIN_HITS = 2      # 이만큼 잇달아 찾아야 내보낸다(한 번 튄 헛검출은 ID를 받지 않게)
+
+
+class KalmanTrack:
+    """상태 8칸: 가운데·크기 4칸과 그 빠르기 4칸. 한 장면에 빠르기만큼 움직인다고 본다(등속)."""
+
+    F = np.eye(8) + np.eye(8, k=4)                 # 다음 위치 = 지금 위치 + 빠르기
+    H = np.eye(4, 8)                               # 재는 것은 위치·크기 4칸뿐
+    Q = np.diag([1, 1, 1, 1, 0.5, 0.5, 0.1, 0.1]) ** 2     # 움직임이 등속에서 벗어나는 정도
+    R = np.diag([4, 4, 8, 8]) ** 2                         # 검출 상자의 흔들림(픽셀)
+
+    def __init__(self, box: np.ndarray, track_id: int):
+        self.x = np.r_[to_state(box), np.zeros(4)]
+        self.P = np.diag([10, 10, 10, 10, 100, 100, 100, 100]) ** 2.0
+        self.id, self.hits, self.missed = track_id, 1, 0
+
+    def predict(self) -> np.ndarray:
+        self.x = self.F @ self.x
+        self.P = self.F @ self.P @ self.F.T + self.Q
+        self.missed += 1
+        return to_box(self.x)
+
+    def correct(self, box: np.ndarray) -> None:
+        y = to_state(box) - self.H @ self.x
+        S = self.H @ self.P @ self.H.T + self.R
+        K = self.P @ self.H.T @ np.linalg.inv(S)
+        self.x = self.x + K @ y
+        self.P = (np.eye(8) - K @ self.H) @ self.P
+        self.hits += 1
+        self.missed = 0</code></pre>
+
+      <div class="steps">
+        <div class="step"><p><b>상태 8칸</b>: 중심 x, y, 너비, 높이 + 각각의 속도 4칸.</p></div>
+        <div class="step"><p><b>F</b>: 다음 상태 = 지금 + 속도. 등속 운동 가정.</p></div>
+        <div class="step"><p><b>H</b>: 실제로 측정하는 건 위치·크기 4칸뿐.</p></div>
+        <div class="step"><p><b>Q</b>: 등속에서 벗어나는 잡음. 위치 1, 속도 0.5, 크기 속도 0.1.</p></div>
+        <div class="step"><p><b>R</b>: 검출 박스의 흔들림. x/y 4px, w/h 8px.</p></div>
+        <div class="step"><p><b>predict</b>: 상태와 공분산을 한 장면 전진, <code>missed += 1</code>.</p></div>
+        <div class="step"><p><b>correct</b>: 검출과의 차이(<code>y</code>)로 칼만 이득 <code>K</code>를 계산해 상태 수정. <code>missed=0</code>, <code>hits+=1</code>.</p></div>
+      </div>
+
+      <div class="code-cap"><span>lab14_sort.py · 59–97행</span><span>원문 그대로</span></div>
+      <pre class="code"><code>class SortTracker:
+    def __init__(self, conf: float = CONF, min_iou: float = MIN_IOU, max_age: int = MAX_AGE, min_hits: int = MIN_HITS):
+        self.conf, self.min_iou, self.max_age, self.min_hits = conf, min_iou, max_age, min_hits
+        self.tracks: list[KalmanTrack] = []
+        self.next_id = 1
+
+    def new_track(self, box: np.ndarray) -> None:
+        self.tracks.append(KalmanTrack(box, self.next_id))
+        self.next_id += 1
+
+    def output(self) -> list[tuple[int, list[float]]]:
+        """이번 장면에 검출로 확인했고, 충분히 여러 번 본 트랙만 내보낸다."""
+        return [(t.id, t.box().tolist()) for t in self.tracks if t.missed == 0 and t.hits >= self.min_hits]
+
+    def update(self, dets: np.ndarray) -> list[tuple[int, list[float]]]:
+        boxes = dets[dets[:, 4] >= self.conf, :4]
+        predicted = np.array([t.predict() for t in self.tracks]).reshape(-1, 4)
+        pairs, _, new = match(iou_matrix(predicted, boxes), self.min_iou)
+        for r, c in pairs:
+            self.tracks[r].correct(boxes[c])
+        for c in new:
+            self.new_track(boxes[c])
+        self.tracks = [t for t in self.tracks if t.missed <= self.max_age]
+        return self.output()</code></pre>
+
+      <div class="layer precise">
+        <span class="tag">🔬 정확히는 — max_age와 min_hits</span>
+        <p><code>max_age=15</code>는 1.5초. 검출이 없어도 예측만으로 15장면을 기다립니다. <code>min_hits=2</code>는 “두 장면 연속으로 검출과 맞아야” 출력. 한 번 튄 헛검출이 ID를 받지 않게 하는 장치. <code>missed &gt; max_age</code>면 삭제, <code>missed == 0 and hits &gt;= min_hits</code>만 출력.</p>
+      </div>
+
+      <div class="layer gotcha">
+        <span class="tag">⚠️ 함정</span>
+        <ul class="arrow-list" style="margin-bottom:0">
+          <li><code>predict()</code>가 <code>missed</code>를 먼저 올립니다. 그래서 짝이 맞으면 <code>correct()</code>가 0으로 되돌립니다.</li>
+          <li>새 트랙은 첫 장면에 <code>hits=1</code>이라 <code>min_hits=2</code>면 다음 장면부터 출력됩니다.</li>
+          <li><code>max_age=0</code>이면 한 장면만 놓쳐도 삭제 → IoU 추적과 비슷해짐.</li>
+          <li>칼만 필터는 <strong>등속</strong> 가정. 갑자기 방향을 바꾸면 예측이 틀립니다.</li>
+          <li>트랙 인덱스 <code>r</code>은 <code>tracks</code> 리스트 순서. 삭제 후 다음 장면에서 인덱스가 바뀝니다.</li>
+        </ul>
+      </div>
+
+      <div class="layer analogy">
+        <span class="tag">🍭 5살 비유</span>
+        <p>“이 친구는 아까 오른쪽으로 걸었으니까 <strong>다음에도 오른쪽에 있겠지</strong>”라고 예상하는 거예요. 잠깐 안 보여도 “조금 기다려 보자” 하고, 너무 오래 안 보이면 잊어버립니다.</p>
+      </div>
+    </section>
+
+    <section id="lab15" data-lecture-section="lab15">
+      <div class="sec-head">
+        <p class="sec-kicker">10 · lab15_bytetrack.py</p>
+        <h2>낮은 점수 검출을 한 번 더 쓰기 (ByteTrack)</h2>
+        <p class="sub">반쯤 가려진 사람은 점수가 낮게 나옵니다. ByteTrack은 1차로 높은 점수와 모든 트랙을 잇고, 2차로 남은 트랙과 낮은 점수를 잇습니다.</p>
+      </div>
+
+      <div class="code-cap"><span>lab15_bytetrack.py · 15–44행</span><span>원문 그대로</span></div>
+      <pre class="code"><code>HIGH = 0.5
+LOW = 0.1
+NEW = 0.6
+FIRST_IOU = 0.2       # 1차 짝짓기(원 논문의 match_thresh 0.8 = 1 - IoU)
+SECOND_IOU = 0.5      # 2차 짝짓기는 더 엄격하게(낮은 검출에는 헛검출이 섞여 있다)
+MAX_AGE = 30          # 원 논문의 track_buffer(30장면)
+
+
+class ByteTracker(SortTracker):
+    def __init__(self, high: float = HIGH, low: float = LOW, new: float = NEW, max_age: int = MAX_AGE):
+        super().__init__(conf=high, max_age=max_age, min_hits=1)
+        self.high, self.low, self.new = high, low, new
+
+    def update(self, dets: np.ndarray) -> list[tuple[int, list[float]]]:
+        high = dets[dets[:, 4] >= self.high]
+        low = dets[(dets[:, 4] >= self.low) & (dets[:, 4] < self.high)]
+        predicted = np.array([t.predict() for t in self.tracks]).reshape(-1, 4)
+        pairs, left_tracks, left_high = match(iou_matrix(predicted, high[:, :4]), FIRST_IOU)
+        for r, c in pairs:
+            self.tracks[r].correct(high[c, :4])
+        # 2차: 바로 앞 장면까지 보던 트랙만(오래 잃은 트랙에 낮은 검출을 붙이면 엉뚱한 사람과 이어진다)
+        recent = [r for r in left_tracks if self.tracks[r].missed == 1]
+        pairs2, _, _ = match(iou_matrix(predicted[recent], low[:, :4]), SECOND_IOU)
+        for r, c in pairs2:
+            self.tracks[recent[r]].correct(low[c, :4])
+        for c in left_high:
+            if high[c, 4] >= self.new:
+                self.new_track(high[c, :4])
+        self.tracks = [t for t in self.tracks if t.missed <= self.max_age]
+        return self.output()</code></pre>
+
+      <div class="steps">
+        <div class="step"><p><b>두 더미</b>: 고득점(<code>≥0.5</code>)과 저득점(<code>0.1~0.5</code>).</p></div>
+        <div class="step"><p><b>1차 매칭</b>: 예측 vs 고득점, IoU 0.2. 맞은 트랙은 correct.</p></div>
+        <div class="step"><p><b>2차 후보</b>: 1차에서 남았고 <code>missed==1</code>인 트랙만. 바로 앞 장면까지 보던 트랙.</p></div>
+        <div class="step"><p><b>2차 매칭</b>: 그 트랙들 vs 저득점, IoU 0.5로 더 엄격.</p></div>
+        <div class="step"><p><b>새 트랙</b>: 1차에서 남은 고득점 중 <code>≥0.6</code>만. 저득점으로는 새 트랙을 만들지 않음.</p></div>
+        <div class="step"><p><b>정리</b>: <code>missed &gt; 30</code> 트랙 삭제. 출력은 <code>min_hits=1</code>이라 바로.</p></div>
+      </div>
+
+      <div class="layer precise">
+        <span class="tag">🔬 정확히는 — 왜 2차가 더 엄격?</span>
+        <p>저득점 검출에는 헛검출(배경, 그림자)이 섞여 있습니다. 그래서 IoU 0.5로 더 확실할 때만 잇습니다. 또 “오래 잃은 트랙”에는 저득점을 붙이지 않습니다(<code>missed==1</code>만). 엉뚱한 사람과 이어지는 것을 막는 장치예요.</p>
+      </div>
+
+      <div class="layer gotcha">
+        <span class="tag">⚠️ 함정</span>
+        <ul class="arrow-list" style="margin-bottom:0">
+          <li>ByteTrack은 SORT를 상속하지만 <code>min_hits=1</code>로 바꿉니다. 첫 장면부터 출력.</li>
+          <li>1차에서 맞은 트랙도 <code>predicted</code>는 이미 <code>predict()</code>로 전진한 상태. correct가 위치를 보정.</li>
+          <li><code>left_high</code>는 1차에서 남은 고득점의 인덱스. <code>high[c,4]</code>로 점수 확인.</li>
+          <li><code>low=HIGH</code>로 두면 저득점 더미가 비어 2차 매칭이 사라집니다. lab15의 ablation.</li>
+          <li>원 논문의 <code>match_thresh=0.8</code>은 “1-IoU” 기준. 여기선 IoU 0.2로 단순화.</li>
+        </ul>
+      </div>
+
+      <div class="layer analogy">
+        <span class="tag">🍭 5살 비유</span>
+        <p>“확실한 친구”는 먼저 이름표를 붙이고, <strong>“아까 그 친구 같은데 잘 안 보여”</strong> 하는 애는 두 번째 명단에서 조심스럽게 확인해요. 처음 보는 애한테는 두 번째 명단을 쓰지 않습니다.</p>
+      </div>
+    </section>
+
+    <section id="lab16" data-lecture-section="lab16">
+      <div class="sec-head">
+        <p class="sec-kicker">11 · lab16_line_count.py</p>
+        <h2>선을 넘은 사람 세기</h2>
+        <p class="sub">트랙 ID가 있으면 “이 사람이 선의 왼쪽에서 오른쪽으로 갔나”를 셀 수 있습니다. ID마다 마지막 중심 x만 기억하면 됩니다.</p>
+      </div>
+
+      <div class="code-cap"><span>lab16_line_count.py · 26–39행</span><span>원문 그대로</span></div>
+      <pre class="code"><code>def count_crossings(frames_of_items: list[list[tuple[int, list[float]]]], line_x: float) -> tuple[int, int]:
+    """ID마다 마지막으로 본 가운데 x를 기억해 두고, 선의 반대편에서 다시 보이면 한 번 넘은 것으로 센다."""
+    last_x: dict[int, float] = {}
+    right, left = 0, 0
+    for items in frames_of_items:
+        for track_id, box in items:
+            cx = (box[0] + box[2]) / 2
+            if track_id in last_x:
+                if last_x[track_id] < line_x <= cx:
+                    right += 1
+                elif cx < line_x <= last_x[track_id]:
+                    left += 1
+            last_x[track_id] = cx
+    return right, left</code></pre>
+
+      <div class="steps">
+        <div class="step"><p><b>장면 순서</b>: 트랙 목록을 시간 순으로 받습니다.</p></div>
+        <div class="step"><p><b>중심 x</b>: <code>(x1+x2)/2</code>. 선은 세로선 <code>line_x</code>.</p></div>
+        <div class="step"><p><b>오른쪽으로</b>: 이전 x &lt; 선 ≤ 현재 x → right +1.</p></div>
+        <div class="step"><p><b>왼쪽으로</b>: 현재 x &lt; 선 ≤ 이전 x → left +1.</p></div>
+        <div class="step"><p><b>기억 갱신</b>: 마지막 x를 항상 업데이트.</p></div>
+        <div class="step"><p><b>한 번만</b>: 선을 넘은 뒤 다시 넘으면 반대 방향으로 또 셈. 왕복하면 2번.</p></div>
+      </div>
+
+      <div class="layer gotcha">
+        <span class="tag">⚠️ 함정</span>
+        <ul class="arrow-list" style="margin-bottom:0">
+          <li>ID가 바뀌면 “새 사람”으로 보여 <strong>한 사람이 두 번</strong> 세질 수 있습니다. 추적 품질이 곧 카운트 품질.</li>
+          <li>트랙이 잠깐 끊겼다 같은 ID로 돌아오면, 마지막 x와 비교해 먼 거리를 한 번에 넘은 것으로 셀 수 있음.</li>
+          <li><code>line_x=200</code>은 합성 영상 기준(기둥 왼쪽). 내 영상은 가운데(<code>width//2</code>).</li>
+          <li><code>draw</code>는 지금까지의 tracks만 넘겨 매 장면 처음부터 다시 셈. 그래서 화면의 카운터가 누적됩니다.</li>
+          <li><code>my_video</code>는 정답이 없어 눈으로 확인해야 합니다. 출력은 <code>runs/track/&lt;stem&gt;_tracked.mp4</code>.</li>
+        </ul>
+      </div>
+
+      <div class="layer analogy">
+        <span class="tag">🍭 5살 비유</span>
+        <p>줄넘기 줄을 세로로 세워 두고, 친구가 <strong>왼쪽에서 오른쪽으로</strong> 지나가면 “한 명!” 하고 세는 거예요. 이름표(ID)가 없으면 같은 친구를 여러 번 세겠죠.</p>
+      </div>
+    </section>
+
+    <section id="lab20" data-lecture-section="lab20">
+      <div class="sec-head">
+        <p class="sec-kicker">12 · lab20_reid.py</p>
+        <h2>겉모습으로 같은 사람 찾기</h2>
+        <p class="sub">추적기는 위치와 움직임만 봅니다. 기둥 뒤로 오래 가렸다 나오면 새 ID를 받죠. DINOv3 특징으로 “이 사람은 아까 그 사람”을 이어 붙입니다.</p>
+      </div>
+
+      <div class="code-cap"><span>lab20_reid.py · 21–29행</span><span>원문 그대로</span></div>
+      <pre class="code"><code>GALLERY_SHOTS = 3        # 사진첩에 넣는 처음 모습 수(사람마다)
+LATER = 30               # 사진첩 마지막 장면에서 이만큼 지난 뒤의 모습을 질문으로
+QUERIES = 10             # 사람마다 질문 수
+GAP = 50                 # 앞 트랙이 끝나고 이 장면 수 안에 시작한 트랙만 이을 후보
+REACH = 60               # 걷던 대로 갔을 자리에서 이만큼(픽셀) 안에서 시작해야 후보
+THRESHOLD = 0.8          # 트랙 평균 특징의 코사인 유사도가 이보다 크면 잇는다
+CROPS_PER_TRACK = 10
+PERSON_SIZE = (256, 128) # 사람 조각은 세로로 길게(정사각으로 늘이지 않는다)
+SHADE = (0.55, 0.6, 0.75)    # 그늘: R·G·B에 곱하는 값(어둡고 푸르게)</code></pre>
+
+      <div class="steps">
+        <div class="step"><p><b>사진첩(gallery)</b>: 사람마다 처음 3장면의 모습. 가장자리 잘린 사람은 제외.</p></div>
+        <div class="step"><p><b>질문(query)</b>: 사진첩 마지막에서 30장면 뒤, 최대 10장. 보이는 비율 0.5 이상.</p></div>
+        <div class="step"><p><b>특징</b>: DINOv3 <code>embed(..., size=(256,128))</code> 또는 HSV 8×8×8 히스토그램.</p></div>
+        <div class="step"><p><b>맞히기</b>: query 특징과 gallery 특징의 내적(<code>@</code>) 최대 → 그 gallery의 사람 ID.</p></div>
+        <div class="step"><p><b>그늘 실험</b>: query를 어둡고 푸르게(<code>SHADE</code>) 바꿔도 맞히는지.</p></div>
+        <div class="step"><p><b>이어 붙이기</b>: 끊긴 트랙을 GAP·REACH·THRESHOLD 조건으로 잇기.</p></div>
+      </div>
+
+      <div class="code-cap"><span>lab20_reid.py · 54–73행</span><span>핵심 발췌</span></div>
+      <pre class="code"><code>def recognition(frames: list[np.ndarray], truth: list[list[dict]], embed, shaded: bool = False) -> tuple[float, int]:
+    inside = lambda g: g["box"][0] > 2 and g["box"][2] < WIDTH - 2      # 화면 가장자리에 잘린 모습은 뺀다
+    gallery, gallery_id, queries, query_id = [], [], [], []
+    for pid in range(1, PEOPLE + 1):
+        seen = [(t, g) for t, boxes in enumerate(truth) for g in boxes if g["id"] == pid and inside(g)]
+        clear = [(t, g) for t, g in seen if g["visible"] >= 0.8] or seen   # 늘 가려진 사람은 보이는 대로
+        if not clear:
+            continue
+        first = clear[:GALLERY_SHOTS]
+        later = [(t, g) for t, g in seen if t >= first[-1][0] + LATER and g["visible"] >= 0.5]  # 없으면 질문도 없다
+        for t, g in first:
+            gallery.append(crop(frames[t], g["box"]))
+            gallery_id.append(pid)
+        for t, g in later[::max(1, len(later) // QUERIES)][:QUERIES]:
+            view = crop(frames[t], g["box"])
+            queries.append(shade(view) if shaded else view)
+            query_id.append(pid)
+    gal, qry = embed(gallery), embed(queries)
+    guess = np.array(gallery_id)[np.argmax(qry @ gal.T, axis=1)]
+    return float((guess == np.array(query_id)).mean()), len(queries)</code></pre>
+
+      <div class="layer precise">
+        <span class="tag">🔬 정확히는 — 이어 붙이기 규칙</span>
+        <p><code>spans</code>로 트랙별 (장면, 상자)를 모으고, 트랙마다 최대 10 crop의 DINO 특징 평균을 정규화합니다. 시작이 이른 트랙부터, <strong>앞 트랙 종료 후 GAP(50) 안</strong>에 시작하고, <strong>걷던 속도로 갔을 자리에서 REACH(60px) 안</strong>이며, <strong>특징 코사인 유사도 &gt; 0.8</strong>인 가장 닮은 트랙에 붙입니다. 이미 붙인 트랙은 <code>taken</code>으로 재사용 방지.</p>
+      </div>
+
+      <div class="layer gotcha">
+        <span class="tag">⚠️ 함정</span>
+        <ul class="arrow-list" style="margin-bottom:0">
+          <li><code>gallery</code>/<code>query</code>가 비면 <code>embed([])</code>에서 에러. 실제 데이터에선 사람마다 최소 몇 장면은 보입니다.</li>
+          <li>DINO는 <strong>그늘</strong>에 강하고 색 히스토그램은 약합니다. lab20이 두 방법을 비교하는 이유.</li>
+          <li>가장자리 잘린 사람을 빼는 <code>inside</code>는 x만 확인. 위/아래는 확인하지 않음.</li>
+          <li><code>stitch</code>는 “이미 끝난 트랙”에만 붙입니다. 미래 트랙을 소급해 바꾸지 않음.</li>
+          <li><code>THRESHOLD=0.8</code>은 코사인 유사도. DINO 특징은 <code>embed</code>가 이미 길이 1로 정규화.</li>
+          <li>ReID는 lab14·15의 추적 결과를 <strong>후처리</strong>로 잇는 것. 온라인 추적기 자체를 바꾸지 않습니다.</li>
+        </ul>
+      </div>
+
+      <div class="layer analogy">
+        <span class="tag">🍭 5살 비유</span>
+        <p>친구가 기둥 뒤로 사라졌다가 나왔어요. 이름표는 새로 받았지만, <strong>옷차림과 얼굴</strong>을 보고 “아까 그 친구네!”라고 알아보는 거예요. 사진첩(처음 모습)과 지금 모습을 비교합니다.</p>
+      </div>
+    </section>
+
+    <section id="fullcode" data-lecture-section="fullcode">
+      <div class="sec-head">
+        <p class="sec-kicker">13 · 전체 코드</p>
+        <h2>원문 그대로</h2>
+        <p class="sub">common_track.py는 줄 번호와 함께, lab12~16·20은 접이식으로 실었습니다.</p>
+      </div>
+
+      <details class="card flat" style="padding:0;overflow:hidden" open>
+        <summary style="cursor:pointer;padding:16px 20px;font-weight:850;display:flex;align-items:center;justify-content:space-between;gap:10px;list-style:none">
+          <span>📄 common_track.py 전체 보기 (298줄)</span>
+          <span style="display:flex;gap:8px;align-items:center">
+            <button class="btn" type="button" id="copyCode" style="font-size:.7rem;padding:5px 10px">복사</button>
+            <span style="color:var(--coral);font-weight:900">+</span>
+          </span>
+        </summary>
+        <div style="padding:0 14px 14px">
+          <div class="codewrap">
+            <pre class="gutter" id="codeGutter" aria-hidden="true"></pre>
+            <pre class="code" style="max-height:620px"><code id="fullCodeSource">"""3일차(추적) 공통 부분: 정답 ID가 있는 합성 영상, 검출 캐시, 추적 지표(MOTA·IDF1·ID 바뀜).
+
+합성 영상은 Penn-Fudan 검증 사진의 사람을 마스크로 오려 내 배경 위를 걷게 만든다.
+누가 누구인지 우리가 알고 있으니, 추적기가 ID를 몇 번 바꿨는지 숫자로 셀 수 있다.
+"""
+import json
+import os
+import warnings
+from pathlib import Path
+
+os.environ.setdefault("YOLO_VERBOSE", "False")   # ultralytics import 전에 정해야 적용된다
+warnings.filterwarnings("ignore", message=".*does not have a deterministic implementation.*")
+
+import cv2
+import numpy as np
+from PIL import Image
+from scipy.optimize import linear_sum_assignment
+
+from common_yolo import BEST, IMAGE_SIZE, YOLO_ROOT, pick_device, require_lab5
+
+HERE = Path(__file__).resolve().parent
+PENN = HERE / "data" / "PennFudanPed"
+OUT = HERE / "runs" / "track"
+VIDEO = OUT / "synth.mp4"
+TRUTH = OUT / "truth.json"
+DETS = OUT / "dets.npz"
+
+WIDTH, HEIGHT = 640, 360
+FPS = 10
+FRAMES = 160
+PEOPLE = 12
+SEED = 11
+PILLAR = (392, 432)        # 기둥의 x 범위. 그 뒤를 지나는 사람은 잠깐 완전히 가려진다
+MIN_VISIBLE = 0.3          # 보이는 부분이 이보다 적으면 정답에서 뺀다(사람도 못 알아볼 만큼 가려짐)
+MIN_TRUTH_HEIGHT = 40
+DET_CONF = 0.05            # 낮은 점수 검출도 남겨 둔다(ByteTrack이 쓴다)
+MATCH_IOU = 0.5            # 지표에서 "같은 사람을 짚었다"로 칠 IoU
+
+
+# ---------- 합성 영상 ----------
+
+def _sprites() -> list[np.ndarray]:
+    """검증 사진의 사람을 마스크로 오려 RGBA 조각으로 만든다. 사진 가장자리에 잘린 사람은 뺀다."""
+    sprites = []
+    for image in sorted((YOLO_ROOT / "valid" / "images").glob("*.png")):
+        rgb = np.array(Image.open(PENN / "PNGImages" / image.name).convert("RGB"))
+        mask = np.array(Image.open(PENN / "PedMasks" / f"{image.stem}_mask.png"))
+        for k in range(1, int(mask.max()) + 1):
+            ys, xs = np.nonzero(mask == k)
+            if len(ys) == 0:
+                continue
+            y1, y2, x1, x2 = ys.min(), ys.max() + 1, xs.min(), xs.max() + 1
+            touches = x1 == 0 or y1 == 0 or x2 == mask.shape[1] or y2 == mask.shape[0]
+            if touches or y2 - y1 < 150:
+                continue
+            alpha = (mask[y1:y2, x1:x2] == k).astype(np.uint8) * 255
+            sprites.append(np.dstack([rgb[y1:y2, x1:x2], alpha]))
+    return sprites
+
+
+def _background() -> np.ndarray:
+    """보도처럼 보이는 배경: 위는 벽, 아래는 바닥, 약한 잡음."""
+    rng = np.random.default_rng(SEED)
+    bg = np.zeros((HEIGHT, WIDTH, 3), np.float32)
+    rows = np.linspace(0, 1, HEIGHT)[:, None]
+    bg[:] = (np.where(rows < 0.55, 150 + 30 * rows, 110 + 40 * rows))[..., None]
+    bg[int(HEIGHT * 0.55):, :, 2] -= 15                     # 바닥은 조금 누렇게
+    bg += rng.normal(0, 6, bg.shape)
+    return np.clip(bg, 0, 255).astype(np.uint8)
+
+
+def _plan_walkers(rng: np.random.Generator, count: int) -> list[dict]:
+    """사람마다 걷는 방향, 빠르기, 발 높이(가까울수록 아래·크게), 나타나는 시각을 정한다."""
+    walkers = []
+    for i in range(count):
+        foot = int(rng.choice([250, 275, 300, 330, 355]))     # 같은 줄을 마주 걷는 사람끼리 겹친다
+        height = int(110 + (foot - 250) * 1.0)
+        walkers.append({"id": i + 1, "dir": 1 if i % 2 == 0 else -1, "speed": float(rng.uniform(5, 11)),
+                        "foot": foot, "height": height, "start": int(rng.integers(0, FRAMES - 70)),
+                        "phase": float(rng.uniform(0, 6.28))})
+    return walkers
+
+
+def _place(walker: dict, sprite: np.ndarray, t: int) -> tuple[int, int, np.ndarray] | None:
+    """t번째 장면에서 조각을 어디에 그릴지. 아직 안 나왔거나 이미 지나갔으면 None."""
+    steps = t - walker["start"]
+    if steps < 0:
+        return None
+    scale = walker["height"] / sprite.shape[0]
+    piece = cv2.resize(sprite, (max(1, int(sprite.shape[1] * scale)), walker["height"]))
+    w = piece.shape[1]
+    x = -w + steps * walker["speed"] if walker["dir"] > 0 else WIDTH - steps * walker["speed"]
+    if x > WIDTH or x < -w:
+        return None
+    if walker["dir"] < 0:
+        piece = piece[:, ::-1]                               # 왼쪽으로 걷는 사람은 좌우를 뒤집는다
+    bob = int(2 * np.sin(walker["phase"] + steps * 0.9))      # 걸을 때 오르내림
+    return int(x), walker["foot"] - walker["height"] + bob, piece
+
+
+def make_video() -> tuple[list[np.ndarray], list[list[dict]]]:
+    """합성 영상의 장면들과 장면마다의 정답(ID, 보이는 부분의 상자, 보이는 비율)을 만든다."""
+    sprites = _sprites()
+    rng = np.random.default_rng(SEED)
+    order = rng.permutation(len(sprites))[:PEOPLE]
+    walkers = _plan_walkers(rng, PEOPLE)
+    background = _background()
+    frames, truth = [], []
+    for t in range(FRAMES):
+        frame = background.copy()
+        owner = np.zeros((HEIGHT, WIDTH), np.int16)           # 픽셀마다 맨 앞에 보이는 사람의 ID
+        full = {}
+        for walker in sorted(walkers, key=lambda w: w["foot"]):    # 먼 사람부터 그린다
+            placed = _place(walker, sprites[order[walker["id"] - 1]], t)
+            if placed is None:
+                continue
+            x, y, piece = placed
+            fx1, fy1 = max(x, 0), max(y, 0)
+            fx2, fy2 = min(x + piece.shape[1], WIDTH), min(y + piece.shape[0], HEIGHT)
+            if fx2 <= fx1 or fy2 <= fy1:
+                continue
+            crop = piece[fy1 - y:fy2 - y, fx1 - x:fx2 - x]
+            alpha = crop[..., 3:4] / 255.0
+            region = frame[fy1:fy2, fx1:fx2]
+            frame[fy1:fy2, fx1:fx2] = (alpha * crop[..., :3] + (1 - alpha) * region).astype(np.uint8)
+            owner[fy1:fy2, fx1:fx2][crop[..., 3] > 127] = walker["id"]
+            full[walker["id"]] = int((crop[..., 3] > 127).sum())
+        frame[:, PILLAR[0]:PILLAR[1]] = (70, 72, 78)          # 기둥은 사람 앞에 있다
+        owner[:, PILLAR[0]:PILLAR[1]] = 0
+        boxes = []
+        for pid, total in full.items():
+            ys, xs = np.nonzero(owner == pid)
+            if len(ys) == 0 or len(ys) / total < MIN_VISIBLE or ys.max() - ys.min() < MIN_TRUTH_HEIGHT:
+                continue
+            boxes.append({"id": pid, "box": [int(xs.min()), int(ys.min()), int(xs.max()) + 1, int(ys.max()) + 1],
+                          "visible": round(len(ys) / total, 3)})
+        frames.append(frame)
+        truth.append(boxes)
+    return frames, truth
+
+
+def save_video(frames: list[np.ndarray], path: Path, fps: int = FPS) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    writer = cv2.VideoWriter(str(path), cv2.VideoWriter_fourcc(*"mp4v"), fps, (frames[0].shape[1], frames[0].shape[0]))
+    for frame in frames:
+        writer.write(cv2.cvtColor(frame, cv2.COLOR_RGB2BGR))
+    writer.release()
+
+
+def load_video(path: Path) -> tuple[list[np.ndarray], float]:
+    """동영상을 RGB 장면 목록으로 읽는다."""
+    capture = cv2.VideoCapture(str(path))
+    fps = capture.get(cv2.CAP_PROP_FPS) or FPS
+    frames = []
+    while True:
+        ok, frame = capture.read()
+        if not ok:
+            break
+        frames.append(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
+    capture.release()
+    if not frames:
+        raise SystemExit(f"동영상을 읽지 못했습니다: {path}")
+    return frames, fps
+
+
+def synth() -> tuple[list[np.ndarray], list[list[dict]]]:
+    """합성 영상과 정답. 씨앗이 정해져 있어 매번 같은 장면이 나온다.
+
+    mp4는 손실 압축이라 다시 읽으면 원본과 조금 다르므로, 검출은 늘 다시 그린 원본 장면에 한다.
+    runs/track의 synth.mp4와 truth.json은 눈으로 보고 열어 보라고 남기는 사본이다.
+    """
+    frames, truth = make_video()
+    if not VIDEO.exists():
+        save_video(frames, VIDEO)
+        TRUTH.write_text(json.dumps(truth))
+    return frames, truth
+
+
+# ---------- 검출 ----------
+
+def detect_frames(frames: list[np.ndarray], conf: float = DET_CONF) -> list[np.ndarray]:
+    """장면마다 2일차 best.pt로 사람을 찾는다. 결과는 (N, 5) = x1, y1, x2, y2, 점수."""
+    require_lab5()
+    from ultralytics import YOLO
+    model = YOLO(str(BEST))
+    device = pick_device()
+    results = []
+    for frame in frames:
+        r = model.predict(frame, imgsz=IMAGE_SIZE, conf=conf, device=device, verbose=False)[0]
+        boxes = r.boxes.xyxy.cpu().numpy()
+        scores = r.boxes.conf.cpu().numpy()[:, None]
+        results.append(np.hstack([boxes, scores]).astype(np.float32))
+    return results
+
+
+def synth_detections() -> list[np.ndarray]:
+    """합성 영상의 검출 결과. 한 번 돌려 runs/track/dets.npz에 두고 다시 쓴다."""
+    if DETS.exists():
+        saved = np.load(DETS)
+        return [saved[f"f{t}"] for t in range(FRAMES)]
+    frames, _ = synth()
+    dets = detect_frames(frames)
+    np.savez(DETS, **{f"f{t}": d for t, d in enumerate(dets)})
+    return dets
+
+
+# ---------- 상자와 매칭 ----------
+
+def iou_matrix(a: np.ndarray, b: np.ndarray) -> np.ndarray:
+    """(N,4)와 (M,4) xyxy 상자의 IoU 표(1일차 lab1과 같은 계산)."""
+    if len(a) == 0 or len(b) == 0:
+        return np.zeros((len(a), len(b)))
+    x1 = np.maximum(a[:, None, 0], b[None, :, 0])
+    y1 = np.maximum(a[:, None, 1], b[None, :, 1])
+    x2 = np.minimum(a[:, None, 2], b[None, :, 2])
+    y2 = np.minimum(a[:, None, 3], b[None, :, 3])
+    inter = np.clip(x2 - x1, 0, None) * np.clip(y2 - y1, 0, None)
+    area_a = (a[:, 2] - a[:, 0]) * (a[:, 3] - a[:, 1])
+    area_b = (b[:, 2] - b[:, 0]) * (b[:, 3] - b[:, 1])
+    return inter / (area_a[:, None] + area_b[None, :] - inter)
+
+
+def match(iou: np.ndarray, min_iou: float) -> tuple[list[tuple[int, int]], list[int], list[int]]:
+    """IoU 합이 가장 큰 짝을 헝가리안 방법으로 찾고, min_iou 아래인 짝은 버린다."""
+    if iou.size == 0:
+        return [], list(range(iou.shape[0])), list(range(iou.shape[1]))
+    rows, cols = linear_sum_assignment(-iou)
+    pairs = [(r, c) for r, c in zip(rows, cols) if iou[r, c] >= min_iou]
+    left_rows = sorted(set(range(iou.shape[0])) - {r for r, _ in pairs})
+    left_cols = sorted(set(range(iou.shape[1])) - {c for _, c in pairs})
+    return pairs, left_rows, left_cols
+
+
+def run_tracker(tracker, dets: list[np.ndarray]) -> list[list[tuple[int, list[float]]]]:
+    """추적기에 장면을 차례로 넣고, 장면마다 (트랙 ID, 상자) 목록을 모은다."""
+    return [tracker.update(d) for d in dets]
+
+
+# ---------- 지표 ----------
+
+def evaluate(truth: list[list[dict]], tracks: list[list[tuple[int, list[float]]]], thr: float = MATCH_IOU) -> dict:
+    """CLEAR MOT(MOTA, ID 바뀜)과 IDF1을 계산한다.
+
+    MOTA: 장면마다 정답과 트랙을 짝짓는다. 앞 장면의 짝이 아직 겹치면 그대로 두고, 나머지를 헝가리안으로.
+          정답의 짝이 앞에서 짝이던 트랙과 다르면 ID 바뀜 1번. MOTA = 1 - (놓침 + 헛짚음 + ID 바뀜) / 정답 수.
+    IDF1: 영상 전체에서 정답 한 사람과 트랙 하나를 1:1로 묶어(겹친 장면 수가 가장 많게), 그 짝이 맞힌 장면 비율.
+    """
+    last, fn, fp, switches, total = {}, 0, 0, 0, 0
+    overlap: dict[tuple[int, int], int] = {}
+    gt_count: dict[int, int] = {}
+    trk_count: dict[int, int] = {}
+    for gt, trk in zip(truth, tracks):
+        g_ids = [g["id"] for g in gt]
+        g_boxes = np.array([g["box"] for g in gt], float).reshape(-1, 4)
+        t_ids = [i for i, _ in trk]
+        t_boxes = np.array([b for _, b in trk], float).reshape(-1, 4)
+        iou = iou_matrix(g_boxes, t_boxes)
+        total += len(gt)
+        for gi in g_ids:
+            gt_count[gi] = gt_count.get(gi, 0) + 1
+        for ti in t_ids:
+            trk_count[ti] = trk_count.get(ti, 0) + 1
+        for r, c in zip(*np.nonzero(iou >= thr)):
+            overlap[(g_ids[r], t_ids[c])] = overlap.get((g_ids[r], t_ids[c]), 0) + 1
+        pairs = []
+        free_g, free_t = set(range(len(gt))), set(range(len(trk)))
+        for r, gi in enumerate(g_ids):                      # 앞 장면의 짝을 먼저 이어 간다
+            if gi in last and last[gi] in t_ids:
+                c = t_ids.index(last[gi])
+                if c in free_t and iou[r, c] >= thr:
+                    pairs.append((r, c))
+                    free_g.discard(r)
+                    free_t.discard(c)
+        rows, cols = sorted(free_g), sorted(free_t)
+        sub_pairs, _, _ = match(iou[np.ix_(rows, cols)], thr)
+        for r, c in sub_pairs:
+            gi, ti = g_ids[rows[r]], t_ids[cols[c]]
+            if gi in last and last[gi] != ti:
+                switches += 1
+            pairs.append((rows[r], cols[c]))
+        for r, c in pairs:
+            last[g_ids[r]] = t_ids[c]
+        fn += len(gt) - len(pairs)
+        fp += len(trk) - len(pairs)
+    g_list, t_list = sorted(gt_count), sorted(trk_count)
+    score = np.zeros((len(g_list), len(t_list)))
+    for (gi, ti), n in overlap.items():
+        score[g_list.index(gi), t_list.index(ti)] = n
+    rows, cols = linear_sum_assignment(-score) if score.size else ([], [])
+    idtp = float(score[rows, cols].sum()) if score.size else 0.0
+    idf1 = 2 * idtp / (sum(gt_count.values()) + sum(trk_count.values())) if total else 0.0
+    return {"MOTA": 1 - (fn + fp + switches) / total, "IDF1": idf1, "ID바뀜": switches,
+            "놓침": fn, "헛짚음": fp, "트랙수": len(trk_count), "정답": total}
+
+
+def show(name: str, m: dict) -> None:
+    print(f"{name:<10} MOTA {m['MOTA']:6.3f}  IDF1 {m['IDF1']:.3f}  ID 바뀜 {m['ID바뀜']:3d}  "
+          f"놓침 {m['놓침']:4d}  헛짚음 {m['헛짚음']:4d}  만든 ID {m['트랙수']:3d}개(실제 {PEOPLE}명)")</code></pre>
+          </div>
+          <p class="note" style="margin:10px 0 0">줄 번호는 원문 기준. 빈 줄도 그대로.</p>
+        </div>
+      </details>
+
+      <details class="card flat" style="padding:0;overflow:hidden;margin-top:12px">
+        <summary style="cursor:pointer;padding:15px 20px;font-weight:850;list-style:none">📄 lab12_count.py 전체 보기 (33줄) <span style="color:var(--coral)">+</span></summary>
+        <div style="padding:0 14px 14px"><pre class="code"><code>"""11차시: 검출만으로는 사람을 셀 수 없다.
+
+정답 ID가 있는 합성 영상(사람 12명, 16초)을 만들고, 2일차 best.pt로 장면마다 사람을 찾는다.
+장면마다 찾은 수를 더하거나, 가장 많이 찾은 장면을 고르는 식으로는 '몇 명이 지나갔나'를 답할 수 없다.
+lab5를 먼저 돌려 runs/person/weights/best.pt가 있어야 합니다.
+"""
+import numpy as np
+
+from common_track import FPS, FRAMES, PEOPLE, VIDEO, synth, synth_detections
+
+CONF = 0.5
+
+
+def main() -> None:
+    frames, truth = synth()
+    dets = synth_detections()
+    per_frame = [int((d[:, 4] >= CONF).sum()) for d in dets]
+    truth_per_frame = [len(t) for t in truth]
+    print(f"합성 영상: {len(frames)}장면, {FPS}fps({FRAMES / FPS:.0f}초), 실제로 지나간 사람 {PEOPLE}명 → {VIDEO.name}")
+    print(f"장면마다 보이는 사람(정답): 평균 {np.mean(truth_per_frame):.1f}명, 가장 많을 때 {max(truth_per_frame)}명")
+    print(f"장면마다 찾은 사람(conf {CONF}): 평균 {np.mean(per_frame):.1f}명, 가장 많을 때 {max(per_frame)}명")
+    print()
+    print("'몇 명이 지나갔나'를 검출만으로 답해 보기")
+    print(f"  장면마다 찾은 수를 모두 더하기 : {sum(per_frame)}명")
+    print(f"  가장 많이 찾은 장면의 수       : {max(per_frame)}명")
+    print(f"  정답                          : {PEOPLE}명")
+    print()
+    print("같은 사람이 장면마다 다시 세지고, 한 장면에는 모두가 함께 나오지 않는다.")
+    print("'이 상자와 저 상자가 같은 사람인가'를 이어 주는 일, 그것이 추적이다.")
+
+
+if __name__ == "__main__":
+    main()</code></pre></div>
+      </details>
+
+      <details class="card flat" style="padding:0;overflow:hidden;margin-top:12px">
+        <summary style="cursor:pointer;padding:15px 20px;font-weight:850;list-style:none">📄 lab13_iou_track.py 전체 보기 (44줄) <span style="color:var(--coral)">+</span></summary>
+        <div style="padding:0 14px 14px"><pre class="code"><code>"""12차시: IoU로 이어 붙이는 가장 단순한 추적기.
+
+앞 장면의 상자와 이번 장면의 상자 가운데 IoU 합이 가장 큰 짝(헝가리안 방법)을 같은 사람으로 본다.
+짝이 없는 검출은 새 사람, 짝이 없는 트랙은 그 자리에서 버린다(기억 없음).
+"""
+import numpy as np
+
+from common_track import evaluate, iou_matrix, match, run_tracker, show, synth, synth_detections
+
+CONF = 0.5        # 이 점수 이상의 검출만 쓴다
+MIN_IOU = 0.3     # 이보다 덜 겹치면 같은 사람으로 보지 않는다
+
+
+class IoUTracker:
+    def __init__(self, conf: float = CONF, min_iou: float = MIN_IOU):
+        self.conf, self.min_iou = conf, min_iou
+        self.tracks: dict[int, np.ndarray] = {}     # ID → 마지막 상자
+        self.next_id = 1
+
+    def update(self, dets: np.ndarray) -> list[tuple[int, list[float]]]:
+        boxes = dets[dets[:, 4] >= self.conf, :4]
+        ids = list(self.tracks)
+        old = np.array([self.tracks[i] for i in ids]).reshape(-1, 4)
+        pairs, _, new = match(iou_matrix(old, boxes), self.min_iou)
+        self.tracks = {ids[r]: boxes[c] for r, c in pairs}          # 짝이 없는 트랙은 사라진다
+        for c in new:
+            self.tracks[self.next_id] = boxes[c]
+            self.next_id += 1
+        return [(i, b.tolist()) for i, b in self.tracks.items()]
+
+
+def main() -> None:
+    _, truth = synth()
+    dets = synth_detections()
+    tracks = run_tracker(IoUTracker(), dets)
+    show("IoU 추적", evaluate(truth, tracks))
+    for min_iou in (0.1, 0.5):
+        show(f"  IoU≥{min_iou}", evaluate(truth, run_tracker(IoUTracker(min_iou=min_iou), dets)))
+    lost = sum(1 for a, b in zip(tracks, tracks[1:]) for i, _ in a if i not in {j for j, _ in b})
+    print(f"\n트랙이 끊긴 횟수 {lost}번. 한 장면만 못 찾아도, 기둥 뒤로 잠깐 가려져도 그 사람은 새 ID로 다시 태어난다.")
+
+
+if __name__ == "__main__":
+    main()</code></pre></div>
+      </details>
+
+      <details class="card flat" style="padding:0;overflow:hidden;margin-top:12px">
+        <summary style="cursor:pointer;padding:15px 20px;font-weight:850;list-style:none">📄 lab14_sort.py 전체 보기 (97줄) <span style="color:var(--coral)">+</span></summary>
+        <div style="padding:0 14px 14px"><pre class="code"><code>"""13차시: 예측하며 따라가기(SORT).
+
+트랙마다 칼만 필터로 '다음 장면에 어디쯤 있을지'를 예측하고, 예측한 상자와 검출을 IoU로 짝짓는다.
+짝을 못 찾은 트랙은 바로 버리지 않고 max_age 장면 동안 예측만으로 기다린다.
+그래서 잠깐 놓치거나 기둥 뒤로 가려져도 같은 ID로 다시 잡을 수 있다.
+"""
+import numpy as np
+
+from common_track import evaluate, iou_matrix, match, run_tracker, show, synth, synth_detections
+
+CONF = 0.5
+MIN_IOU = 0.3
+MAX_AGE = 15      # 이만큼(1.5초) 못 찾으면 트랙을 버린다
+MIN_HITS = 2      # 이만큼 잇달아 찾아야 내보낸다(한 번 튄 헛검출은 ID를 받지 않게)
+
+
+def to_state(box: np.ndarray) -> np.ndarray:
+    """xyxy 상자 → (가운데 x, 가운데 y, 너비, 높이)."""
+    return np.array([(box[0] + box[2]) / 2, (box[1] + box[3]) / 2, box[2] - box[0], box[3] - box[1]])
+
+
+def to_box(state: np.ndarray) -> np.ndarray:
+    cx, cy, w, h = state[:4]
+    return np.array([cx - w / 2, cy - h / 2, cx + w / 2, cy + h / 2])
+
+
+class KalmanTrack:
+    """상태 8칸: 가운데·크기 4칸과 그 빠르기 4칸. 한 장면에 빠르기만큼 움직인다고 본다(등속)."""
+
+    F = np.eye(8) + np.eye(8, k=4)                 # 다음 위치 = 지금 위치 + 빠르기
+    H = np.eye(4, 8)                               # 재는 것은 위치·크기 4칸뿐
+    Q = np.diag([1, 1, 1, 1, 0.5, 0.5, 0.1, 0.1]) ** 2     # 움직임이 등속에서 벗어나는 정도
+    R = np.diag([4, 4, 8, 8]) ** 2                         # 검출 상자의 흔들림(픽셀)
+
+    def __init__(self, box: np.ndarray, track_id: int):
+        self.x = np.r_[to_state(box), np.zeros(4)]
+        self.P = np.diag([10, 10, 10, 10, 100, 100, 100, 100]) ** 2.0
+        self.id, self.hits, self.missed = track_id, 1, 0
+
+    def predict(self) -> np.ndarray:
+        self.x = self.F @ self.x
+        self.P = self.F @ self.P @ self.F.T + self.Q
+        self.missed += 1
+        return to_box(self.x)
+
+    def correct(self, box: np.ndarray) -> None:
+        y = to_state(box) - self.H @ self.x
+        S = self.H @ self.P @ self.H.T + self.R
+        K = self.P @ self.H.T @ np.linalg.inv(S)
+        self.x = self.x + K @ y
+        self.P = (np.eye(8) - K @ self.H) @ self.P
+        self.hits += 1
+        self.missed = 0
+
+    def box(self) -> np.ndarray:
+        return to_box(self.x)
+
+
+class SortTracker:
+    def __init__(self, conf: float = CONF, min_iou: float = MIN_IOU, max_age: int = MAX_AGE, min_hits: int = MIN_HITS):
+        self.conf, self.min_iou, self.max_age, self.min_hits = conf, min_iou, max_age, min_hits
+        self.tracks: list[KalmanTrack] = []
+        self.next_id = 1
+
+    def new_track(self, box: np.ndarray) -> None:
+        self.tracks.append(KalmanTrack(box, self.next_id))
+        self.next_id += 1
+
+    def output(self) -> list[tuple[int, list[float]]]:
+        """이번 장면에 검출로 확인했고, 충분히 여러 번 본 트랙만 내보낸다."""
+        return [(t.id, t.box().tolist()) for t in self.tracks if t.missed == 0 and t.hits >= self.min_hits]
+
+    def update(self, dets: np.ndarray) -> list[tuple[int, list[float]]]:
+        boxes = dets[dets[:, 4] >= self.conf, :4]
+        predicted = np.array([t.predict() for t in self.tracks]).reshape(-1, 4)
+        pairs, _, new = match(iou_matrix(predicted, boxes), self.min_iou)
+        for r, c in pairs:
+            self.tracks[r].correct(boxes[c])
+        for c in new:
+            self.new_track(boxes[c])
+        self.tracks = [t for t in self.tracks if t.missed <= self.max_age]
+        return self.output()
+
+
+def main() -> None:
+    from lab13_iou_track import IoUTracker
+    _, truth = synth()
+    dets = synth_detections()
+    show("IoU 추적", evaluate(truth, run_tracker(IoUTracker(), dets)))
+    show("SORT", evaluate(truth, run_tracker(SortTracker(), dets)))
+    print()
+    for max_age in (0, 5, 15, 30):
+        show(f"  max_age {max_age}", evaluate(truth, run_tracker(SortTracker(max_age=max_age), dets)))
+
+
+if __name__ == "__main__":
+    main()</code></pre></div>
+      </details>
+
+      <details class="card flat" style="padding:0;overflow:hidden;margin-top:12px">
+        <summary style="cursor:pointer;padding:15px 20px;font-weight:850;list-style:none">📄 lab15_bytetrack.py 전체 보기 (63줄) <span style="color:var(--coral)">+</span></summary>
+        <div style="padding:0 14px 14px"><pre class="code"><code>"""14차시: ByteTrack, 그리고 세 추적기 견주기.
+
+SORT는 점수가 낮은 검출을 버린다. 그런데 반쯤 가려진 사람은 점수가 낮게 나온다.
+ByteTrack은 짝짓기를 두 번 한다.
+  1차: 점수 높은 검출(≥ HIGH)과 모든 트랙
+  2차: 1차에서 짝을 못 찾은 트랙과 점수 낮은 검출(LOW ~ HIGH)
+새 트랙은 점수가 아주 높은 검출(≥ NEW)에서만 만든다. 낮은 검출은 '이미 따라가던 사람'을 잇는 데만 쓴다.
+"""
+import numpy as np
+
+from common_track import evaluate, iou_matrix, match, run_tracker, show, synth, synth_detections
+from lab13_iou_track import IoUTracker
+from lab14_sort import SortTracker
+
+HIGH = 0.5
+LOW = 0.1
+NEW = 0.6
+FIRST_IOU = 0.2       # 1차 짝짓기(원 논문의 match_thresh 0.8 = 1 - IoU)
+SECOND_IOU = 0.5      # 2차 짝짓기는 더 엄격하게(낮은 검출에는 헛검출이 섞여 있다)
+MAX_AGE = 30          # 원 논문의 track_buffer(30장면)
+
+
+class ByteTracker(SortTracker):
+    def __init__(self, high: float = HIGH, low: float = LOW, new: float = NEW, max_age: int = MAX_AGE):
+        super().__init__(conf=high, max_age=max_age, min_hits=1)
+        self.high, self.low, self.new = high, low, new
+
+    def update(self, dets: np.ndarray) -> list[tuple[int, list[float]]]:
+        high = dets[dets[:, 4] >= self.high]
+        low = dets[(dets[:, 4] >= self.low) & (dets[:, 4] < self.high)]
+        predicted = np.array([t.predict() for t in self.tracks]).reshape(-1, 4)
+        pairs, left_tracks, left_high = match(iou_matrix(predicted, high[:, :4]), FIRST_IOU)
+        for r, c in pairs:
+            self.tracks[r].correct(high[c, :4])
+        # 2차: 바로 앞 장면까지 보던 트랙만(오래 잃은 트랙에 낮은 검출을 붙이면 엉뚱한 사람과 이어진다)
+        recent = [r for r in left_tracks if self.tracks[r].missed == 1]
+        pairs2, _, _ = match(iou_matrix(predicted[recent], low[:, :4]), SECOND_IOU)
+        for r, c in pairs2:
+            self.tracks[recent[r]].correct(low[c, :4])
+        for c in left_high:
+            if high[c, 4] >= self.new:
+                self.new_track(high[c, :4])
+        self.tracks = [t for t in self.tracks if t.missed <= self.max_age]
+        return self.output()
+
+
+def main() -> None:
+    _, truth = synth()
+    dets = synth_detections()
+    results = {
+        "IoU 추적": evaluate(truth, run_tracker(IoUTracker(), dets)),
+        "SORT": evaluate(truth, run_tracker(SortTracker(), dets)),
+        "ByteTrack": evaluate(truth, run_tracker(ByteTracker(), dets)),
+    }
+    for name, m in results.items():
+        show(name, m)
+    print()
+    print("2차 짝짓기를 끄면(낮은 검출을 쓰지 않으면)")
+    show("  LOW=HIGH", evaluate(truth, run_tracker(ByteTracker(low=HIGH), dets)))
+
+
+if __name__ == "__main__":
+    main()</code></pre></div>
+      </details>
+
+      <details class="card flat" style="padding:0;overflow:hidden;margin-top:12px">
+        <summary style="cursor:pointer;padding:15px 20px;font-weight:850;list-style:none">📄 lab16_line_count.py 전체 보기 (94줄) <span style="color:var(--coral)">+</span></summary>
+        <div style="padding:0 14px 14px"><pre class="code"><code>"""15차시: 선 넘기 세기, 그리고 내 영상.
+
+트랙 ID가 있으면 '세로선을 왼쪽→오른쪽으로 몇 명, 오른쪽→왼쪽으로 몇 명 넘었나'를 셀 수 있다.
+합성 영상에서는 정답과 견주고, ByteTrack 결과를 그려 runs/track/tracked.mp4로 남긴다.
+
+내 영상에 돌리기(조별로 휴대폰이나 Jetson 카메라로 찍은 사람이 지나가는 영상):
+    uv run --no-project --with ultralytics --with scipy python lab16_line_count.py 내영상.mp4
+"""
+import sys
+from pathlib import Path
+
+import cv2
+import numpy as np
+
+from common_track import (OUT, PEOPLE, detect_frames, evaluate, load_video, run_tracker, save_video, show, synth,
+                          synth_detections)
+from lab13_iou_track import IoUTracker
+from lab14_sort import SortTracker
+from lab15_bytetrack import ByteTracker
+
+LINE_X = 200              # 합성 영상의 세는 선(기둥 왼쪽)
+COLORS = [(230, 25, 75), (60, 180, 75), (255, 225, 25), (0, 130, 200), (245, 130, 48), (145, 30, 180),
+          (70, 240, 240), (240, 50, 230), (210, 245, 60), (250, 190, 212), (0, 128, 128), (170, 110, 40)]
+
+
+def count_crossings(frames_of_items: list[list[tuple[int, list[float]]]], line_x: float) -> tuple[int, int]:
+    """ID마다 마지막으로 본 가운데 x를 기억해 두고, 선의 반대편에서 다시 보이면 한 번 넘은 것으로 센다."""
+    last_x: dict[int, float] = {}
+    right, left = 0, 0
+    for items in frames_of_items:
+        for track_id, box in items:
+            cx = (box[0] + box[2]) / 2
+            if track_id in last_x:
+                if last_x[track_id] < line_x <= cx:
+                    right += 1
+                elif cx < line_x <= last_x[track_id]:
+                    left += 1
+            last_x[track_id] = cx
+    return right, left
+
+
+def draw(frames: list[np.ndarray], tracks: list[list[tuple[int, list[float]]]], line_x: int) -> list[np.ndarray]:
+    """상자와 ID, 세는 선, 지금까지 넘은 수를 그린다."""
+    drawn, seen = [], []
+    for frame, items in zip(frames, tracks):
+        seen.append(items)
+        right, left = count_crossings(seen, line_x)
+        canvas = frame.copy()
+        cv2.line(canvas, (line_x, 0), (line_x, canvas.shape[0]), (255, 255, 255), 2)
+        for track_id, box in items:
+            x1, y1, x2, y2 = (int(v) for v in box)
+            color = COLORS[track_id % len(COLORS)]
+            cv2.rectangle(canvas, (x1, y1), (x2, y2), color, 2)
+            cv2.putText(canvas, str(track_id), (x1, max(y1 - 4, 12)), cv2.FONT_HERSHEY_SIMPLEX, 0.6, color, 2)
+        cv2.putText(canvas, f"-> {right}   <- {left}", (10, 24), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
+        drawn.append(canvas)
+    return drawn
+
+
+def synthetic() -> None:
+    frames, truth = synth()
+    dets = synth_detections()
+    truth_items = [[(g["id"], g["box"]) for g in boxes] for boxes in truth]
+    right, left = count_crossings(truth_items, LINE_X)
+    print(f"선 x={LINE_X}을 넘은 사람(정답): → {right}명, ← {left}명 (영상 속 사람 {PEOPLE}명)")
+    for name, tracker in [("IoU 추적", IoUTracker()), ("SORT", SortTracker()), ("ByteTrack", ByteTracker())]:
+        tracks = run_tracker(tracker, dets)
+        r, l = count_crossings(tracks, LINE_X)
+        print(f"  {name:<10} → {r}명, ← {l}명   ", end="")
+        show("", evaluate(truth, tracks))
+    tracks = run_tracker(ByteTracker(), dets)
+    save_video(draw(frames, tracks, LINE_X), OUT / "tracked.mp4")
+    print(f"\nByteTrack 결과 영상: {OUT / 'tracked.mp4'}")
+
+
+def my_video(path: Path) -> None:
+    frames, fps = load_video(path)
+    line_x = frames[0].shape[1] // 2
+    print(f"{path.name}: {len(frames)}장면, {fps:.0f}fps, 크기 {frames[0].shape[1]}x{frames[0].shape[0]}, 선 x={line_x}(가운데)")
+    dets = detect_frames(frames)
+    tracks = run_tracker(ByteTracker(), dets)
+    right, left = count_crossings(tracks, line_x)
+    ids = {i for items in tracks for i, _ in items}
+    print(f"ByteTrack: 만든 ID {len(ids)}개, 선을 → {right}명, ← {left}명 넘음")
+    out = OUT / f"{path.stem}_tracked.mp4"
+    save_video(draw(frames, tracks, line_x), out, fps=int(round(fps)))
+    print(f"결과 영상: {out}  (정답이 없으니 눈으로 세어 견줘 보세요)")
+
+
+if __name__ == "__main__":
+    if len(sys.argv) > 1:
+        my_video(Path(sys.argv[1]))
+    else:
+        synthetic()</code></pre></div>
+      </details>
+
+      <details class="card flat" style="padding:0;overflow:hidden;margin-top:12px">
+        <summary style="cursor:pointer;padding:15px 20px;font-weight:850;list-style:none">📄 lab20_reid.py 전체 보기 (131줄) <span style="color:var(--coral)">+</span></summary>
+        <div style="padding:0 14px 14px"><pre class="code"><code>"""19차시: 겉모습으로 같은 사람 찾기(수요일 추적 영상에 DINOv3 더하기).
+
+3일차 추적기는 위치와 움직임만 봤다. 그래서 기둥 뒤로 오래 가렸다 나온 사람은 새 ID를 받았다.
+1) 알아보기: 사람마다 처음 몇 장면의 모습을 '사진첩'에 넣고, 나중 장면의 모습이 사진첩의 누구와 가장
+   닮았는지 맞혀 본다. DINOv3 특징과 색 히스토그램(HSV)을 견준다. 나중 모습을 그늘에 들어간 것처럼
+   어둡고 푸르게 바꿔서도 해 본다(조명이 바뀌는 실제 현장).
+2) 이어 붙이기: 추적기가 끊어 놓은 트랙 가운데, 앞 트랙이 끝나고 GAP 장면 안에, 걷던 빠르기로 갔을
+   자리 근처(REACH 픽셀)에서 시작한 트랙이 겉모습도 THRESHOLD보다 닮았으면 같은 ID로 잇는다.
+lab5(best.pt)와 3일차 공통 코드(common_track.py, lab14·15)를 씁니다.
+"""
+import cv2
+import numpy as np
+from PIL import Image
+
+from common_dino import load
+from common_dino import embed as dino_embed
+from common_track import PEOPLE, WIDTH, evaluate, run_tracker, show, synth, synth_detections
+from lab14_sort import SortTracker
+from lab15_bytetrack import ByteTracker
+
+GALLERY_SHOTS = 3        # 사진첩에 넣는 처음 모습 수(사람마다)
+LATER = 30               # 사진첩 마지막 장면에서 이만큼 지난 뒤의 모습을 질문으로
+QUERIES = 10             # 사람마다 질문 수
+GAP = 50                 # 앞 트랙이 끝나고 이 장면 수 안에 시작한 트랙만 이을 후보
+REACH = 60               # 걷던 대로 갔을 자리에서 이만큼(픽셀) 안에서 시작해야 후보
+THRESHOLD = 0.8          # 트랙 평균 특징의 코사인 유사도가 이보다 크면 잇는다
+CROPS_PER_TRACK = 10
+PERSON_SIZE = (256, 128) # 사람 조각은 세로로 길게(정사각으로 늘이지 않는다)
+SHADE = (0.55, 0.6, 0.75)    # 그늘: R·G·B에 곱하는 값(어둡고 푸르게)
+
+
+def crop(frame: np.ndarray, box: list[float]) -> Image.Image:
+    x1, y1, x2, y2 = (int(round(v)) for v in box)
+    h, w = frame.shape[:2]
+    x1, y1, x2, y2 = max(x1, 0), max(y1, 0), min(x2, w), min(y2, h)
+    return Image.fromarray(frame[y1:max(y2, y1 + 2), x1:max(x2, x1 + 2)])
+
+
+def hsv_hist(images: list[Image.Image]) -> np.ndarray:
+    """견줄 거리: 색상·채도·명도 8×8×8칸 히스토그램(길이 1로 맞춤)."""
+    out = []
+    for im in images:
+        hsv = cv2.cvtColor(np.asarray(im), cv2.COLOR_RGB2HSV)
+        h = cv2.calcHist([hsv], [0, 1, 2], None, [8, 8, 8], [0, 180, 0, 256, 0, 256]).ravel()
+        out.append(np.sqrt(h / max(h.sum(), 1)))
+    return np.array(out)
+
+
+def shade(image: Image.Image) -> Image.Image:
+    a = np.asarray(image, np.float32) * np.array(SHADE)
+    return Image.fromarray(np.clip(a, 0, 255).astype(np.uint8))
+
+
+def recognition(frames: list[np.ndarray], truth: list[list[dict]], embed, shaded: bool = False) -> tuple[float, int]:
+    inside = lambda g: g["box"][0] > 2 and g["box"][2] < WIDTH - 2      # 화면 가장자리에 잘린 모습은 뺀다
+    gallery, gallery_id, queries, query_id = [], [], [], []
+    for pid in range(1, PEOPLE + 1):
+        seen = [(t, g) for t, boxes in enumerate(truth) for g in boxes if g["id"] == pid and inside(g)]
+        clear = [(t, g) for t, g in seen if g["visible"] >= 0.8] or seen   # 늘 가려진 사람은 보이는 대로
+        if not clear:
+            continue
+        first = clear[:GALLERY_SHOTS]
+        later = [(t, g) for t, g in seen if t >= first[-1][0] + LATER and g["visible"] >= 0.5]  # 없으면 질문도 없다
+        for t, g in first:
+            gallery.append(crop(frames[t], g["box"]))
+            gallery_id.append(pid)
+        for t, g in later[::max(1, len(later) // QUERIES)][:QUERIES]:
+            view = crop(frames[t], g["box"])
+            queries.append(shade(view) if shaded else view)
+            query_id.append(pid)
+    gal, qry = embed(gallery), embed(queries)
+    guess = np.array(gallery_id)[np.argmax(qry @ gal.T, axis=1)]
+    return float((guess == np.array(query_id)).mean()), len(queries)
+
+
+def stitch(frames: list[np.ndarray], tracks: list[list[tuple[int, list[float]]]], embed) -> list[list[tuple[int, list[float]]]]:
+    """끊긴 트랙을 겉모습으로 잇는다. 시작이 이른 트랙부터, 가장 닮은 '이미 끝난' 트랙에 붙인다."""
+    spans: dict[int, list[tuple[int, list[float]]]] = {}
+    for t, items in enumerate(tracks):
+        for tid, box in items:
+            spans.setdefault(tid, []).append((t, box))
+    feature = {}
+    for tid, seen in spans.items():
+        picks = seen[::max(1, len(seen) // CROPS_PER_TRACK)][:CROPS_PER_TRACK]
+        f = embed([crop(frames[t], b) for t, b in picks]).mean(axis=0)
+        feature[tid] = f / np.linalg.norm(f)
+    start = {tid: s[0][0] for tid, s in spans.items()}
+    end = {tid: s[-1][0] for tid, s in spans.items()}
+    cx = lambda box: (box[0] + box[2]) / 2
+
+    def reachable(old: int, new: int) -> bool:
+        """앞 트랙이 마지막 빠르기로 계속 걸었다면 새 트랙이 시작한 자리 근처(REACH 픽셀 안)에 와 있어야 한다."""
+        seen = spans[old]
+        back = seen[-min(len(seen), 5)]
+        speed = (cx(seen[-1][1]) - cx(back[1])) / max(seen[-1][0] - back[0], 1)
+        guess = cx(seen[-1][1]) + speed * (start[new] - end[old])
+        return abs(cx(spans[new][0][1]) - guess) < REACH
+
+    root, taken = {tid: tid for tid in spans}, set()
+    for tid in sorted(spans, key=start.get):
+        candidates = [p for p in spans if p not in taken and end[p] < start[tid] <= end[p] + GAP and reachable(p, tid)]
+        if not candidates:
+            continue
+        best = max(candidates, key=lambda p: feature[p] @ feature[tid])
+        if feature[best] @ feature[tid] > THRESHOLD:
+            root[tid] = root[best]
+            taken.add(best)
+    return [[(root[tid], box) for tid, box in items] for items in tracks]
+
+
+def main() -> None:
+    frames, truth = synth()
+    dets = synth_detections()
+    model = load()
+    dino = lambda ims: dino_embed(model, ims, size=PERSON_SIZE)
+    print("1) 알아보기: 처음 모습(사람마다 3장)으로 만든 사진첩에서 나중 모습의 주인 맞히기")
+    print(f"   {'':<8}{'그대로':>8}{'그늘에서':>10}   (아무렇게나 찍으면 {1 / PEOPLE:.3f})")
+    for name, fn in [("DINOv3", dino), ("색", hsv_hist)]:
+        same, n = recognition(frames, truth, fn)
+        dark, _ = recognition(frames, truth, fn, shaded=True)
+        print(f"   {name:<8}{same:>8.3f}{dark:>10.3f}   (질문 {n}장)")
+    print(f"\n2) 이어 붙이기(앞 트랙이 끝나고 {GAP}장면 안, 걷던 자리에서 {REACH}픽셀 안, 코사인 유사도 > {THRESHOLD})")
+    for name, tracker in [("SORT", SortTracker()), ("ByteTrack", ByteTracker())]:
+        tracks = run_tracker(tracker, dets)
+        show(name, evaluate(truth, tracks))
+        show("  +DINOv3", evaluate(truth, stitch(frames, tracks, dino)))
+        show("  +색", evaluate(truth, stitch(frames, tracks, hsv_hist)))
+
+
+if __name__ == "__main__":
+    main()</code></pre></div>
+      </details>
+    </section>
+
+    <section id="quiz" data-lecture-section="quiz">
+      <div class="sec-head">
+        <p class="sec-kicker">14 · 퀴즈</p>
+        <h2>추적의 진짜 이해</h2>
+        <p class="sub">14문제. MOTA·IDF1·매칭·ByteTrack을 골고루.</p>
+      </div>
+      <div class="panel" id="quizPanel">
+        <div class="quiz-top">
+          <span class="quiz-count" id="quizCount">1 / 14</span>
+          <div class="quiz-track" aria-hidden="true"><i id="quizBar"></i></div>
+          <span class="quiz-count" id="quizScore">0점</span>
+        </div>
+        <div id="quizBody">
+          <p class="quiz-q" id="quizQ">문제를 불러오는 중…</p>
+          <div class="quiz-opts" id="quizOpts"></div>
+          <div class="quiz-fb" id="quizFb" aria-live="polite"></div>
+          <div class="quiz-actions"><button class="btn primary" type="button" id="quizNext" hidden>다음 문제 →</button></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="glossary" data-lecture-section="glossary">
+      <div class="sec-head">
+        <p class="sec-kicker">15 · 용어 사전</p>
+        <h2>막히면 여기로</h2>
+      </div>
+      <details class="acc"><summary>MOTA</summary><div class="body"><p>CLEAR MOT 지표. <code>1 - (놓침 + 헛짚음 + ID 바뀜) / 정답 수</code>. 1에 가까울수록 좋고 음수도 가능.</p></div></details>
+      <details class="acc"><summary>IDF1</summary><div class="body"><p>영상 전체에서 정답과 트랙을 1:1로 묶었을 때, 그 짝이 맞힌 장면 비율. <code>2·IDTP/(정답수+트랙수)</code>.</p></div></details>
+      <details class="acc"><summary>ID 바뀜 (ID switch)</summary><div class="body"><p>같은 정답 사람이 이전 장면과 다른 트랙 ID로 짝지어지는 것. 추적기가 이름표를 바꾼 횟수.</p></div></details>
+      <details class="acc"><summary>헝가리안 매칭</summary><div class="body"><p>행/열마다 하나씩 짝지어 합을 최대(또는 최소)로 만드는 조합. <code>scipy.optimize.linear_sum_assignment</code>.</p></div></details>
+      <details class="acc"><summary>칼만 필터</summary><div class="body"><p>예측(predict)과 보정(correct)을 반복하며 상태를 추정하는 필터. SORT는 위치·크기와 그 속도를 8칸 상태로 둡니다.</p></div></details>
+      <details class="acc"><summary>SORT</summary><div class="body"><p>Simple Online and Realtime Tracking. 칼만 예측 + IoU 매칭. max_age로 잠깐 기다리고 min_hits로 헛검출을 거릅니다.</p></div></details>
+      <details class="acc"><summary>ByteTrack</summary><div class="body"><p>고득점 1차 매칭 + 저득점 2차 매칭. 낮은 점수의 가려진 사람을 이어 붙이는 데 강합니다.</p></div></details>
+      <details class="acc"><summary>트랙 (track)</summary><div class="body"><p>같은 사람이라고 이어 붙인 검출의 시간적 묶음. 고유 ID를 가집니다.</p></div></details>
+      <details class="acc"><summary>스프라이트 (sprite)</summary><div class="body"><p>마스크로 오려 낸 사람 RGBA 조각. 합성 영상에 붙입니다.</p></div></details>
+      <details class="acc"><summary>owner mask</summary><div class="body"><p>픽셀마다 “맨 앞에 보이는 사람 ID”를 적은 배열. 기둥에 가린 부분은 0으로 지웁니다.</p></div></details>
+      <details class="acc"><summary>선 넘기 (line crossing)</summary><div class="body"><p>트랙 중심 x가 세로선을 어느 방향으로 통과했는지 세는 것. ID별 마지막 x만 기억하면 됩니다.</p></div></details>
+      <details class="acc"><summary>ReID</summary><div class="body"><p>Re-identification. 겉모습 특징으로 같은 사람을 다시 찾는 것. lab20은 DINOv3와 HSV 히스토그램을 비교합니다.</p></div></details>
+      <details class="acc"><summary>gallery / query</summary><div class="body"><p>gallery는 “아는 사람 사진첩”, query는 “누구인지 물어볼 사진”. 특징 내적으로 가장 가까운 gallery를 고릅니다.</p></div></details>
+      <details class="acc"><summary>코사인 유사도</summary><div class="body"><p>두 벡터의 방향이 얼마나 같은지. <code>embed</code>가 길이를 1로 맞추면 내적과 같습니다. DINO 특징 비교에 사용.</p></div></details>
+    </section>
+
+    <section id="cheatsheet" data-lecture-section="cheatsheet">
+      <div class="sec-head">
+        <p class="sec-kicker">16 · 치트시트</p>
+        <h2>한 장 요약</h2>
+      </div>
+      <div class="scroll-x">
+        <table class="table">
+          <thead><tr><th>하고 싶은 것</th><th>한 줄</th></tr></thead>
+          <tbody>
+            <tr><td>합성 영상 + 정답</td><td><code>frames, truth = synth()</code></td></tr>
+            <tr><td>검출 캐시</td><td><code>dets = synth_detections()</code></td></tr>
+            <tr><td>IoU 표</td><td><code>iou_matrix(old, new)</code></td></tr>
+            <tr><td>최적 짝</td><td><code>match(iou, min_iou)</code> → pairs, left_rows, left_cols</td></tr>
+            <tr><td>추적 실행</td><td><code>tracks = run_tracker(tracker, dets)</code></td></tr>
+            <tr><td>채점</td><td><code>evaluate(truth, tracks)</code> → MOTA/IDF1</td></tr>
+            <tr><td>선 넘기</td><td><code>count_crossings(tracks, line_x)</code></td></tr>
+            <tr><td>ReID</td><td><code>qry @ gal.T</code> → argmax</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="scroll-x" style="margin-top:14px">
+        <table class="table">
+          <thead><tr><th>함정</th><th>기억할 말</th></tr></thead>
+          <tbody>
+            <tr><td>검출 캐시</td><td>모델/상수를 바꾸면 <code>dets.npz</code> 삭제.</td></tr>
+            <tr><td>mp4 재사용</td><td>검출은 원본 프레임에. mp4는 사본.</td></tr>
+            <tr><td>IoU 추적</td><td>한 장면 놓치면 새 ID. 기억 없음.</td></tr>
+            <tr><td>SORT</td><td>max_age만큼 예측으로 기다림. min_hits로 헛검출 거름.</td></tr>
+            <tr><td>ByteTrack</td><td>2차는 <code>missed==1</code> 트랙만, IoU 더 엄격.</td></tr>
+            <tr><td>선 넘기</td><td>ID가 바뀌면 같은 사람이 두 번 세짐.</td></tr>
+            <tr><td>MOTA</td><td>음수 가능. IDF1과 함께 보기.</td></tr>
+            <tr><td>ReID stitch</td><td>GAP·REACH·THRESHOLD 세 조건.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="card flat" style="margin-top:18px;background:var(--teal-soft);border-color:#BFDDD5">
+        <h4>마지막 한 문장</h4>
+        <p style="margin:0"><strong>“common_track은 정답 ID가 있는 합성 영상과 검출 캐시를 만들어, IoU·헝가리안·MOTA·IDF1이라는 공통 잣대로 IoU 추적기·SORT·ByteTrack·ReID를 공정하게 비교하게 해 주는 상자다.”</strong></p>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<footer class="footer">
+  <div class="footer-inner">
+    <p><strong>common_track.py — 추적 공용 상자.</strong> YOLO 특강 3일차 공통 모듈 해설. 원문: src/lab/yolo_labs/common_track.py.</p>
+    <p>이 페이지는 학습용 비공식 해설입니다. lab12~16·20과 common_track.py는 ultralytics(AGPL-3.0)를 사용합니다. lab20은 DINOv3 가중치(Meta DINOv3 License)도 사용합니다.</p>
+    <div class="footer-links">
+      <a href="#hero">맨 위로</a>
+      <a href="#fullcode">전체 코드</a>
+      <a href="#quiz">퀴즈 다시 풀기</a>
+    </div>
+  </div>
+</footer>
+
+<script>
+window.QUIZ_QUESTIONS = [
+  { q: '합성 영상의 길이와 등장 인원은?', o: ['160장면 · 10fps · 12명', '100장면 · 30fps · 10명', '64장면 · 5fps · 20명', '300장면 · 25fps · 12명'], a: 0, why: 'FRAMES=160, FPS=10 → 16초. PEOPLE=12명.' },
+  { q: 'SEED=11은 어디에 쓰이나요?', o: ['YOLO 학습 가중치', '배경 잡음·사람 배치·시작 시각', 'NMS 임계값', 'ONNX 양자화'], a: 1, why: 'np.random.default_rng(SEED)로 배경·걷는 계획을 고정합니다. 합성 영상이 매번 같아집니다.' },
+  { q: '검출을 mp4가 아니라 원본 프레임에 하는 이유는?', o: ['mp4가 더 느려서', 'mp4는 손실 압축이라 픽셀이 조금 달라져서', 'mp4에는 사람이 없어서', 'GPU를 못 써서'], a: 1, why: '압축 오차가 검출을 흔들 수 있습니다. mp4는 눈으로 보는 사본입니다.' },
+  { q: 'dets.npz에는 무엇이 들어 있나요?', o: ['장면별 (N,5) 검출', '정답 ID와 상자', '모델 가중치', '영상 프레임'], a: 0, why: 'f0…f159 키로 장면별 xyxy+score를 저장합니다. 정답은 truth.json.' },
+  { q: 'DET_CONF=0.05처럼 낮게 두는 이유는?', o: ['속도를 높이려고', 'ByteTrack의 2차 매칭이 낮은 점수를 쓰기 때문', 'mAP를 올리려고', 'NMS를 끄려고'], a: 1, why: '높은 점수만 저장하면 ByteTrack이 가려진 사람을 이어 붙일 재료가 없습니다.' },
+  { q: 'match()가 min_iou 필터를 할당 후에 하는 이유는?', o: ['속도가 빨라서', '먼저 버리면 전체 합 최적 조합이 달라질 수 있어서', '메모리를 아끼려고', 'IoU가 음수라서'], a: 1, why: '헝가리안은 전체 합을 최대화합니다. 후보를 미리 자르면 최적이 깨질 수 있어요.' },
+  { q: 'MOTA 공식은?', o: ['1 - (놓침+헛짚음+ID바뀜)/정답수', '정답수/(놓침+헛짚음)', 'ID바뀜/트랙수', '2·IDTP/(정답+트랙)'], a: 0, why: 'CLEAR MOT의 종합 점수. 1에 가까울수록 좋고 음수도 가능합니다.' },
+  { q: 'ID 바뀜(ID switch)은?', o: ['새 트랙이 생길 때마다', '같은 정답이 이전과 다른 트랙 ID로 짝지어질 때', '트랙이 삭제될 때', 'IoU가 0.5일 때'], a: 1, why: '추적기가 같은 사람에게 다른 이름표를 붙인 횟수입니다.' },
+  { q: 'IDF1이 보는 것은?', o: ['장면별 검출 정확도', '영상 전체에서 정답-트랙이 얼마나 오래 붙어 있었나', '속도', 'NMS 품질'], a: 1, why: '겹친 장면 수를 점수로 두고 1:1로 묶어 지속성을 평가합니다.' },
+  { q: 'IoUTracker에서 짝을 못 찾은 트랙은?', o: ['max_age 동안 기다린다', '그 자리에서 삭제된다', '새 ID를 받는다', '칼만 예측으로 살아난다'], a: 1, why: '기억이 없는 가장 단순한 추적기. 한 장면만 놓쳐도 새 ID로 다시 태어납니다.' },
+  { q: 'SORT의 max_age=15는?', o: ['15번 검출되면 출력', '15장면(1.5초) 동안 예측만으로 기다림', 'IoU 문턱 0.15', '트랙을 15개까지 허용'], a: 1, why: '검출이 없어도 15장면까지 예측으로 버팁니다. min_hits=2는 헛검출을 거릅니다.' },
+  { q: 'ByteTrack 2차 매칭의 조건은?', o: ['모든 트랙 vs 모든 저득점', 'missed==1인 최근 트랙 vs 저득점, IoU 0.5', '새 트랙 vs 고득점', '트랙 vs 정답'], a: 1, why: '바로 앞 장면까지 보던 트랙만, 더 엄격한 IoU로 저득점 검출과 잇습니다.' },
+  { q: 'count_crossings가 ID마다 기억하는 것은?', o: ['마지막 중심 x', '마지막 상자 크기', '등장 장면 수', 'IoU 평균'], a: 0, why: '이전 x와 현재 x가 선의 반대편이면 한 번 넘은 것으로 셉니다.' },
+  { q: 'lab20의 stitch가 트랙을 잇는 세 조건은?', o: ['GAP·REACH·THRESHOLD', 'CONF·IOU·NMS', 'FPS·FRAMES·SEED', 'HIGH·LOW·NEW'], a: 0, why: '앞 트랙 종료 후 GAP 장면 안, 걷던 자리에서 REACH 픽셀 안, 특징 코사인 > THRESHOLD.' }
+];
+
+</script>
+<script>
+
+(function () {
+  'use strict';
+
+  var $ = function (s, r) { return (r || document).querySelector(s); };
+  var $$ = function (s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); };
+
+  /* ---------------- Python syntax highlighter (display only) ---------------- */
+  function esc(s) {
+    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+  function enc(n) {
+    var s = '';
+    do { s += String.fromCharCode(97 + (n % 26)); n = Math.floor(n / 26); } while (n > 0);
+    return s;
+  }
+  function dec(s) {
+    var n = 0;
+    for (var i = s.length - 1; i >= 0; i--) n = n * 26 + (s.charCodeAt(i) - 97);
+    return n;
+  }
+  var KEYWORDS = 'def|return|if|else|elif|for|while|in|not|and|or|is|import|from|as|with|lambda|None|True|False|try|except|raise|yield|pass|break|continue';
+
+  function highlightBlock(raw) {
+    var inDoc = false;
+    return raw.replace(/\r\n/g, '\n').split('\n').map(function (line) {
+      var t = line.trim();
+      if (inDoc) {
+        if (t.slice(-3) === '"""' || t.slice(-3) === "'''") inDoc = false;
+        return '<span class="tok-doc">' + esc(line) + '</span>';
+      }
+      if (t.slice(0, 3) === '"""' || t.slice(0, 3) === "'''") {
+        var q = t.slice(0, 3);
+        if (!(t.length > 3 && t.slice(-3) === q)) inDoc = true;
+        return '<span class="tok-doc">' + esc(line) + '</span>';
+      }
+      var cut = -1, quote = null;
+      for (var i = 0; i < line.length; i++) {
+        var ch = line[i];
+        if (quote) {
+          if (ch === '\\') { i++; continue; }
+          if (ch === quote) quote = null;
+        } else if (ch === '"' || ch === "'") {
+          quote = ch;
+        } else if (ch === '#') {
+          cut = i; break;
+        }
+      }
+      var code = cut >= 0 ? line.slice(0, cut) : line;
+      var comment = cut >= 0 ? line.slice(cut) : '';
+      var strings = [];
+      code = esc(code);
+      code = code.replace(/"[^"]*"|'[^']*'/g, function (m) {
+        strings.push(m);
+        return '\u0003' + enc(strings.length - 1) + '\u0003';
+      });
+      code = code.replace(/^(\s*)(@[\w.]+)/, function (m, a, b) { return a + '<span class="tok-dec">' + b + '</span>'; });
+      code = code.replace(new RegExp('\\b(' + KEYWORDS + ')\\b', 'g'), '<span class="tok-k">$1</span>');
+      code = code.replace(/(<span class="tok-k">def<\/span>\s+)([A-Za-z_]\w*)/g, '$1<span class="tok-fn">$2</span>');
+      code = code.replace(/\b(\d+(?:\.\d+)?)\b/g, '<span class="tok-n">$1</span>');
+      code = code.replace(/\u0003([a-z]+)\u0003/g, function (m, idx) {
+        return '<span class="tok-str">' + strings[dec(idx)] + '</span>';
+      });
+      if (comment) comment = '<span class="tok-com">' + esc(comment) + '</span>';
+      return code + comment;
+    }).join('\n');
+  }
+
+  $$('pre.code code').forEach(function (el) {
+    var raw = el.textContent.replace(/\r\n/g, '\n');
+    el.dataset.raw = raw;
+    el.innerHTML = highlightBlock(raw);
+  });
+
+  /* ---------------- full code: gutter + copy ---------------- */
+  var fullCode = $('#fullCodeSource');
+  if (fullCode) {
+    var raw = fullCode.dataset.raw || fullCode.textContent;
+    var lines = raw.split('\n');
+    var gutter = $('#codeGutter');
+    if (gutter) {
+      gutter.textContent = lines.map(function (_, i) { return String(i + 1); }).join('\n');
+    }
+    var copyBtn = $('#copyCode');
+    if (copyBtn) {
+      copyBtn.addEventListener('click', function (e) {
+        e.preventDefault(); e.stopPropagation();
+        var done = function () {
+          copyBtn.textContent = '복사됨 ✓';
+          setTimeout(function () { copyBtn.textContent = '복사'; }, 1500);
+        };
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(raw).then(done, function () { fallbackCopy(raw, done); });
+        } else {
+          fallbackCopy(raw, done);
+        }
+      });
+    }
+  }
+  function fallbackCopy(text, done) {
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand('copy'); done(); } catch (err) { /* ignore */ }
+    document.body.removeChild(ta);
+  }
+
+  /* ---------------- progress + active TOC ---------------- */
+  var progress = $('#progress');
+  var sections = $$('[data-lecture-section]');
+  var tocLinks = $$('#toc a');
+  var ticking = false;
+  function updateScroll() {
+    ticking = false;
+    var max = document.documentElement.scrollHeight - window.innerHeight;
+    if (progress) progress.style.width = (max > 0 ? Math.min(100, Math.max(0, window.scrollY / max * 100)) : 0) + '%';
+    var current = sections[0];
+    for (var i = 0; i < sections.length; i++) {
+      if (sections[i].getBoundingClientRect().top <= 130) current = sections[i];
+    }
+    if (current) {
+      tocLinks.forEach(function (a) {
+        a.classList.toggle('active', a.getAttribute('href') === '#' + current.id);
+      });
+    }
+  }
+  function onScroll() {
+    if (!ticking) { ticking = true; window.requestAnimationFrame(updateScroll); }
+  }
+  window.addEventListener('scroll', onScroll, { passive: true });
+  window.addEventListener('resize', onScroll);
+  updateScroll();
+
+  /* ---------------- device picker ---------------- */
+  var hasCuda = $('#hasCuda'), hasMps = $('#hasMps');
+  if (hasCuda && hasMps) {
+    var deviceOut = $('#deviceOut'), deviceWhy = $('#deviceWhy');
+    var updateDevice = function () {
+      var d = hasCuda.checked ? 'cuda' : (hasMps.checked ? 'mps' : 'cpu');
+      deviceOut.textContent = 'torch.device("' + d + '")';
+      if (hasCuda.checked) {
+        deviceWhy.textContent = hasMps.checked
+          ? 'CUDA가 먼저라서 첫 번째 if에서 바로 반환합니다. MPS 체크박스가 켜져 있어도 무시돼요.'
+          : 'CUDA가 있으니 첫 번째 if에서 바로 반환합니다. MPS는 검사하지 않아요.';
+      } else if (hasMps.checked) {
+        deviceWhy.textContent = 'CUDA가 없으니 MPS를 검사하고, 있으니 "mps"를 반환합니다.';
+      } else {
+        deviceWhy.textContent = '둘 다 없으니 CPU로 떨어집니다. 느리지만 어디서든 돌아가요.';
+      }
+    };
+    hasCuda.addEventListener('change', updateDevice);
+    hasMps.addEventListener('change', updateDevice);
+    updateDevice();
+  }
+
+  /* ---------------- pretrained conceptual viz ---------------- */
+  var viz = $('#pretrainedViz');
+  if (viz) {
+    var structured = [16, 22, 30, 26, 38, 34, 46, 42, 54, 50, 60, 56, 68, 64, 74, 70, 80, 76, 84, 80, 88, 84, 92, 88];
+    var noisy = [42, 18, 74, 28, 56, 88, 34, 66, 22, 80, 48, 30, 70, 52, 90, 26, 62, 38, 76, 44, 58, 84, 32, 68];
+    var bars = [];
+    for (var bi = 0; bi < 24; bi++) {
+      var bar = document.createElement('i');
+      bar.style.width = '12px';
+      bar.style.height = structured[bi] + 'px';
+      bar.style.background = 'var(--teal)';
+      bar.style.opacity = '0.8';
+      viz.appendChild(bar);
+      bars.push(bar);
+    }
+    var btnP = $('#btnPretrained'), btnR = $('#btnRandom'), cap = $('#pretrainedCaption');
+    var setMode = function (pretrained) {
+      bars.forEach(function (bar, i) {
+        var h = pretrained ? structured[i] : noisy[i];
+        bar.style.height = h + 'px';
+        bar.style.background = pretrained ? 'var(--teal)' : 'var(--coral)';
+      });
+      btnP.classList.toggle('primary', pretrained);
+      btnR.classList.toggle('primary', !pretrained);
+      btnP.setAttribute('aria-pressed', String(pretrained));
+      btnR.setAttribute('aria-pressed', String(!pretrained));
+      cap.textContent = pretrained
+        ? '학습된 특징은 사진의 구조를 따라 규칙적으로 변합니다. (개념을 위한 그림이지 실제 수치가 아니에요.)'
+        : '무작위 가중치는 같은 구조라도 규칙성이 없습니다. “학습이 얼마나 큰 차이를 만드는가”의 기준선이에요.';
+    };
+    btnP.addEventListener('click', function () { setMode(true); });
+    btnR.addEventListener('click', function () { setMode(false); });
+  }
+
+  /* ---------------- normalization calculator ---------------- */
+  var normX = $('#normX');
+  if (normX) {
+    var channels = [
+      { name: 'R', mean: 0.485, std: 0.229 },
+      { name: 'G', mean: 0.456, std: 0.224 },
+      { name: 'B', mean: 0.406, std: 0.225 }
+    ];
+    var chSel = $('#normChannel');
+    var meanSlider = $('#normMean'), stdSlider = $('#normStd');
+    var xVal = $('#normXVal'), meanVal = $('#normMeanVal'), stdVal = $('#normStdVal');
+    var nfX = $('#nfX'), nfM = $('#nfM'), nfS = $('#nfS'), nfOut = $('#nfOut');
+    var swatch = $('#normSwatch');
+    var outs = [$('#normR'), $('#normG'), $('#normB')];
+
+    var fmt = function (v) { return (v >= 0 ? '+' : '') + v.toFixed(3); };
+    var calcNorm = function () {
+      var x = Number(normX.value);
+      var ch = Number(chSel.value);
+      channels[ch].mean = Number(meanSlider.value);
+      channels[ch].std = Number(stdSlider.value);
+      xVal.textContent = String(x);
+      meanVal.textContent = channels[ch].mean.toFixed(3);
+      stdVal.textContent = channels[ch].std.toFixed(3);
+      var xn = x / 255;
+      nfX.textContent = xn.toFixed(3);
+      nfM.textContent = channels[ch].mean.toFixed(3);
+      nfS.textContent = channels[ch].std.toFixed(3);
+      nfOut.textContent = fmt((xn - channels[ch].mean) / channels[ch].std);
+      channels.forEach(function (c, i) {
+        if (outs[i]) outs[i].textContent = fmt((xn - c.mean) / c.std);
+      });
+      swatch.style.background = 'rgb(' + x + ',' + x + ',' + x + ')';
+      swatch.textContent = 'x = ' + x;
+      swatch.style.color = x > 150 ? '#211D18' : '#fff';
+      swatch.style.textShadow = x > 150 ? 'none' : '0 1px 3px rgba(0,0,0,.55)';
+    };
+    var syncChannel = function () {
+      var ch = Number(chSel.value);
+      meanSlider.value = channels[ch].mean;
+      stdSlider.value = channels[ch].std;
+      calcNorm();
+    };
+    normX.addEventListener('input', calcNorm);
+    meanSlider.addEventListener('input', calcNorm);
+    stdSlider.addEventListener('input', calcNorm);
+    chSel.addEventListener('change', syncChannel);
+    syncChannel();
+  }
+
+  /* ---------------- cosine playground ---------------- */
+  var cv = $('#cosCanvas');
+  if (cv) {
+    var ctx = cv.getContext('2d');
+    var box = cv.parentElement;
+    var state = { a: { x: 1.12, y: 0.52 }, b: { x: 0.38, y: 1.02 }, norm: false, drag: null };
+    var W = 600, H = 320, DPR = 1;
+    var cosDot = $('#cosDot'), cosNa = $('#cosNa'), cosNb = $('#cosNb'), cosCos = $('#cosCos'), cosAngle = $('#cosAngle'), cosNote = $('#cosNote'), cosNorm = $('#cosNorm');
+
+    var unit = function (v) {
+      var n = Math.hypot(v.x, v.y) || 1;
+      return { x: v.x / n, y: v.y / n };
+    };
+    var shown = function (v) { return state.norm ? unit(v) : v; };
+    var scaleFor = function () { return Math.min(W, H) * 0.3; };
+    var cx = function () { return W / 2; };
+    var cy = function () { return H / 2; };
+    var toScreen = function (v) { var s = scaleFor(); return { x: cx() + v.x * s, y: cy() - v.y * s }; };
+    var toData = function (p) { var s = scaleFor(); return { x: (p.x - cx()) / s, y: (cy() - p.y) / s }; };
+    var clampVec = function (v) {
+      var n = Math.hypot(v.x, v.y);
+      var max = 1.55, min = 0.22;
+      if (n < 1e-6) return { x: min, y: 0 };
+      if (n > max) { v.x = v.x / n * max; v.y = v.y / n * max; }
+      if (n < min) { v.x = v.x / n * min; v.y = v.y / n * min; }
+      if (state.norm) return unit(v);
+      return v;
+    };
+    var normUnit = function (v) { var n = Math.hypot(v.x, v.y) || 1; return { x: v.x / n, y: v.y / n }; };
+
+    function draw() {
+      ctx.clearRect(0, 0, W, H);
+      var s = scaleFor(), x0 = cx(), y0 = cy();
+      ctx.save();
+      ctx.strokeStyle = 'rgba(33,29,24,.08)';
+      ctx.lineWidth = 1;
+      for (var g = -1.5; g <= 1.5; g += 0.5) {
+        ctx.beginPath(); ctx.moveTo(x0 + g * s, 0); ctx.lineTo(x0 + g * s, H); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(0, y0 + g * s); ctx.lineTo(W, y0 + g * s); ctx.stroke();
+      }
+      ctx.strokeStyle = 'rgba(33,29,24,.28)';
+      ctx.beginPath(); ctx.moveTo(0, y0); ctx.lineTo(W, y0); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(x0, 0); ctx.lineTo(x0, H); ctx.stroke();
+      ctx.setLineDash([5, 5]);
+      ctx.strokeStyle = 'rgba(31,122,108,.45)';
+      ctx.beginPath(); ctx.arc(x0, y0, s, 0, Math.PI * 2); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = 'rgba(33,29,24,.5)';
+      ctx.font = '600 11px ui-monospace, monospace';
+      ctx.fillText('1', x0 + s + 5, y0 - 6);
+      ctx.fillText('−1', x0 - s - 22, y0 - 6);
+      ctx.restore();
+
+      var a = shown(state.a), b = shown(state.b);
+      var pa = toScreen(a), pb = toScreen(b);
+      var drawVec = function (p, color, label) {
+        ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = 3.2;
+        ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(p.x, p.y); ctx.stroke();
+        var ang = Math.atan2(p.y - y0, p.x - x0);
+        ctx.beginPath();
+        ctx.moveTo(p.x, p.y);
+        ctx.lineTo(p.x - 12 * Math.cos(ang - 0.42), p.y - 12 * Math.sin(ang - 0.42));
+        ctx.lineTo(p.x - 12 * Math.cos(ang + 0.42), p.y - 12 * Math.sin(ang + 0.42));
+        ctx.closePath(); ctx.fill();
+        ctx.beginPath(); ctx.arc(p.x, p.y, 6, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#FFFDF8'; ctx.beginPath(); ctx.arc(p.x, p.y, 2.4, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = color;
+        ctx.font = '800 13px "Pretendard Variable", Pretendard, sans-serif';
+        ctx.fillText(label, p.x + 9, p.y - 9);
+      };
+      drawVec(pa, '#E4572E', 'a');
+      drawVec(pb, '#1F7A6C', 'b');
+
+      var a1 = Math.atan2(pa.y - y0, pa.x - x0);
+      var a2 = Math.atan2(pb.y - y0, pb.x - x0);
+      var delta = a2 - a1;
+      while (delta > Math.PI) delta -= Math.PI * 2;
+      while (delta < -Math.PI) delta += Math.PI * 2;
+      if (Math.abs(delta) > 0.04) {
+        ctx.strokeStyle = 'rgba(233,180,76,.9)'; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(x0, y0, 48, a1, a1 + delta, delta < 0); ctx.stroke();
+        ctx.fillStyle = '#8A6412';
+        ctx.font = '700 11px ui-monospace, monospace';
+        var mid = a1 + delta / 2;
+        ctx.fillText('θ', x0 + Math.cos(mid) * 60 - 4, y0 + Math.sin(mid) * 60 + 4);
+      }
+    }
+
+    function readout() {
+      var a = shown(state.a), b = shown(state.b);
+      var dot = a.x * b.x + a.y * b.y;
+      var na = Math.hypot(a.x, a.y), nb = Math.hypot(b.x, b.y);
+      var cos = dot / ((na * nb) || 1);
+      var angle = Math.acos(Math.max(-1, Math.min(1, cos))) * 180 / Math.PI;
+      cosDot.textContent = dot.toFixed(3);
+      cosNa.textContent = na.toFixed(3);
+      cosNb.textContent = nb.toFixed(3);
+      cosCos.textContent = cos.toFixed(3);
+      cosAngle.textContent = angle.toFixed(1) + '°';
+      cosNote.textContent = state.norm
+        ? '길이를 1로 맞췄으니 내적과 코사인이 같습니다. 두 숫자가 같은지 보세요.'
+        : '정규화가 꺼져 있으면 내적과 코사인은 다릅니다. 길이가 다르기 때문이에요.';
+    }
+
+    function refresh() { draw(); readout(); }
+
+    function resize() {
+      var rect = box.getBoundingClientRect();
+      DPR = Math.min(window.devicePixelRatio || 1, 2);
+      W = Math.max(280, Math.round(box.clientWidth || rect.width));
+      H = 320;
+      cv.width = W * DPR; cv.height = H * DPR;
+      cv.style.width = W + 'px'; cv.style.height = H + 'px';
+      ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+      refresh();
+    }
+
+    var localPos = function (e) {
+      var r = cv.getBoundingClientRect();
+      return { x: e.clientX - r.left, y: e.clientY - r.top };
+    };
+    cv.addEventListener('pointerdown', function (e) {
+      var p = localPos(e);
+      var pa = toScreen(shown(state.a)), pb = toScreen(shown(state.b));
+      var da = Math.hypot(p.x - pa.x, p.y - pa.y);
+      var db = Math.hypot(p.x - pb.x, p.y - pb.y);
+      if (Math.min(da, db) < 34) {
+        state.drag = da <= db ? 'a' : 'b';
+        cv.setPointerCapture(e.pointerId);
+        cv.style.cursor = 'grabbing';
+        e.preventDefault();
+      }
+    });
+    cv.addEventListener('pointermove', function (e) {
+      if (!state.drag) return;
+      var v = toData(localPos(e));
+      state[state.drag] = clampVec(v);
+      refresh();
+    });
+    var endDrag = function (e) {
+      if (!state.drag) return;
+      state.drag = null;
+      cv.style.cursor = 'crosshair';
+      try { cv.releasePointerCapture(e.pointerId); } catch (err) { /* ignore */ }
+    };
+    cv.addEventListener('pointerup', endDrag);
+    cv.addEventListener('pointercancel', endDrag);
+
+    cv.addEventListener('keydown', function (e) {
+      if (e.key.indexOf('Arrow') !== 0) return;
+      e.preventDefault();
+      var v = e.shiftKey ? state.b : state.a;
+      var step = e.altKey ? 0.02 : 0.1;
+      if (e.key === 'ArrowLeft') v.x -= step;
+      if (e.key === 'ArrowRight') v.x += step;
+      if (e.key === 'ArrowUp') v.y += step;
+      if (e.key === 'ArrowDown') v.y -= step;
+      state[e.shiftKey ? 'b' : 'a'] = clampVec(v);
+      refresh();
+    });
+
+    if (cosNorm) {
+      cosNorm.addEventListener('change', function () {
+        state.norm = cosNorm.checked;
+        if (state.norm) { state.a = normUnit(state.a); state.b = normUnit(state.b); }
+        refresh();
+      });
+    }
+
+    var presets = {
+      same: { a: { x: 1.15, y: 0.42 }, b: { x: 1.05, y: 0.38 } },
+      right: { a: { x: 1.12, y: 0 }, b: { x: 0, y: 1.12 } },
+      opposite: { a: { x: 1.1, y: 0.32 }, b: { x: -1.1, y: -0.32 } },
+      reset: { a: { x: 1.12, y: 0.52 }, b: { x: 0.38, y: 1.02 } }
+    };
+    $$('[data-preset]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var p = presets[btn.getAttribute('data-preset')];
+        if (!p) return;
+        state.a = { x: p.a.x, y: p.a.y };
+        state.b = { x: p.b.x, y: p.b.y };
+        if (state.norm) { state.a = normUnit(state.a); state.b = normUnit(state.b); }
+        refresh();
+      });
+    });
+
+    if (window.ResizeObserver) {
+      new ResizeObserver(resize).observe(box);
+    } else {
+      window.addEventListener('resize', resize);
+    }
+    resize();
+  }
+
+  /* ---------------- batch calculator ---------------- */
+  var batchTotal = $('#batchTotal');
+  if (batchTotal) {
+    var batchSize = $('#batchSize');
+    var btVal = $('#batchTotalVal'), bsVal = $('#batchSizeVal');
+    var callsOut = $('#batchCalls'), lastOut = $('#batchLast'), maxOut = $('#batchMax');
+    var visual = $('#batchVisual');
+    var updateBatch = function () {
+      var n = Number(batchTotal.value), b = Number(batchSize.value);
+      var calls = Math.max(1, Math.ceil(n / b));
+      var last = n - (calls - 1) * b;
+      btVal.textContent = String(n);
+      bsVal.textContent = String(b);
+      callsOut.textContent = String(calls);
+      lastOut.textContent = last + '장';
+      maxOut.textContent = b + '장';
+      visual.innerHTML = '';
+      var show = Math.min(calls, 48);
+      for (var i = 0; i < show; i++) {
+        var bar = document.createElement('i');
+        if (i === show - 1) bar.style.background = 'var(--coral)';
+        if (i === show - 1 && show === 1) bar.style.width = '18px';
+        visual.appendChild(bar);
+      }
+      if (calls > 48) {
+        var more = document.createElement('span');
+        more.className = 'more';
+        more.textContent = '… +' + (calls - 48) + '번';
+        visual.appendChild(more);
+      }
+    };
+    batchTotal.addEventListener('input', updateBatch);
+    batchSize.addEventListener('input', updateBatch);
+    updateBatch();
+  }
+
+  /* ---------------- euroSAT split simulator ---------------- */
+  var splitRows = $('#splitRows');
+  if (splitRows) {
+    var classes = [
+      ['AnnualCrop', '연간 작물'], ['Forest', '숲'], ['HerbaceousVegetation', '초본 식생'],
+      ['Highway', '고속도로'], ['Industrial', '산업 지역'], ['Pasture', '목초지'],
+      ['PermanentCrop', '영구 작물'], ['Residential', '주거 지역'], ['River', '강'], ['SeaLake', '바다·호수']
+    ];
+    var rowRefs = [];
+    classes.forEach(function (c, ci) {
+      var row = document.createElement('div');
+      row.className = 'split-row';
+      var name = document.createElement('div');
+      name.className = 'split-name';
+      name.innerHTML = esc(c[0]) + '<em>' + esc(c[1]) + ' · class ' + ci + '</em>';
+      var blocks = document.createElement('div');
+      blocks.className = 'blocks';
+      for (var i = 0; i < 15; i++) {
+        var b = document.createElement('span');
+        b.className = 'block';
+        b.title = '사진 10장 묶음';
+        blocks.appendChild(b);
+      }
+      var count = document.createElement('div');
+      count.className = 'split-count';
+      count.textContent = '50 + 100';
+      row.appendChild(name); row.appendChild(blocks); row.appendChild(count);
+      splitRows.appendChild(row);
+      rowRefs.push({ row: row, blocks: blocks });
+    });
+
+    var applySplit = function (animate) {
+      rowRefs.forEach(function (ref, ri) {
+        ref.blocks.classList.toggle('shuffling', !!animate);
+        var bs = Array.prototype.slice.call(ref.blocks.children);
+        bs.forEach(function (b, i) {
+          b.className = 'block';
+          b.style.transitionDelay = animate ? (ri * 25 + i * 9) + 'ms' : '0ms';
+        });
+      });
+      setTimeout(function () {
+        rowRefs.forEach(function (ref) {
+          ref.blocks.classList.remove('shuffling');
+          var bs = Array.prototype.slice.call(ref.blocks.children);
+          bs.forEach(function (b, i) {
+            b.classList.add(i < 5 ? 'pool' : (i < 15 ? 'test' : 'unused'));
+          });
+        });
+      }, animate ? 340 : 0);
+    };
+    applySplit(false);
+
+    var splitResult = $('#splitResult');
+    $('#shuffleSplit').addEventListener('click', function () {
+      applySplit(true);
+      splitResult.className = 'split-result';
+      splitResult.textContent = '다시 섞었어요. pool 500장 / test 1,000장.';
+    });
+    $('#checkOverlap').addEventListener('click', function () {
+      var pool = new Set(), test = new Set();
+      var seed = 7;
+      var rnd = function () {
+        seed |= 0; seed = seed + 0x6D2B79F5 | 0;
+        var t = Math.imul(seed ^ seed >>> 15, 1 | seed);
+        t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+        return ((t ^ t >>> 14) >>> 0) / 4294967296;
+      };
+      for (var c = 0; c < 10; c++) {
+        var idx = [];
+        for (var i = 0; i < 3000; i++) idx.push(i);
+        for (var j = idx.length - 1; j > 0; j--) {
+          var k = Math.floor(rnd() * (j + 1));
+          var tmp = idx[j]; idx[j] = idx[k]; idx[k] = tmp;
+        }
+        idx.slice(0, 50).forEach(function (v) { pool.add(c + ':' + v); });
+        idx.slice(50, 150).forEach(function (v) { test.add(c + ':' + v); });
+      }
+      var overlap = 0;
+      test.forEach(function (key) { if (pool.has(key)) overlap++; });
+      splitResult.className = 'split-result ' + (overlap === 0 ? 'ok' : 'bad');
+      splitResult.textContent = overlap === 0
+        ? '겹친 사진: 0장 — pool과 test가 완전히 분리됐어요. (시드 7 시뮬레이션)'
+        : '겹친 사진: ' + overlap + '장 — 나눔 로직을 확인하세요!';
+    });
+  }
+
+  /* ---------------- cache simulator ---------------- */
+  var cacheName = $('#cacheName');
+  if (cacheName) {
+    var cacheModel = $('#cacheModel');
+    var cacheLog = $('#cacheLog');
+    var cacheWarn = $('#cacheWarn');
+    var cacheRun = $('#cacheRun');
+    var cacheReset = $('#cacheReset');
+    var cache = new Map();
+    var busy = false;
+    var cacheLines = [{ text: '[대기] 실행을 눌러 주세요.', cls: 'dim' }];
+
+    var renderLog = function () {
+      cacheLog.innerHTML = cacheLines.map(function (l) {
+        return '<span class="' + l.cls + '">' + esc(l.text) + '</span>';
+      }).join('\n');
+      cacheLog.scrollTop = cacheLog.scrollHeight;
+    };
+    var pushLog = function (text, cls) {
+      if (cacheLines.length === 1 && cacheLines[0].text.indexOf('[대기]') === 0) cacheLines.shift();
+      cacheLines.push({ text: text, cls: cls || '' });
+      if (cacheLines.length > 7) cacheLines.shift();
+      renderLog();
+    };
+
+    cacheRun.addEventListener('click', function () {
+      if (busy) return;
+      var name = cacheName.value.trim() || 'eurosat';
+      var model = cacheModel.value;
+      if (cache.has(name)) {
+        var prev = cache.get(name);
+        pushLog('[HIT] runs/dino/' + name + '.npy 를 불러왔어요.', 'hit');
+        if (prev !== model) {
+          cacheWarn.classList.add('show');
+          cacheWarn.innerHTML = '⚠️ <strong>오래된 캐시!</strong> 이 이름은 <code>' + esc(prev) + '</code>로 저장됐는데 지금은 <code>' + esc(model) + '</code>을(를) 선택했어요. 코드는 이름만 보고 불러오므로 <strong>옛 특징</strong>이 나옵니다. 이름을 바꾸거나 <code>.npy</code>를 지우세요.';
+        } else {
+          cacheWarn.classList.remove('show');
+          cacheWarn.textContent = '';
+        }
+        return;
+      }
+      busy = true; cacheRun.disabled = true;
+      cacheWarn.classList.remove('show'); cacheWarn.textContent = '';
+      pushLog('[MISS] ' + name + ' 계산 시작… (' + model + ')', 'miss');
+      setTimeout(function () {
+        cache.set(name, model);
+        pushLog('[SAVE] runs/dino/' + name + '.npy 저장 완료', 'hit');
+        busy = false; cacheRun.disabled = false;
+      }, 1100);
+    });
+
+    cacheReset.addEventListener('click', function () {
+      cache.clear();
+      cacheLines = [];
+      pushLog('[RESET] 캐시를 비웠어요. 다음 실행은 다시 계산합니다.', 'dim');
+      cacheWarn.classList.remove('show');
+      cacheWarn.textContent = '';
+    });
+    renderLog();
+  }
+
+  /* ---------------- patch grid ---------------- */
+  var patchGrid = $('#patchGrid');
+  if (patchGrid) {
+    var patchReadout = $('#patchReadout');
+    var prefixToggle = $('#prefixToggle');
+    var prefixStrip = $('#prefixStrip');
+    for (var r = 0; r < 14; r++) {
+      for (var c = 0; c < 14; c++) {
+        var b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'patch';
+        b.setAttribute('data-r', String(r));
+        b.setAttribute('data-c', String(c));
+        b.setAttribute('aria-label', '패치 행 ' + (r + 1) + ', 열 ' + (c + 1));
+        b.title = 'row ' + r + ', col ' + c;
+        patchGrid.appendChild(b);
+      }
+    }
+    var showPatch = function (el, selected) {
+      var rr = Number(el.getAttribute('data-r'));
+      var cc = Number(el.getAttribute('data-c'));
+      var flat = rr * 14 + cc;
+      patchReadout.innerHTML = '패치 <b>row ' + rr + ', col ' + cc + '</b> · flat index ' + flat +
+        '<br>이 칸의 특징: <b>384개 숫자</b>' + (selected ? ' · 선택됨' : '');
+      if (selected) {
+        $$('.patch.sel', patchGrid).forEach(function (x) { x.classList.remove('sel'); x.setAttribute('aria-pressed', 'false'); });
+        el.classList.add('sel');
+        el.setAttribute('aria-pressed', 'true');
+      }
+    };
+    patchGrid.addEventListener('pointerover', function (e) {
+      var t = e.target.closest('.patch');
+      if (t) showPatch(t, false);
+    });
+    patchGrid.addEventListener('focusin', function (e) {
+      var t = e.target.closest('.patch');
+      if (t) showPatch(t, false);
+    });
+    patchGrid.addEventListener('click', function (e) {
+      var t = e.target.closest('.patch');
+      if (t) showPatch(t, true);
+    });
+    if (prefixToggle) {
+      prefixToggle.addEventListener('change', function () {
+        prefixStrip.classList.toggle('show', prefixToggle.checked);
+        if (prefixToggle.checked) {
+          patchReadout.innerHTML = '앞쪽 <b>5개 토큰</b>(CLS 1 + 레지스터 4)을 잘라냅니다. 실제 개수는 <b>model.num_prefix_tokens</b>.';
+        } else {
+          patchReadout.innerHTML = '칸을 골라 보세요. 각 칸은 <b>384개 숫자</b>를 가집니다.';
+        }
+      });
+    }
+  }
+
+  /* ---------------- quiz ---------------- */
+  var questions = window.QUIZ_QUESTIONS || [];
+  var quizBody = $('#quizBody');
+  if (quizBody && questions.length) {
+    var qi = 0, score = 0, answered = false;
+    var quizQ = $('#quizQ'), quizOpts = $('#quizOpts'), quizFb = $('#quizFb'), quizNext = $('#quizNext');
+    var quizCount = $('#quizCount'), quizScore = $('#quizScore'), quizBar = $('#quizBar');
+
+    var renderQuestion = function () {
+      answered = false;
+      var q = questions[qi];
+      quizQ.textContent = q.q;
+      quizOpts.innerHTML = '';
+      quizFb.className = 'quiz-fb';
+      quizFb.innerHTML = '';
+      quizNext.hidden = true;
+      quizNext.textContent = qi === questions.length - 1 ? '결과 보기 →' : '다음 문제 →';
+      quizCount.textContent = (qi + 1) + ' / ' + questions.length;
+      quizScore.textContent = score + '점';
+      quizBar.style.width = ((qi) / questions.length * 100) + '%';
+      q.o.forEach(function (text, i) {
+        var b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'opt';
+        b.innerHTML = '<span class="ltr">' + 'ABCD'[i] + '</span><span>' + esc(text) + '</span>';
+        b.addEventListener('click', function () { choose(i, b); });
+        quizOpts.appendChild(b);
+      });
+    };
+
+    var choose = function (i, btn) {
+      if (answered) return;
+      answered = true;
+      var q = questions[qi];
+      var opts = $$('.opt', quizOpts);
+      opts.forEach(function (b, idx) {
+        b.disabled = true;
+        if (idx === q.a) b.classList.add('correct');
+        if (idx === i && i !== q.a) b.classList.add('wrong');
+      });
+      var ok = i === q.a;
+      if (ok) score++;
+      quizScore.textContent = score + '점';
+      quizFb.className = 'quiz-fb show ' + (ok ? 'ok' : 'no');
+      quizFb.innerHTML = '<b>' + (ok ? '정답! 🎉' : '아쉬워요. 정답은 ' + 'ABCD'[q.a] + '.') + '</b>' + esc(q.why);
+      quizNext.hidden = false;
+    };
+
+    var handleNext = function () {
+      if (!answered) return;
+      if (qi < questions.length - 1) {
+        qi++;
+        renderQuestion();
+      } else {
+        quizBar.style.width = '100%';
+        quizCount.textContent = questions.length + ' / ' + questions.length;
+        var pct = Math.round(score / questions.length * 100);
+        var msg = pct >= 90 ? '완벽에 가까워요. 이 파일의 주인이네요!' : pct >= 70 ? '좋아요. 함정 몇 개만 다시 보면 됩니다.' : pct >= 50 ? '절반은 잡았어요. 캐시와 패치 부분을 복습해 보세요.' : '괜찮아요. 위로 올라가 천천히 다시 읽으면 금방 이해됩니다.';
+        quizBody.innerHTML = '<div class="quiz-result"><div class="score">' + score + '<small> / ' + questions.length + '</small></div><p style="margin:10px 0 4px;font-weight:800">' + msg + '</p><p class="note">정답률 ' + pct + '%</p><button class="btn primary" type="button" id="quizRestart">다시 풀기</button></div>';
+        $('#quizRestart').addEventListener('click', function () {
+          qi = 0; score = 0;
+          quizBody.innerHTML = '<p class="quiz-q" id="quizQ"></p><div class="quiz-opts" id="quizOpts"></div><div class="quiz-fb" id="quizFb" aria-live="polite"></div><div class="quiz-actions"><button class="btn primary" type="button" id="quizNext" hidden>다음 문제 →</button></div>';
+          quizQ = $('#quizQ'); quizOpts = $('#quizOpts'); quizFb = $('#quizFb'); quizNext = $('#quizNext');
+          quizNext.addEventListener('click', handleNext);
+          renderQuestion();
+        });
+      }
+    };
+    quizNext.addEventListener('click', handleNext);
+
+    renderQuestion();
+  }
+})();
+
+</script>
+<script>
+(function () {
+  'use strict';
+
+  /* ---------------- IoU playground ---------------- */
+  var cv = document.getElementById('iouCanvas');
+  if (cv) {
+    var ctx = cv.getContext('2d');
+    var W = 640, H = 360, scale = 1, ox = 0, oy = 0, DPR = 1;
+    var A = { x: 90, y: 70, w: 190, h: 230 };
+    var B = { x: 160, y: 110, w: 190, h: 230 };
+    var drag = null;
+    var grab = { x: 0, y: 0 };
+
+    function resize() {
+      var box = cv.parentElement;
+      var rect = box.getBoundingClientRect();
+      DPR = Math.min(window.devicePixelRatio || 1, 2);
+      var cw = Math.max(280, Math.round(box.clientWidth || rect.width));
+      var ch = Math.round(cw * 9 / 16);
+      cv.width = cw * DPR; cv.height = ch * DPR;
+      cv.style.width = cw + 'px'; cv.style.height = ch + 'px';
+      ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+      scale = Math.min(cw / W, ch / H);
+      ox = (cw - W * scale) / 2;
+      oy = (ch - H * scale) / 2;
+      draw();
+    }
+    function rect(b) { return { x: ox + b.x * scale, y: oy + b.y * scale, w: b.w * scale, h: b.h * scale }; }
+    function iou(a, b) {
+      var x1 = Math.max(a.x, b.x), y1 = Math.max(a.y, b.y);
+      var x2 = Math.min(a.x + a.w, b.x + b.w), y2 = Math.min(a.y + a.h, b.y + b.h);
+      var iw = Math.max(0, x2 - x1), ih = Math.max(0, y2 - y1);
+      var inter = iw * ih;
+      var union = a.w * a.h + b.w * b.h - inter;
+      return { inter: inter, union: union, value: union > 0 ? inter / union : 0 };
+    }
+    function draw() {
+      var cw = cv.width / DPR, ch = cv.height / DPR;
+      ctx.clearRect(0, 0, cw, ch);
+      ctx.fillStyle = '#FBF7EF';
+      ctx.fillRect(0, 0, cw, ch);
+      ctx.strokeStyle = 'rgba(33,29,24,.07)';
+      for (var gx = 0; gx <= W; gx += 40) {
+        ctx.beginPath(); ctx.moveTo(ox + gx * scale, oy); ctx.lineTo(ox + gx * scale, oy + H * scale); ctx.stroke();
+      }
+      for (var gy = 0; gy <= H; gy += 40) {
+        ctx.beginPath(); ctx.moveTo(ox, oy + gy * scale); ctx.lineTo(ox + W * scale, oy + gy * scale); ctx.stroke();
+      }
+      var ra = rect(A), rb = rect(B);
+      var m = iou(A, B);
+      var ix1 = Math.max(A.x, B.x), iy1 = Math.max(A.y, B.y);
+      var ix2 = Math.min(A.x + A.w, B.x + B.w), iy2 = Math.min(A.y + A.h, B.y + B.h);
+      if (ix2 > ix1 && iy2 > iy1) {
+        ctx.fillStyle = 'rgba(233,180,76,.5)';
+        ctx.fillRect(ox + ix1 * scale, oy + iy1 * scale, (ix2 - ix1) * scale, (iy2 - iy1) * scale);
+      }
+      var drawBox = function (r, color, label) {
+        ctx.strokeStyle = color; ctx.lineWidth = 3;
+        ctx.strokeRect(r.x, r.y, r.w, r.h);
+        ctx.fillStyle = color;
+        ctx.font = '800 13px "Pretendard Variable", Pretendard, sans-serif';
+        ctx.fillText(label, r.x + 8, r.y + 20);
+      };
+      drawBox(ra, '#E4572E', 'A');
+      drawBox(rb, '#1F7A6C', 'B');
+      document.getElementById('iouInter').textContent = Math.round(m.inter) + ' px²';
+      document.getElementById('iouUnion').textContent = Math.round(m.union) + ' px²';
+      document.getElementById('iouValue').textContent = m.value.toFixed(3);
+      var verdict = document.getElementById('iouVerdict');
+      verdict.textContent = m.value >= 0.5 ? '같은 사람 후보 ✓' : '다른 사람';
+      verdict.style.color = m.value >= 0.5 ? 'var(--teal)' : 'var(--coral)';
+    }
+    function local(e) {
+      var r = cv.getBoundingClientRect();
+      return { x: (e.clientX - r.left - ox) / scale, y: (e.clientY - r.top - oy) / scale };
+    }
+    function inside(b, p) { return p.x >= b.x && p.x <= b.x + b.w && p.y >= b.y && p.y <= b.y + b.h; }
+    function clamp(b) {
+      b.x = Math.max(0, Math.min(W - b.w, b.x));
+      b.y = Math.max(0, Math.min(H - b.h, b.y));
+    }
+    cv.addEventListener('pointerdown', function (e) {
+      var p = local(e);
+      if (inside(B, p)) drag = B;
+      else if (inside(A, p)) drag = A;
+      else return;
+      grab.x = p.x - drag.x; grab.y = p.y - drag.y;
+      cv.setPointerCapture(e.pointerId);
+      cv.style.cursor = 'grabbing';
+      e.preventDefault();
+    });
+    cv.addEventListener('pointermove', function (e) {
+      if (!drag) return;
+      var p = local(e);
+      drag.x = p.x - grab.x;
+      drag.y = p.y - grab.y;
+      clamp(drag);
+      draw();
+    });
+    var end = function (e) {
+      if (!drag) return;
+      drag = null;
+      cv.style.cursor = 'crosshair';
+      try { cv.releasePointerCapture(e.pointerId); } catch (err) { /* ignore */ }
+    };
+    cv.addEventListener('pointerup', end);
+    cv.addEventListener('pointercancel', end);
+    var presets = {
+      overlap: { a: { x: 90, y: 70, w: 190, h: 230 }, b: { x: 120, y: 100, w: 190, h: 230 } },
+      apart: { a: { x: 30, y: 60, w: 170, h: 220 }, b: { x: 420, y: 110, w: 170, h: 220 } },
+      same: { a: { x: 160, y: 70, w: 190, h: 230 }, b: { x: 168, y: 76, w: 190, h: 230 } }
+    };
+    document.querySelectorAll('[data-iou]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var p = presets[btn.getAttribute('data-iou')];
+        if (!p) return;
+        A.x = p.a.x; A.y = p.a.y; A.w = p.a.w; A.h = p.a.h;
+        B.x = p.b.x; B.y = p.b.y; B.w = p.b.w; B.h = p.b.h;
+        draw();
+      });
+    });
+    if (window.ResizeObserver) new ResizeObserver(resize).observe(cv.parentElement);
+    else window.addEventListener('resize', resize);
+    resize();
+  }
+
+  /* ---------------- Hungarian vs greedy demo ---------------- */
+  var minEl = document.getElementById('matchMin');
+  if (minEl) {
+    var M = [
+      [0.90, 0.80, 0.00, 0.10],
+      [0.85, 0.10, 0.20, 0.00],
+      [0.05, 0.75, 0.70, 0.10],
+      [0.10, 0.05, 0.65, 0.60]
+    ];
+    var grid = document.getElementById('matchGrid');
+    var hOut = document.getElementById('hungarianOut');
+    var gOut = document.getElementById('greedyOut');
+
+    function perms(arr) {
+      if (arr.length <= 1) return [arr];
+      var out = [];
+      arr.forEach(function (v, i) {
+        var rest = arr.slice(0, i).concat(arr.slice(i + 1));
+        perms(rest).forEach(function (p) { out.push([v].concat(p)); });
+      });
+      return out;
+    }
+    function hungarian(min) {
+      var best = null, bestSum = -1;
+      perms([0, 1, 2, 3]).forEach(function (cols) {
+        var sum = 0;
+        for (var r = 0; r < 4; r++) sum += M[r][cols[r]];
+        if (sum > bestSum) { bestSum = sum; best = cols.slice(); }
+      });
+      var pairs = [], rowsUsed = {}, colsUsed = {};
+      for (var r = 0; r < 4; r++) {
+        var c = best[r];
+        if (M[r][c] >= min) { pairs.push([r, c]); rowsUsed[r] = 1; colsUsed[c] = 1; }
+      }
+      var leftR = [0, 1, 2, 3].filter(function (r) { return !rowsUsed[r]; });
+      var leftC = [0, 1, 2, 3].filter(function (c) { return !colsUsed[c]; });
+      return { pairs: pairs, leftR: leftR, leftC: leftC, sum: bestSum };
+    }
+    function greedy(min) {
+      var cells = [];
+      for (var r = 0; r < 4; r++) for (var c = 0; c < 4; c++) cells.push({ r: r, c: c, v: M[r][c] });
+      cells.sort(function (a, b) { return b.v - a.v; });
+      var rowsUsed = {}, colsUsed = {}, pairs = [];
+      cells.forEach(function (cell) {
+        if (cell.v < min || rowsUsed[cell.r] || colsUsed[cell.c]) return;
+        rowsUsed[cell.r] = 1; colsUsed[cell.c] = 1;
+        pairs.push([cell.r, cell.c]);
+      });
+      var leftR = [0, 1, 2, 3].filter(function (r) { return !rowsUsed[r]; });
+      var leftC = [0, 1, 2, 3].filter(function (c) { return !colsUsed[c]; });
+      return { pairs: pairs, leftR: leftR, leftC: leftC };
+    }
+    function fmtPairs(res) {
+      return res.pairs.map(function (p) { return 'O' + (p[0] + 1) + '↔N' + (p[1] + 1) + ' (' + M[p[0]][p[1]].toFixed(2) + ')'; }).join(', ') || '없음';
+    }
+    function render() {
+      var min = Number(minEl.value);
+      document.getElementById('matchMinVal').textContent = min.toFixed(2);
+      var h = hungarian(min), g = greedy(min);
+      var hset = {};
+      h.pairs.forEach(function (p) { hset[p[0] + ':' + p[1]] = 1; });
+      var gset = {};
+      g.pairs.forEach(function (p) { gset[p[0] + ':' + p[1]] = 1; });
+      var html = '<tr><th></th><th>N1</th><th>N2</th><th>N3</th><th>N4</th></tr>';
+      for (var r = 0; r < 4; r++) {
+        html += '<tr><th>O' + (r + 1) + '</th>';
+        for (var c = 0; c < 4; c++) {
+          var key = r + ':' + c;
+          var cls = '';
+          if (hset[key]) cls += ' hp';
+          if (gset[key]) cls += ' gp';
+          html += '<td class="' + cls + '">' + M[r][c].toFixed(1) + '</td>';
+        }
+        html += '</tr>';
+      }
+      grid.innerHTML = html;
+      hOut.innerHTML = '<p>' + fmtPairs(h) + '</p><p class="note">남은 트랙: ' + (h.leftR.map(function (r) { return 'O' + (r + 1); }).join(', ') || '없음') +
+        ' · 남은 검출: ' + (h.leftC.map(function (c) { return 'N' + (c + 1); }).join(', ') || '없음') + '</p>';
+      gOut.innerHTML = '<p>' + fmtPairs(g) + '</p><p class="note">남은 트랙: ' + (g.leftR.map(function (r) { return 'O' + (r + 1); }).join(', ') || '없음') +
+        ' · 남은 검출: ' + (g.leftC.map(function (c) { return 'N' + (c + 1); }).join(', ') || '없음') + '</p>';
+    }
+    minEl.addEventListener('input', render);
+    render();
+  }
+})();
+
+</script>
+</body>
+</html>

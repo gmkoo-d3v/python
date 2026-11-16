@@ -1,0 +1,11 @@
+[project]
+name = "robo"
+version = "0.1.0"
+description = "로봇기초 실습 코드 (vol3)"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "numpy==2.5.4",
+    "scipy==1.18.1",
+    "matplotlib==3.11.2",
+    "mujoco==3.17.0",
+]

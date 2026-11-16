@@ -1,0 +1,2228 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<title>common.py — 데이터를 읽고 8:2로 나누는 상자</title>
+<style>
+
+/* ============================================================
+   common_dino.py 인터랙티브 강의
+   단일 파일 · 외부 의존성 없음 · file:// 동작
+   ============================================================ */
+:root{
+  --paper:#FBF7EF;
+  --paper-2:#F4EDE0;
+  --paper-3:#EEE5D5;
+  --card:#FFFDF8;
+  --ink:#211D18;
+  --muted:#6E6457;
+  --line:#E4DAC8;
+  --line-strong:#D2C3A9;
+  --coral:#E4572E;
+  --coral-soft:#FBE3D9;
+  --teal:#1F7A6C;
+  --teal-soft:#DDEFEA;
+  --mustard:#E9B44C;
+  --mustard-soft:#FBF0D3;
+  --code:#191613;
+  --code-ink:#F3ECDF;
+  --code-muted:#A99E8C;
+  --radius:18px;
+  --radius-sm:12px;
+  --shadow:0 14px 34px rgba(48,38,22,.09), 0 2px 6px rgba(48,38,22,.05);
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+  --sans:"Pretendard Variable",Pretendard,-apple-system,BlinkMacSystemFont,"Segoe UI","Malgun Gothic","Apple SD Gothic Neo",sans-serif;
+}
+*,*::before,*::after{box-sizing:border-box}
+[hidden]{display:none!important}
+html{scroll-behavior:smooth}
+body{
+  margin:0;
+  color:var(--ink);
+  font-family:var(--sans);
+  font-size:16.5px;
+  line-height:1.72;
+  background-color:var(--paper);
+  background-image:radial-gradient(rgba(33,29,24,.055) 1px,transparent 1px);
+  background-size:22px 22px;
+  word-break:keep-all;
+  overflow-wrap:anywhere;
+}
+::selection{background:var(--mustard);color:var(--ink)}
+a{color:var(--teal);text-underline-offset:3px}
+a:hover{color:var(--coral)}
+code{font-family:var(--mono);font-size:.88em;background:var(--paper-2);border:1px solid var(--line);border-radius:6px;padding:.1em .35em}
+h1,h2,h3,h4{line-height:1.24;letter-spacing:-.022em;margin:0}
+p{margin:0 0 1em}
+ul,ol{margin:0 0 1em;padding-left:1.35em}
+li{margin:.28em 0}
+strong{font-weight:800}
+:focus-visible{outline:3px solid var(--coral);outline-offset:2px;border-radius:5px}
+.skip{position:fixed;left:12px;top:-60px;z-index:200;background:var(--ink);color:var(--paper);padding:10px 16px;border-radius:10px;text-decoration:none;transition:top .2s}
+.skip:focus{top:12px}
+/* ---------- top bar ---------- */
+.topbar{position:fixed;inset:0 0 auto 0;height:58px;z-index:100;background:rgba(251,247,239,.9);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
+.topbar-inner{max-width:1320px;height:100%;margin:0 auto;padding:0 22px;display:flex;align-items:center;justify-content:space-between;gap:14px}
+.brand{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--ink);font-weight:850;letter-spacing:-.02em;font-size:.95rem;min-width:0}
+.brand .logo{width:28px;height:28px;border-radius:9px;background:var(--ink);color:var(--paper);display:grid;place-items:center;font-size:14px;flex:none}
+.brand span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.topmeta{display:flex;align-items:center;gap:8px;font-size:.72rem;color:var(--muted);white-space:nowrap}
+.topmeta .chip{padding:4px 9px}
+#progress{position:absolute;left:0;bottom:-1px;height:3px;width:0;background:linear-gradient(90deg,var(--coral),var(--mustard));transition:width .08s linear}
+/* ---------- layout ---------- */
+.layout{max-width:1320px;margin:0 auto;padding:58px 24px 0;display:grid;grid-template-columns:236px minmax(0,1fr);gap:54px}
+.sidenav{position:sticky;top:82px;align-self:start;max-height:calc(100vh - 104px);overflow:auto;padding:18px 2px 30px;scrollbar-width:thin}
+.navlabel{font-size:.66rem;font-weight:850;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);padding:0 12px;margin:0 0 8px}
+.toc{display:grid;gap:2px}
+.toc a{display:flex;align-items:center;gap:9px;padding:6px 10px;border-radius:9px;color:var(--muted);text-decoration:none;font-size:.83rem;font-weight:650;line-height:1.35;transition:background .15s,color .15s}
+.toc a .num{font-size:.66rem;font-variant-numeric:tabular-nums;opacity:.55;width:1.5em;flex:none;font-weight:800}
+.toc a:hover{background:var(--paper-2);color:var(--ink)}
+.toc a.active{background:var(--ink);color:var(--paper)}
+.toc a.active .num{opacity:.75}
+.navfoot{margin-top:18px;padding:12px;border:1px dashed var(--line-strong);border-radius:12px;font-size:.72rem;color:var(--muted);line-height:1.55}
+main{max-width:900px;min-width:0;padding:26px 0 100px}
+section{scroll-margin-top:86px;margin:0 0 62px}
+.sec-head{margin:0 0 22px}
+.sec-kicker{display:flex;align-items:center;gap:8px;margin:0 0 8px;font-size:.68rem;font-weight:850;letter-spacing:.16em;text-transform:uppercase;color:var(--coral)}
+.sec-kicker::before{content:"";width:18px;height:2px;background:var(--coral);border-radius:2px}
+h2{font-size:clamp(1.55rem,3.1vw,2.1rem);font-weight:900}
+h3{font-size:1.12rem;font-weight:850;margin:0 0 10px}
+h4{font-size:.95rem;font-weight:800;margin:0 0 6px}
+.sub{color:var(--muted);font-size:.95rem;margin:8px 0 0;max-width:70ch}
+/* ---------- hero ---------- */
+.hero{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(260px,.75fr);gap:28px;align-items:stretch;margin-bottom:54px}
+.hero-copy{background:var(--card);border:1px solid var(--line);border-radius:26px;padding:34px 36px;box-shadow:var(--shadow);position:relative;overflow:hidden}
+.hero-copy::after{content:"";position:absolute;width:220px;height:220px;right:-100px;top:-110px;border-radius:50%;background:radial-gradient(circle,var(--mustard-soft),transparent 68%)}
+.eyebrow{display:inline-flex;align-items:center;gap:8px;font-size:.7rem;font-weight:850;letter-spacing:.1em;text-transform:uppercase;color:var(--teal);margin:0 0 14px}
+.eyebrow .dot{width:8px;height:8px;border-radius:50%;background:var(--coral);box-shadow:0 0 0 4px var(--coral-soft)}
+h1{font-size:clamp(2.15rem,5vw,3.4rem);font-weight:950;letter-spacing:-.045em;margin:0 0 16px}
+h1 mark{background:linear-gradient(180deg,transparent 56%,var(--mustard) 56%,var(--mustard) 92%,transparent 92%);color:inherit;padding:0 .05em}
+.lead{font-size:1.06rem;color:var(--ink);margin:0 0 10px;font-weight:650}
+.hero-desc{color:var(--muted);font-size:.93rem;margin:0 0 20px}
+.chips{display:flex;flex-wrap:wrap;gap:7px}
+.chip{display:inline-flex;align-items:center;gap:5px;padding:5px 10px;border-radius:999px;background:var(--paper-2);border:1px solid var(--line);font-size:.71rem;font-weight:750;color:var(--muted);white-space:nowrap}
+.chip.dark{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.chip.coral{background:var(--coral-soft);border-color:#F2C6B6;color:#9C3416}
+.chip.teal{background:var(--teal-soft);border-color:#BFDDD5;color:#155A4F}
+.hero-art{background:var(--ink);color:var(--paper);border-radius:26px;padding:24px 22px;position:relative;overflow:hidden;box-shadow:var(--shadow);display:flex;flex-direction:column;justify-content:center;min-height:330px}
+.hero-art::before{content:"";position:absolute;inset:0;background-image:radial-gradient(rgba(255,255,255,.09) 1px,transparent 1px);background-size:18px 18px;opacity:.7}
+.hero-art .doodle{position:absolute;opacity:.55;color:var(--mustard)}
+.flow{position:relative;z-index:1;display:grid;gap:4px}
+.flow-node{display:flex;align-items:center;gap:11px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.13);border-radius:13px;padding:9px 12px}
+.flow-node .ficon{font-size:1.1rem;width:30px;height:30px;display:grid;place-items:center;background:rgba(255,255,255,.09);border-radius:9px;flex:none}
+.flow-node b{font-size:.85rem;display:block;line-height:1.2}
+.flow-node small{display:block;font-family:var(--mono);font-size:.62rem;color:#C9BEAA;line-height:1.4}
+.flow-link{justify-self:center;color:var(--mustard);font-size:.85rem;line-height:1;padding:2px 0;opacity:.8}
+.hero-note{position:relative;z-index:1;margin:14px 0 0;font-size:.68rem;color:#BDB29E;line-height:1.5}
+/* ---------- generic cards ---------- */
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:22px 24px;box-shadow:var(--shadow)}
+.card + .card{margin-top:14px}
+.card.flat{box-shadow:none}
+.grid-2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.grid-3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.grid-4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.layer{border-radius:14px;padding:14px 16px;border:1px solid;margin:12px 0}
+.layer p:last-child{margin-bottom:0}
+.layer .tag{display:inline-flex;align-items:center;gap:6px;font-size:.64rem;font-weight:900;letter-spacing:.1em;text-transform:uppercase;margin-bottom:5px}
+.analogy{background:var(--mustard-soft);border-color:#EAD6A5}
+.analogy .tag{color:#8A6412}
+.precise{background:var(--teal-soft);border-color:#C2DFD7}
+.precise .tag{color:#155A4F}
+.gotcha{background:var(--coral-soft);border-color:#F2C6B6}
+.gotcha .tag{color:#9C3416}
+.callout{display:flex;gap:13px;padding:15px 17px;border-radius:14px;background:var(--paper-2);border:1px dashed var(--line-strong);margin:14px 0}
+.callout .ico{font-size:1.15rem;line-height:1.4;flex:none}
+.callout p:last-child{margin-bottom:0}
+.callout.warn{background:var(--coral-soft);border-color:#EAB6A3}
+.callout.ok{background:var(--teal-soft);border-color:#B8D8CE}
+.note{font-size:.8rem;color:var(--muted);line-height:1.6}
+.note strong{color:var(--ink)}
+.kicker-inline{font-size:.68rem;font-weight:900;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin:0 0 6px}
+/* ---------- table ---------- */
+.scroll-x{overflow-x:auto;border:1px solid var(--line);border-radius:14px;background:var(--card)}
+.table{width:100%;border-collapse:collapse;font-size:.86rem;min-width:520px}
+.table th,.table td{padding:10px 13px;text-align:left;vertical-align:top;border-bottom:1px solid var(--line)}
+.table th{font-size:.64rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);background:var(--paper-2);font-weight:900;white-space:nowrap}
+.table tr:last-child td{border-bottom:0}
+.table td code{white-space:nowrap}
+.table.compact{min-width:420px}
+/* ---------- code ---------- */
+.code{background:var(--code);color:var(--code-ink);border:1px solid #2A2622;border-radius:14px;padding:17px 19px;overflow:auto;font-family:var(--mono);font-size:12.6px;line-height:1.7;margin:14px 0;tab-size:4;scrollbar-width:thin}
+.code code{font:inherit;background:none;border:0;padding:0;white-space:pre;display:block;min-width:max-content}
+.tok-k{color:#F0A868}
+.tok-str{color:#A8D8B9}
+.tok-doc{color:#93A8A1;font-style:italic}
+.tok-n{color:#E9C46A}
+.tok-fn{color:#8ECAE6}
+.tok-dec{color:#D8A7E8}
+.tok-com{color:#8C8272;font-style:italic}
+.code-cap{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:16px 0 -4px;font-size:.69rem;font-weight:850;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.code-cap span:last-child{font-weight:600;letter-spacing:0;text-transform:none;color:var(--muted)}
+.codewrap{display:grid;grid-template-columns:54px minmax(0,1fr);background:var(--code);border:1px solid #2A2622;border-radius:14px;overflow:hidden;margin-top:12px}
+.gutter{padding:17px 9px 17px 0;text-align:right;color:#6E6457;border-right:1px solid #2A2622;font-family:var(--mono);font-size:12.6px;line-height:1.7;user-select:none;white-space:pre;background:#151210}
+.codewrap .code{border:0;border-radius:0;margin:0;padding:17px 19px;max-height:560px}
+/* ---------- steps ---------- */
+.steps{counter-reset:step;display:grid;gap:9px;margin:14px 0}
+.step{position:relative;padding:11px 14px 11px 46px;background:var(--paper);border:1px solid var(--line);border-radius:12px;font-size:.88rem;line-height:1.6}
+.step::before{counter-increment:step;content:counter(step);position:absolute;left:11px;top:11px;width:25px;height:25px;border-radius:50%;background:var(--ink);color:var(--paper);display:grid;place-items:center;font-size:.7rem;font-weight:900}
+.step p{margin:0}
+.step b{font-weight:850}
+/* ---------- interactive panels ---------- */
+.panel{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:20px 22px;box-shadow:var(--shadow);margin:18px 0}
+.panel-head{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;margin-bottom:12px}
+.panel-head h3{margin:0;display:flex;align-items:center;gap:8px}
+.panel-head .badge{font-size:.6rem;font-weight:900;letter-spacing:.08em;text-transform:uppercase;background:var(--mustard-soft);border:1px solid #E6D09B;color:#7A5810;padding:3px 8px;border-radius:999px;white-space:nowrap}
+.controls{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin:10px 0}
+.controls label{font-size:.78rem;font-weight:750;color:var(--muted);display:inline-flex;align-items:center;gap:7px}
+.controls label.range-label{display:grid;grid-template-columns:auto minmax(80px,1fr) 3.4em;gap:9px;align-items:center;flex:1 1 320px;max-width:430px;white-space:nowrap}
+.controls label.range-label input[type=range]{width:100%;max-width:none}
+.controls label.range-label b{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+.btn{font:inherit;font-size:.78rem;font-weight:800;border-radius:10px;padding:8px 14px;border:1px solid var(--line-strong);background:var(--card);color:var(--ink);cursor:pointer;transition:transform .12s,background .15s,border-color .15s;text-decoration:none;display:inline-flex;align-items:center;gap:6px}
+.btn:hover{transform:translateY(-1px);border-color:var(--ink)}
+.btn:active{transform:translateY(0)}
+.btn.primary{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.btn.primary:hover{background:#000}
+.btn.soft{background:var(--paper-2)}
+.btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
+input[type=range]{accent-color:var(--coral);width:100%;max-width:240px;cursor:pointer}
+input[type=text],select{font:inherit;font-size:.8rem;padding:7px 10px;border:1px solid var(--line-strong);border-radius:9px;background:var(--card);color:var(--ink);max-width:100%}
+input[type=checkbox]{accent-color:var(--teal);width:17px;height:17px}
+.switch{display:inline-flex;align-items:center;gap:8px;font-size:.78rem;font-weight:750;color:var(--ink);cursor:pointer;user-select:none}
+.readout{display:grid;grid-template-columns:repeat(auto-fit,minmax(112px,1fr));gap:8px;margin-top:12px}
+.stat{background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:8px 10px;min-width:0}
+.stat .k{display:block;font-size:.62rem;font-weight:850;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);line-height:1.3}
+.stat b{display:block;font-size:1.02rem;font-variant-numeric:tabular-nums;line-height:1.4;letter-spacing:-.02em}
+.stat.hot b{color:var(--coral)}
+.stat.cool b{color:var(--teal)}
+.formula{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:12px 14px;font-family:var(--mono);font-size:.8rem;line-height:1.8;overflow-x:auto}
+.formula .hl{color:var(--coral);font-weight:800}
+.canvas-box{position:relative;background:var(--paper);border:1px solid var(--line);border-radius:14px;overflow:hidden;margin-top:10px}
+#cosCanvas{display:block;width:100%;height:320px;touch-action:none;cursor:crosshair}
+.canvas-hint{position:absolute;left:12px;bottom:10px;font-size:.66rem;color:var(--muted);background:rgba(251,247,239,.85);border:1px solid var(--line);border-radius:8px;padding:3px 8px;pointer-events:none}
+.presets{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.presets .btn{font-size:.7rem;padding:6px 10px}
+/* ---------- normalization ---------- */
+.norm-grid{display:grid;grid-template-columns:minmax(0,1fr) 170px;gap:18px;align-items:start}
+.norm-row{display:grid;grid-template-columns:58px minmax(0,1fr) 62px;gap:10px;align-items:center;margin:7px 0;font-size:.76rem}
+.norm-row span:last-child{text-align:right;font-variant-numeric:tabular-nums;font-weight:800}
+.swatch{height:100px;border-radius:14px;border:1px solid var(--line-strong);display:grid;place-items:end center;padding:8px;font-size:.65rem;font-weight:800;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.55);background:#888}
+.norm-table{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:10px}
+.norm-table .stat b{font-size:.92rem}
+/* ---------- batch ---------- */
+.batch-visual{display:flex;flex-wrap:wrap;gap:3px;margin-top:12px;min-height:18px}
+.batch-visual i{display:block;width:14px;height:18px;border-radius:4px;background:var(--teal);opacity:.85}
+.batch-visual i:last-child{background:var(--coral)}
+.batch-visual .more{font-size:.7rem;color:var(--muted);align-self:center;margin-left:4px}
+/* ---------- eurosat ---------- */
+.split{display:grid;gap:7px;margin-top:12px}
+.split-row{display:grid;grid-template-columns:170px minmax(0,1fr) 82px;gap:10px;align-items:center}
+.split-name{font-size:.74rem;font-weight:750;line-height:1.3;min-width:0}
+.split-name em{display:block;font-style:normal;font-weight:600;font-size:.64rem;color:var(--muted)}
+.blocks{display:flex;gap:3px;height:20px}
+.block{flex:1;border-radius:4px;background:#E9E1D2;transition:background .35s ease,transform .35s ease;transform-origin:center}
+.block.pool{background:var(--coral)}
+.block.test{background:var(--teal)}
+.block.unused{background:#E9E1D2}
+.blocks.shuffling .block{transform:scaleY(.35)}
+.split-count{font-size:.66rem;color:var(--muted);text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.legend{display:flex;flex-wrap:wrap;gap:12px;margin-top:12px;font-size:.7rem;color:var(--muted)}
+.legend i{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+.legend .p{background:var(--coral)}.legend .t{background:var(--teal)}.legend .u{background:#E9E1D2;border:1px solid var(--line-strong)}
+.split-result{font-size:.78rem;font-weight:750;margin-top:10px}
+.split-result.ok{color:var(--teal)}
+.split-result.bad{color:var(--coral)}
+/* ---------- cache ---------- */
+.cache-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);gap:14px}
+.log{background:var(--code);color:var(--code-ink);border-radius:12px;padding:12px 14px;font-family:var(--mono);font-size:11.8px;line-height:1.75;min-height:122px;max-height:180px;overflow:auto;white-space:pre-wrap;margin:0}
+.log .hit{color:#A8D8B9}.log .miss{color:#F0A868}.log .warnline{color:#F2A08A}.log .dim{color:#8C8272}
+.cache-warn{display:none;margin-top:10px;padding:10px 12px;border-radius:10px;background:var(--coral-soft);border:1px solid #EAB6A3;font-size:.76rem;line-height:1.55}
+.cache-warn.show{display:block}
+/* ---------- patch grid ---------- */
+.patch-layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:18px;align-items:start}
+.patch-wrap{position:relative;aspect-ratio:1/1;max-width:420px;border-radius:12px;overflow:hidden;border:1px solid var(--line-strong);background:#5B7A4C}
+.patch-bg{position:absolute;inset:0;background:
+  radial-gradient(circle at 20% 26%,rgba(110,139,74,.95) 0 14%,transparent 15%),
+  radial-gradient(circle at 76% 64%,rgba(183,163,106,.9) 0 20%,transparent 21%),
+  radial-gradient(circle at 38% 82%,rgba(72,104,62,.9) 0 17%,transparent 18%),
+  repeating-linear-gradient(34deg,rgba(255,255,255,.11) 0 2px,transparent 2px 15px),
+  repeating-linear-gradient(-18deg,rgba(0,0,0,.08) 0 1px,transparent 1px 19px),
+  linear-gradient(135deg,#4E6B3A,#8FA36A 42%,#C2B280 72%,#5B7A4C);}
+.patch-grid{position:absolute;inset:0;display:grid;grid-template-columns:repeat(14,1fr);grid-template-rows:repeat(14,1fr)}
+.patch{border:1px solid rgba(255,255,255,.19);background:transparent;padding:0;cursor:pointer;transition:background .12s}
+.patch:hover,.patch:focus-visible{background:rgba(228,87,46,.38);outline:2px solid #fff;outline-offset:-2px}
+.patch.sel{background:rgba(31,122,108,.5);box-shadow:inset 0 0 0 2px #fff}
+.prefix-strip{display:none;flex-wrap:wrap;gap:5px;margin:10px 0 0;align-items:center}
+.prefix-strip.show{display:flex}
+.prefix-strip .tok{font-size:.64rem;font-weight:850;padding:4px 8px;border-radius:7px;background:var(--coral-soft);border:1px solid #F0C2B1;color:#9C3416;white-space:nowrap}
+.prefix-strip .tok.patchtok{background:var(--teal-soft);border-color:#BFDDD5;color:#155A4F}
+.prefix-strip .arrow{color:var(--muted);font-size:.7rem}
+.patch-readout{background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:9px 12px;font-size:.76rem;line-height:1.55;margin-top:10px;min-height:58px}
+.patch-readout b{color:var(--coral)}
+/* ---------- quiz ---------- */
+.quiz-top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
+.quiz-count{font-size:.72rem;font-weight:850;color:var(--muted);letter-spacing:.06em}
+.quiz-track{height:6px;border-radius:999px;background:var(--paper-3);overflow:hidden;flex:1;max-width:220px}
+.quiz-track i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--coral),var(--mustard));transition:width .3s}
+.quiz-q{font-size:1.02rem;font-weight:850;line-height:1.5;margin:0 0 13px}
+.quiz-opts{display:grid;gap:8px}
+.opt{font:inherit;font-size:.86rem;line-height:1.5;text-align:left;padding:11px 14px;border:1px solid var(--line-strong);border-radius:11px;background:var(--card);color:var(--ink);cursor:pointer;display:flex;gap:10px;align-items:flex-start;transition:border-color .15s,transform .12s,background .15s}
+.opt:hover:not(:disabled){border-color:var(--ink);transform:translateY(-1px)}
+.opt .ltr{font-size:.66rem;font-weight:900;width:20px;height:20px;border-radius:50%;background:var(--paper-2);border:1px solid var(--line);display:grid;place-items:center;flex:none;margin-top:1px}
+.opt.correct{background:var(--teal-soft);border-color:var(--teal)}
+.opt.correct .ltr{background:var(--teal);color:#fff;border-color:var(--teal)}
+.opt.wrong{background:var(--coral-soft);border-color:var(--coral)}
+.opt.wrong .ltr{background:var(--coral);color:#fff;border-color:var(--coral)}
+.opt:disabled{cursor:default}
+.quiz-fb{display:none;margin-top:12px;padding:12px 14px;border-radius:11px;font-size:.82rem;line-height:1.6;background:var(--paper-2);border:1px solid var(--line)}
+.quiz-fb.show{display:block}
+.quiz-fb.ok{background:var(--teal-soft);border-color:#B8D8CE}
+.quiz-fb.no{background:var(--coral-soft);border-color:#EAB6A3}
+.quiz-fb b{display:block;margin-bottom:2px}
+.quiz-actions{display:flex;justify-content:flex-end;margin-top:12px}
+.quiz-result{text-align:center;padding:12px 0}
+.quiz-result .score{font-size:3rem;font-weight:950;letter-spacing:-.05em;line-height:1;color:var(--coral)}
+.quiz-result .score small{font-size:1rem;color:var(--muted);font-weight:750}
+/* ---------- accordion ---------- */
+.acc{background:var(--card);border:1px solid var(--line);border-radius:12px;margin-bottom:7px;overflow:hidden}
+.acc summary{cursor:pointer;padding:11px 15px;font-size:.86rem;font-weight:800;list-style:none;display:flex;align-items:center;justify-content:space-between;gap:10px}
+.acc summary::-webkit-details-marker{display:none}
+.acc summary::after{content:"+";font-size:1rem;color:var(--coral);font-weight:900;flex:none}
+.acc[open] summary::after{content:"−"}
+.acc[open] summary{background:var(--paper);border-bottom:1px solid var(--line)}
+.acc .body{padding:11px 15px 13px;font-size:.82rem;color:var(--muted);line-height:1.65}
+.acc .body p:last-child{margin-bottom:0}
+.acc .body code{font-size:.84em}
+/* ---------- misc ---------- */
+.arrow-list{list-style:none;padding:0;margin:10px 0}
+.arrow-list li{position:relative;padding-left:20px;margin:6px 0;font-size:.87rem}
+.arrow-list li::before{content:"→";position:absolute;left:0;color:var(--coral);font-weight:900}
+.mini-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:9px;margin:12px 0}
+.mini{background:var(--paper);border:1px solid var(--line);border-radius:11px;padding:10px 12px;font-size:.76rem;line-height:1.5}
+.mini b{display:block;font-size:.86rem;margin-bottom:2px}
+.mini .mono{font-family:var(--mono);font-size:.68rem;color:var(--muted)}
+.quote{border-left:3px solid var(--mustard);padding:2px 0 2px 14px;color:var(--muted);font-size:.9rem;margin:12px 0}
+.tag-list{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}
+.footer{border-top:1px solid var(--line);margin-top:20px;padding:30px 24px 44px;background:var(--paper-2)}
+.footer-inner{max-width:900px;margin:0 auto;font-size:.76rem;color:var(--muted);line-height:1.7}
+.footer-inner strong{color:var(--ink)}
+.footer-links{display:flex;flex-wrap:wrap;gap:14px;margin-top:8px}
+/* ---------- responsive ---------- */
+@media (max-width:1080px){
+  .layout{grid-template-columns:minmax(0,1fr);gap:0;padding-top:58px}
+  .sidenav{position:sticky;top:58px;z-index:40;max-height:none;min-width:0;overflow:visible;background:rgba(251,247,239,.96);backdrop-filter:blur(10px);border-bottom:1px solid var(--line);padding:8px 0;margin:0 -24px;padding-left:24px;padding-right:24px}
+  .navlabel,.navfoot{display:none}
+  .toc{display:flex;gap:5px;overflow-x:auto;padding-bottom:3px;scrollbar-width:thin;max-width:100%}
+  .toc a{white-space:nowrap;padding:5px 9px;font-size:.75rem;border:1px solid var(--line)}
+  .toc a.active{border-color:var(--ink)}
+  main{max-width:none;padding-top:26px}
+}
+@media (max-width:820px){
+  .hero{grid-template-columns:1fr}
+  .hero-art{min-height:0}
+  .grid-3,.grid-4{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .patch-layout,.cache-grid,.norm-grid{grid-template-columns:1fr}
+  .swatch{height:64px}
+  .split-row{grid-template-columns:120px minmax(0,1fr) 62px;gap:8px}
+}
+@media (max-width:620px){
+  body{font-size:15.5px}
+  .layout{padding-left:16px;padding-right:16px}
+  .sidenav{margin:0 -16px;padding-left:16px;padding-right:16px}
+  .hero-copy{padding:24px 20px}
+  .hero-art{padding:18px}
+  .card,.panel{padding:17px 16px}
+  .grid-2,.grid-3,.grid-4{grid-template-columns:1fr}
+  .split-row{grid-template-columns:98px minmax(0,1fr)}
+  .split-count{display:none}
+  .code{font-size:11.6px;padding:14px}
+  .codewrap{grid-template-columns:42px minmax(0,1fr)}
+  .gutter{font-size:11.6px;padding-right:7px}
+  .codewrap .code{max-height:420px}
+  h1{font-size:2.1rem}
+  .topmeta .chip:not(.keep){display:none}
+  .step{padding-left:42px}
+}
+@media (prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+  *,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}
+}
+
+.split-dots{display:grid;grid-template-columns:repeat(20,minmax(0,1fr));gap:4px;margin-top:12px}
+.split-dots i{display:block;aspect-ratio:1/1;border-radius:3px;background:var(--teal);transition:background .3s,transform .3s;transform-origin:center}
+.split-dots i.valid{background:var(--coral)}
+@media(max-width:640px){.split-dots{grid-template-columns:repeat(10,minmax(0,1fr))}}
+.label-grid{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:18px;align-items:start}
+.label-canvas{position:relative;aspect-ratio:16/9;border:1px solid var(--line-strong);border-radius:12px;overflow:hidden;background:
+  linear-gradient(135deg,rgba(31,122,108,.08),rgba(233,180,76,.12)),
+  repeating-linear-gradient(90deg,rgba(33,29,24,.06) 0 1px,transparent 1px 32px),
+  repeating-linear-gradient(0deg,rgba(33,29,24,.06) 0 1px,transparent 1px 32px)}
+.label-box{position:absolute;border:2px solid var(--coral);background:rgba(228,87,46,.16);border-radius:2px;transition:all .12s}
+.label-size{position:absolute;right:8px;bottom:6px;font:10px/1 var(--mono);color:var(--muted)}
+@media(max-width:720px){.label-grid{grid-template-columns:1fr}}
+
+</style>
+</head>
+<body>
+<a class="skip" href="#main">본문으로 건너뛰기</a>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <a class="brand" href="#hero"><span class="logo">C</span><span>common.py 강의</span></a>
+    <div class="topmeta">
+      <span class="chip keep">1–2일차 · 데이터 준비</span>
+      <span class="chip">약 25분</span>
+    </div>
+  </div>
+  <div id="progress" aria-hidden="true"></div>
+</header>
+
+<div class="layout">
+  <aside class="sidenav" aria-label="강의 목차">
+    <p class="navlabel">Lecture map</p>
+    <nav class="toc" id="toc">
+      <a href="#hero"><span class="num">00</span>시작</a>
+      <a href="#map"><span class="num">01</span>파일 지도</a>
+      <a href="#imports"><span class="num">02</span>준비물</a>
+      <a href="#ssl"><span class="num">03</span>ssl_context</a>
+      <a href="#penn"><span class="num">04</span>penn_root</a>
+      <a href="#masks"><span class="num">05</span>mask_to_boxes</a>
+      <a href="#split"><span class="num">06</span>load_split</a>
+      <a href="#lab5"><span class="num">07</span>lab5</a>
+      <a href="#lab9"><span class="num">08</span>lab9</a>
+      <a href="#fullcode"><span class="num">09</span>전체 코드</a>
+      <a href="#quiz"><span class="num">10</span>퀴즈</a>
+      <a href="#glossary"><span class="num">11</span>용어 사전</a>
+      <a href="#cheatsheet"><span class="num">12</span>치트시트</a>
+    </nav>
+    <div class="navfoot">
+      <strong>한 줄도 생략 없음.</strong><br>
+      Penn-Fudan 다운로드부터 lab5·lab9의 3-way 분할까지, 모든 함수와 함정을 다룹니다.
+    </div>
+  </aside>
+
+  <main id="main">
+    <section id="hero" class="hero" data-lecture-section="hero">
+      <div class="hero-copy">
+        <p class="eyebrow"><span class="dot"></span> YOLO 특강 · 1–2일차 · 데이터 준비</p>
+        <h1>데이터를 읽고,<br><mark>8:2로 나누는</mark> 상자</h1>
+        <p class="lead"><code>common.py</code>를 5살에게 설명하듯 — 하지만 <strong>한 줄도 빼먹지 않고</strong> 읽는 강의.</p>
+        <p class="hero-desc">Penn-Fudan 보행자 사진을 내려받고, 사람별 마스크에서 박스를 뽑고, 노트북과 같은 시드로 학습/검증을 나눕니다. <strong>lab5</strong>가 학습 데이터를 만들 때, <strong>lab9</strong>가 3-way로 다시 나눌 때 이 상자를 씁니다.</p>
+        <div class="chips">
+          <span class="chip dark">91줄</span>
+          <span class="chip">함수 4개</span>
+          <span class="chip teal">Penn-Fudan 170장</span>
+          <span class="chip">8 : 2 · seed 1729</span>
+          <span class="chip coral">lab5 · lab9</span>
+        </div>
+      </div>
+      <div class="hero-art" aria-hidden="true">
+        <svg class="doodle" style="right:14px;top:14px" width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2l2.4 7.6L22 12l-7.6 2.4L12 22l-2.4-7.6L2 12l7.6-2.4z"/></svg>
+        <div class="flow">
+          <div class="flow-node"><span class="ficon">🗜️</span><div><b>zip 내려받기</b><small>urllib + ssl</small></div></div>
+          <div class="flow-link">↓</div>
+          <div class="flow-node"><span class="ficon">🖼️</span><div><b>사진 + 마스크</b><small>PNGImages · PedMasks</small></div></div>
+          <div class="flow-link">↓</div>
+          <div class="flow-node"><span class="ficon">📦</span><div><b>사람별 xyxy 박스</b><small>mask_to_boxes</small></div></div>
+          <div class="flow-link">↓</div>
+          <div class="flow-node"><span class="ficon">🔀</span><div><b>136 : 34</b><small>seed 1729</small></div></div>
+        </div>
+        <p class="hero-note">“사진을 읽고 박스를 뽑아 8:2로 나눈다” — lab5와 lab9의 공통 준비 운동.</p>
+      </div>
+    </section>
+
+    <section id="map" data-lecture-section="map">
+      <div class="sec-head">
+        <p class="sec-kicker">01 · 파일 지도</p>
+        <h2>이 상자는 누가 쓰나요?</h2>
+        <p class="sub"><code>common.py</code>는 모델을 만들지 않습니다. <strong>데이터만</strong> 준비합니다. 그래서 torch도 ultralytics도 import하지 않아요.</p>
+      </div>
+
+      <div class="scroll-x">
+        <table class="table">
+          <thead><tr><th>파일</th><th>가져다 쓰는 것</th><th>하는 일</th></tr></thead>
+          <tbody>
+            <tr><td><code>lab5_yolo11.py</code></td><td><code>load_split</code></td><td>Penn-Fudan을 136/34로 나눠 YOLO 데이터셋을 만들고 YOLO11s를 전이학습</td></tr>
+            <tr><td><code>lab9_test_split.py</code></td><td><code>load_split</code></td><td>lab5의 136장을 다시 102/34로 쪼개고, lab5의 34장은 시험으로만 사용</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="layer analogy">
+        <span class="tag">🍭 5살 비유</span>
+        <p>요리하기 전에 <strong>재료 손질</strong>을 하는 도구예요. 감자를 씻고, 껍질을 벗기고, 반은 오늘 먹을 것, 반은 내일 먹을 것으로 나눠 놓는 거죠. 불을 켜고 요리하는 건 다른 파일(lab5)이 합니다.</p>
+      </div>
+
+      <div class="layer precise">
+        <span class="tag">🔬 정확히는 — 실행 순서</span>
+        <p><code>lab5</code>가 먼저 돌아야 <code>data/PennFudan_yolo/</code>와 <code>runs/person/weights/best.pt</code>가 생깁니다. 그다음 lab6~lab11이 이 산출물을 씁니다. <code>lab9</code>는 lab5가 이미 만든 데이터를 <strong>다시</strong> 나눠 별도 폴더(<code>data/PennFudan_3way/</code>)와 별도 run(<code>runs/person_3way/</code>)을 만듭니다. 서로 덮어쓰지 않아요.</p>
+      </div>
+
+      <div class="callout">
+        <span class="ico">📥</span>
+        <div><p><strong>데이터는 어디에?</strong> 기본은 <code>common.py</code>가 있는 폴더의 <code>data/</code>입니다. 환경변수 <code>PENN_DATA_ROOT</code>를 주면 그 폴더 아래를 씁니다. 예: <code>PENN_DATA_ROOT=/mnt/datasets</code> → <code>/mnt/datasets/PennFudanPed</code>.</p></div>
+      </div>
+    </section>
+
+    <section id="imports" data-lecture-section="imports">
+      <div class="sec-head">
+        <p class="sec-kicker">02 · 준비물과 상수</p>
+        <h2>맨 위 20줄</h2>
+        <p class="sub">다운로드·압축·경로·난수·이미지. 데이터 준비에 필요한 도구만 모였습니다.</p>
+      </div>
+
+      <div class="code-cap"><span>common.py · 1–19행</span><span>원문 그대로</span></div>
+      <pre class="code"><code>"""YOLO 덱 실습판 공통 부분: Penn-Fudan 데이터를 6강 노트북과 같은 방식으로 읽고 나눕니다."""
+import os
+import random
+import shutil
+import ssl
+import urllib.error
+import urllib.request
+import zipfile
+from pathlib import Path
+
+import numpy as np
+from PIL import Image
+
+PENN_URL = "https://www.cis.upenn.edu/~jshi/ped_html/PennFudanPed.zip"
+DOWNLOAD_TIMEOUT_SEC = 180
+SPLIT_SEED = 1729
+TRAIN_RATIO = 0.8
+# 데이터 위치는 환경변수로 바꿀 수 있다. 없으면 실습 폴더 아래 data/에 내려받는다
+DATA_ROOT = Path(os.environ.get("PENN_DATA_ROOT", Path(__file__).parent / "data"))</code></pre>
+
+      <div class="grid-3" style="margin-top:14px">
+        <div class="mini"><b>os</b><span class="mono">환경변수</span><code>PENN_DATA_ROOT</code>를 읽음.</div>
+        <div class="mini"><b>random</b><span class="mono">섞기</span>seed가 고정된 <code>Random</code> 인스턴스로 셔플.</div>
+        <div class="mini"><b>shutil</b><span class="mono">복사/삭제</span>다운로드 스트림 복사, 폴더 삭제.</div>
+        <div class="mini"><b>ssl · urllib</b><span class="mono">HTTPS</span>인증서 맥락과 다운로드 요청.</div>
+        <div class="mini"><b>zipfile</b><span class="mono">압축 해제</span><code>extractall(DATA_ROOT)</code>.</div>
+        <div class="mini"><b>numpy · PIL</b><span class="mono">마스크</span>마스크 배열에서 사람별 좌표를 뽑음.</div>
+      </div>
+
+      <div class="layer precise">
+        <span class="tag">🔬 정확히는 — 상수</span>
+        <ul class="arrow-list" style="margin-bottom:0">
+          <li><code>PENN_URL</code>: Penn-Fudan 원본 zip 주소. 약 50MB.</li>
+          <li><code>DOWNLOAD_TIMEOUT_SEC = 180</code>: 연결이 멈춰도 3분에서 끊기게.</li>
+          <li><code>SPLIT_SEED = 1729</code>: “6강 노트북과 같은” 나눔을 재현하는 번호. lab5의 <code>SEED</code>와도 같은 값.</li>
+          <li><code>TRAIN_RATIO = 0.8</code>: 80% 학습, 20% 검증.</li>
+          <li><code>DATA_ROOT</code>: 환경변수가 있으면 그곳, 없으면 이 파일 옆 <code>data/</code>. <code>Path(__file__).parent</code> 덕분에 cwd와 무관.</li>
+        </ul>
+      </div>
+    </section>
+
+    <section id="ssl" data-lecture-section="ssl">
+      <div class="sec-head">
+        <p class="sec-kicker">03 · ssl_context()</p>
+        <h2>“이 사이트 믿어도 돼요?”를 확인하는 방법</h2>
+        <p class="sub">HTTPS 다운로드에서 서버 인증서를 검사할 때, 어떤 인증서 목록을 쓸지 고릅니다. 학원·회사 네트워크에서 자주 막히는 지점이에요.</p>
+      </div>
+
+      <div class="code-cap"><span>common.py · 22–38행</span><span>원문 그대로</span></div>
+      <pre class="code"><code>def ssl_context() -> ssl.SSLContext:
+    """인증서 목록을 고릅니다. 파이썬 기본 목록만으로는 이 서버의 인증서를 확인하지 못하는 컴퓨터가 있습니다.
+
+    1) truststore가 깔려 있으면 운영체제의 인증서 저장소를 그대로 씁니다(학원·회사 보안 프록시 인증서도 포함).
+    2) 없으면 certifi(ultralytics와 함께 깔림)의 목록을 씁니다. 서버 인증서의 뿌리(emSign Root CA - G1)가 들어 있습니다.
+    3) 둘 다 없으면 파이썬 기본값.
+    """
+    try:
+        import truststore
+        return truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+    except ImportError:
+        pass
+    try:
+        import certifi
+        return ssl.create_default_context(cafile=certifi.where())
+    except ImportError:
+        return ssl.create_default_context()</code></pre>
+
+      <div class="steps">
+        <div class="step"><p><b>1순위 truststore</b>: 설치돼 있으면 운영체제(Windows/macOS)의 인증서 저장소를 그대로 씁니다. 회사·학원의 보안 프록시가 끼어든 인증서도 여기 들어 있어요.</p></div>
+        <div class="step"><p><b>2순위 certifi</b>: truststore가 없으면 <code>certifi</code>의 CA 묶음. ultralytics와 함께 설치되는 경우가 많고, Penn 서버의 뿌리 인증서(emSign Root CA - G1)가 들어 있습니다.</p></div>
+        <div class="step"><p><b>3순위 파이썬 기본</b>: 둘 다 없으면 <code>ssl.create_default_context()</code>. 가장 보수적이지만, 이 서버에서는 실패하는 컴퓨터가 있습니다.</p></div>
+      </div>
+
+      <div class="layer gotcha">
+        <span class="tag">⚠️ 함정</span>
+        <p><code>except ImportError</code>만 잡습니다. truststore가 설치돼 있는데 <strong>초기화 중 다른 에러</strong>가 나면 그대로 올라갑니다. 또 인증서 검증 실패는 여기서 처리하지 않고, 다음 함수 <code>penn_root()</code>에서 친절한 안내로 바꿔 줍니다.</p>
+      </div>
+
+      <div class="layer analogy">
+        <span class="tag">🍭 5살 비유</span>
+        <p>낯선 사람이 “나 은행 직원이야”라고 할 때, <strong>신분증 목록</strong>을 보고 확인하는 거예요. 우리 집 목록(OS), 인터넷 공용 목록(certifi), 기본 목록(파이썬) 순서로 찾아봅니다.</p>
+      </div>
+    </section>
+
+    <section id="penn" data-lecture-section="penn">
+      <div class="sec-head">
+        <p class="sec-kicker">04 · penn_root()</p>
+        <h2>없으면 받고, 있으면 바로 돌려주기</h2>
+        <p class="sub">데이터 폴더가 이미 있으면 즉시 반환. 없으면 zip을 내려받아 풉니다. 실패했을 때의 뒷정리까지 포함합니다.</p>
+      </div>
+
+      <div class="code-cap"><span>common.py · 41–64행</span><span>원문 그대로</span></div>
+      <pre class="code"><code>def penn_root() -> Path:
+    """Penn-Fudan 폴더를 돌려줍니다. 없으면 내려받아 풉니다."""
+    target = DATA_ROOT / "PennFudanPed"
+    if target.exists():
+        return target
+    DATA_ROOT.mkdir(parents=True, exist_ok=True)
+    zip_path = DATA_ROOT / "PennFudanPed.zip"
+    try:
+        with urllib.request.urlopen(PENN_URL, timeout=DOWNLOAD_TIMEOUT_SEC, context=ssl_context()) as response, open(zip_path, "wb") as f:
+            shutil.copyfileobj(response, f)
+    except urllib.error.URLError as error:
+        zip_path.unlink(missing_ok=True)   # 반쯤 받은 파일이 남으면 다음 실행에서 깨진 zip을 풀게 된다
+        if not isinstance(error.reason, ssl.SSLCertVerificationError):
+            raise
+        raise SystemExit(
+            f"인증서 확인에 실패해 데이터를 받지 못했습니다: {error.reason}\n"
+            "학원·회사 네트워크의 보안 장비가 인증서를 바꿔 끼우는 경우가 많습니다. 둘 중 하나를 하세요.\n"
+            "  1) 명령에 --with truststore를 더해 다시 실행합니다(운영체제 인증서 저장소를 씁니다).\n"
+            f"  2) 브라우저로 {PENN_URL} 을 받아 {DATA_ROOT} 에 풀고 다시 실행합니다.\n"
+            "     다른 곳에 풀었다면 PENN_DATA_ROOT에 PennFudanPed 폴더의 상위 폴더를 알려 줍니다."
+        ) from error
+    with zipfile.ZipFile(zip_path) as z:
+        z.extractall(DATA_ROOT)
+    return target</code></pre>
+
+      <div class="steps">
+        <div class="step"><p><b>이미 있나?</b> <code>DATA_ROOT / "PennFudanPed"</code>가 존재하면 바로 반환. <strong>내용이 온전한지는 검사하지 않습니다</strong>.</p></div>
+        <div class="step"><p><b>부모 폴더 만들기</b>: <code>mkdir(parents=True, exist_ok=True)</code>. 없으면 만들고, 있어도 에러 없음.</p></div>
+        <div class="step"><p><b>스트리밍 다운로드</b>: <code>urlopen(..., timeout=180, context=ssl_context())</code> + <code>shutil.copyfileobj</code>. 전체를 메모리에 올리지 않고 조금씩 파일로 복사합니다.</p></div>
+        <div class="step"><p><b>실패 정리</b>: <code>URLError</code>면 반쯤 받은 zip을 <code>unlink(missing_ok=True)</code>로 삭제. 다음 실행에서 깨진 zip을 푸는 사고를 막아요.</p></div>
+        <div class="step"><p><b>SSL 실패만 친절하게</b>: <code>error.reason</code>이 <code>SSLCertVerificationError</code>이면 <code>SystemExit</code>로 안내문을 보여 줍니다. 다른 네트워크 에러는 그대로 다시 던짐(<code>raise</code>).</p></div>
+        <div class="step"><p><b>압축 해제</b>: <code>ZipFile(...).extractall(DATA_ROOT)</code> 후 <code>target</code> 반환. zip 파일 자체는 남겨 둡니다.</p></div>
+      </div>
+
+      <div class="layer gotcha">
+        <span class="tag">⚠️ 함정</span>
+        <ul class="arrow-list" style="margin-bottom:0">
+          <li>폴더가 <strong>존재하기만</strong> 하면 다운로드를 건너뜁니다. 중간에 깨진 데이터가 있으면 직접 지우고 다시 실행해야 해요.</li>
+          <li>zip을 풀 때 경로 검증(zip slip 방지)을 하지 않습니다. 신뢰하는 원본 URL에서만 받는 전제.</li>
+          <li>다운로드가 180초 안에 끝나야 합니다. 아주 느린 회선이면 <code>DOWNLOAD_TIMEOUT_SEC</code>를 늘리세요.</li>
+          <li>인증서 오류 안내문의 <code>--with truststore</code>는 “uv로 실행할 때 패키지를 추가”하는 옵션입니다. 이미 의존성에 들어 있으면 그냥 다시 실행해도 됩니다.</li>
+        </ul>
+      </div>
+
+      <div class="layer analogy">
+        <span class="tag">🍭 5살 비유</span>
+        <p>장난감 상자가 이미 방에 있으면 그냥 꺼내 놀고, 없으면 <strong>택배</strong>를 시켜요. 택배가 오다가 깨지면 반쯤 온 상자를 버리고, “공항 보안 검색 때문에 못 받았어요”라고 알려 주는 거죠.</p>
+      </div>
+    </section>
+
+    <section id="masks" data-lecture-section="masks">
+      <div class="sec-head">
+        <p class="sec-kicker">05 · mask_to_boxes()</p>
+        <h2>사람 모양 스티커 → 네모 박스</h2>
+        <p class="sub">Penn-Fudan은 사람마다 <strong>인스턴스 마스크</strong>를 줍니다. 마스크의 픽셀 좌표에서 가장 작은/큰 x·y를 찾아 xyxy 박스로 바꿉니다.</p>
+      </div>
+
+      <div class="code-cap"><span>common.py · 67–74행</span><span>원문 그대로</span></div>
+      <pre class="code"><code>def mask_to_boxes(mask_path: Path) -> list[list[int]]:
+    """인스턴스 마스크에서 사람별 xyxy 박스를 구합니다. 노트북 1.4절과 같은 규칙입니다."""
+    mask = np.array(Image.open(mask_path))
+    boxes = []
+    for object_id in np.unique(mask)[1:]:   # 0은 배경
+        ys, xs = np.where(mask == object_id)
+        boxes.append([int(xs.min()), int(ys.min()), int(xs.max()) + 1, int(ys.max()) + 1])
+    return boxes</code></pre>
+
+      <div class="steps">
+        <div class="step"><p><b>마스크 읽기</b>: 마스크 PNG는 픽셀마다 “사람 번호”가 적힌 2D 배열입니다. 0은 배경, 1·2·3…은 각 사람.</p></div>
+        <div class="step"><p><b>배경 빼기</b>: <code>np.unique(mask)[1:]</code>. 정렬된 고유값에서 0만 건너뜁니다.</p></div>
+        <div class="step"><p><b>그 사람 픽셀 찾기</b>: <code>np.where(mask == object_id)</code> → <code>ys, xs</code>.</p></div>
+        <div class="step"><p><b>박스로</b>: <code>xs.min(), ys.min(), xs.max()+1, ys.max()+1</code>. <code>+1</code>은 “끝 좌표는 포함하지 않는다”는 관례(x2, y2는 exclusive) 때문입니다.</p></div>
+        <div class="step"><p><b>정수로</b>: NumPy 정수를 파이썬 <code>int</code>로 바꿔 JSON/출력에 안전하게.</p></div>
+      </div>
+
+      <div class="layer precise">
+        <span class="tag">🔬 정확히는 — +1의 의미</span>
+        <p>픽셀 인덱스가 10부터 19까지 있다면, 실제로 덮는 구간은 [10, 20)입니다. 그래서 <code>max + 1</code>을 씁니다. <code>x2 - x1</code>이 픽셀 폭이 되고, 자르기(crop)나 IoU 계산과 잘 맞아요. 반대로 <code>max</code>를 그대로 쓰면 폭이 1픽셀 작아집니다.</p>
+      </div>
+
+      <div class="callout">
+        <span class="ico">🧩</span>
+        <div><p><strong>사람이 가장자리에서 잘렸다면?</strong> 마스크에 보이는 부분만 있으므로 박스도 보이는 부분 기준입니다. lab5는 그대로 학습에 쓰고, lab20은 “화면 가장자리에 잘린 사람”을 따로 걸러 냅니다.</p></div>
+      </div>
+
+      <div class="layer analogy">
+        <span class="tag">🍭 5살 비유</span>
+        <p>사람 모양으로 오려 붙인 <strong>스티커</strong>가 있어요. 스티커의 제일 왼쪽·위·오른쪽·아래 점을 찾아 <strong>네모 상자</strong>를 그리는 거예요. 스티커 모양이 삐죽삐죽해도 상자는 반듯합니다.</p>
+      </div>
+    </section>
+
+    <section id="split" data-lecture-section="split">
+      <div class="sec-head">
+        <p class="sec-kicker">06 · load_split()</p>
+        <h2>170장을 136 : 34로</h2>
+        <p class="sub">모든 사진과 박스를 읽고, 고정된 시드로 섞은 뒤 앞 80%를 학습, 뒤 20%를 검증으로 돌려줍니다.</p>
+      </div>
+
+      <div class="code-cap"><span>common.py · 77–90행</span><span>원문 그대로</span></div>
+      <pre class="code"><code>def load_split() -> tuple[list[dict], list[dict]]:
+    """샘플을 읽고 노트북과 같은 난수로 섞어 8:2로 나눕니다."""
+    root = penn_root()
+    samples = []
+    for image_path in sorted((root / "PNGImages").glob("*.png")):
+        with Image.open(image_path) as image:
+            width, height = image.size
+        boxes = mask_to_boxes(root / "PedMasks" / f"{image_path.stem}_mask.png")
+        samples.append({"path": image_path, "width": width, "height": height, "boxes": boxes})
+    shuffled = samples.copy()
+    random.Random(SPLIT_SEED).shuffle(shuffled)
+    num_train = int(len(shuffled) * TRAIN_RATIO)
+    return shuffled[:num_train], shuffled[num_train:]</code></pre>
+
+      <div class="steps">
+        <div class="step"><p><b>데이터 확보</b>: <code>penn_root()</code>가 폴더를 보장합니다.</p></div>
+        <div class="step"><p><b>정렬된 목록</b>: <code>sorted(...glob("*.png"))</code>. 파일 시스템 순서에 흔들리지 않게 이름순으로.</p></div>
+        <div class="step"><p><b>크기 읽기</b>: <code>Image.open(...).size</code>는 <strong>(width, height)</strong> 순서. 나중에 YOLO 라벨을 정규화할 때 필요합니다.</p></div>
+        <div class="step"><p><b>마스크 경로</b>: <code>PedMasks/&lt;stem&gt;_mask.png</code>. 사진 이름에서 확장자만 뗀 stem을 씁니다.</p></div>
+        <div class="step"><p><b>샘플 dict</b>: <code>path</code>, <code>width</code>, <code>height</code>, <code>boxes</code>. lab5와 lab9가 그대로 재사용하는 형식.</p></div>
+        <div class="step"><p><b>섞기</b>: <code>random.Random(SPLIT_SEED).shuffle(...)</code>. 전역 <code>random</code> 상태를 건드리지 않는 <strong>지역 RNG</strong>.</p></div>
+        <div class="step"><p><b>8:2 자르기</b>: <code>int(170 * 0.8) = 136</code> 학습, 나머지 34 검증. <code>copy()</code> 덕분에 원래 <code>samples</code> 순서는 보존.</p></div>
+      </div>
+
+      <div class="panel" id="splitPanel">
+        <div class="panel-head"><h3>🔀 8:2 나눔 시뮬레이터</h3><span class="badge">170장</span></div>
+        <p class="note" style="margin-top:0">점 하나가 사진 한 장입니다. 136장은 학습(청록), 34장은 검증(코랄). “섞기”를 누르면 seed 1729로 위치가 다시 섞입니다.</p>
+        <div class="split-dots" id="splitDots" aria-label="170장의 학습/검증 나눔"></div>
+        <div class="legend">
+          <span><i class="p" style="background:var(--teal)"></i>train 136</span>
+          <span><i class="t" style="background:var(--coral)"></i>valid 34</span>
+        </div>
+        <div class="controls" style="margin-top:10px">
+          <button class="btn primary" type="button" id="splitShuffle">🔀 seed 1729로 섞기</button>
+          <span class="note" id="splitCaption">정렬된 170장을 섞은 뒤 앞 136장을 train으로.</span>
+        </div>
+      </div>
+
+      <div class="layer gotcha">
+        <span class="tag">⚠️ 함정</span>
+        <ul class="arrow-list" style="margin-bottom:0">
+          <li>학습/검증을 나누는 시드가 <strong>두 군데</strong> 있습니다. <code>common.SPLIT_SEED</code>(데이터 8:2)와 <code>lab5.SEED=1729</code>(모델 학습). 값은 같지만 역할은 다릅니다.</li>
+          <li><code>random.Random(seed)</code>는 <strong>인스턴스</strong>라 전역 난수와 분리됩니다. 다른 코드가 <code>random.seed()</code>를 바꿔도 이 나눔은 흔들리지 않아요.</li>
+          <li>사진을 열어 크기만 읽고 닫습니다(<code>with</code>). 박스는 마스크에서 나오므로 사진 픽셀을 메모리에 들고 있지 않습니다.</li>
+          <li>170장이 아닌 데이터로 바꾸면 <code>int(n * 0.8)</code>이라 80%가 조금 모자랄 수 있습니다(내림).</li>
+          <li>train/valid의 순서는 “섞인 순서”입니다. 파일명 정렬 순서가 아닙니다.</li>
+        </ul>
+      </div>
+
+      <div class="layer analogy">
+        <span class="tag">🍭 5살 비유</span>
+        <p>카드 170장을 <strong>7번 마법</strong>으로 섞고, 앞에서 136장은 “연습 카드”, 뒤 34장은 “시험 카드”로 나누는 거예요. 내일 다시 해도 7번 마법이라 똑같이 나뉩니다.</p>
+      </div>
+    </section>
+
+    <section id="lab5" data-lecture-section="lab5">
+      <div class="sec-head">
+        <p class="sec-kicker">07 · lab5_yolo11.py</p>
+        <h2>공용 데이터를 YOLO 형식으로, 그리고 전이학습</h2>
+        <p class="sub">common.py가 만든 dict 목록을 YOLO가 읽는 폴더 구조와 라벨 파일로 바꾸고, COCO로 학습된 YOLO11s를 사람 탐지에 맞게 다시 학습합니다.</p>
+      </div>
+
+      <div class="code-cap"><span>lab5_yolo11.py · 25–33행</span><span>원문 그대로</span></div>
+      <pre class="code"><code>WEIGHTS = "yolo11s.pt"
+IMAGE_SIZE = 416
+BATCH = 16
+EPOCHS = int(os.environ.get("YOLO_EPOCHS", "50"))   # 수업 시간이 짧으면 YOLO_EPOCHS=10
+PRINT_EVERY = 10
+SEED = 1729
+HERE = Path(__file__).resolve().parent
+YOLO_ROOT = HERE / "data" / "PennFudan_yolo"
+RUN_DIR = HERE / "runs"</code></pre>
+
+      <div class="grid-3" style="margin-top:12px">
+        <div class="mini"><b>yolo11s.pt</b><span class="mono">COCO 사전학습</span>80클래스. 사람 클래스가 이미 있음.</div>
+        <div class="mini"><b>416 × 416</b><span class="mono">입력 크기</span>학습과 평가에서 같은 크기를 씀.</div>
+        <div class="mini"><b>batch 16</b><span class="mono">한 번에 16장</span>메모리와 속도의 타협.</div>
+        <div class="mini"><b>50 epoch</b><span class="mono">YOLO_EPOCHS</span>환경변수로 줄일 수 있음(예: 10).</div>
+        <div class="mini"><b>seed 1729</b><span class="mono">재현</span>데이터 나눔과 같은 숫자.</div>
+        <div class="mini"><b>AGPL-3.0</b><span class="mono">라이선스</span>ultralytics 사용. 교안 MIT에서 제외.</div>
+      </div>
+
+      <h3 style="margin-top:22px">① 박스 형식 변환</h3>
+      <div class="code-cap"><span>lab5_yolo11.py · 36–45행</span><span>원문 그대로</span></div>
+      <pre class="code"><code>def to_yolo_label(box: list[int], width: int, height: int) -> tuple[float, float, float, float]:
+    """xyxy 픽셀 박스를 YOLO 형식(중심과 크기, 0~1)으로 바꿉니다."""
+    x1, y1, x2, y2 = box
+    return ((x1 + x2) / 2 / width, (y1 + y2) / 2 / height, (x2 - x1) / width, (y2 - y1) / height)
+
+
+def yolo_to_xyxy(label: list[float], width: int, height: int) -> list[float]:
+    """YOLO 형식(0~1)을 xyxy 픽셀 박스로 되돌립니다."""
+    center_x, center_y, w, h = label
+    return [(center_x - w / 2) * width, (center_y - h / 2) * height, (center_x + w / 2) * width, (center_y + h / 2) * height]</code></pre>
+
+      <div class="layer precise">
+        <span class="tag">🔬 정확히는 — 두 가지 표기</span>
+        <p><strong>xyxy</strong>는 “왼쪽 위, 오른쪽 아래” 픽셀 좌표. <strong>YOLO</strong>는 “중심 x, 중심 y, 너비, 높이”를 이미지 크기로 나눈 0~1 값입니다. 클래스 번호는 라벨 줄 맨 앞에 따로 붙습니다(<code>0</code>=person). 정규화 덕분에 이미지 크기가 달라도 같은 라벨을 쓸 수 있어요.</p>
+      </div>
+
+      <div class="panel" id="labelPanel">
+        <div class="panel-head"><h3>📦 xyxy → YOLO 변환기</h3><span class="badge">lab5와 같은 식</span></div>
+        <p class="note" style="margin-top:0">슬라이더로 박스를 움직여 보세요. 오른쪽 아래에 실제 라벨 한 줄이 나옵니다. (이미지 크기 640×360이라고 가정)</p>
+        <div class="label-grid">
+          <div class="label-canvas" id="labelCanvas">
+            <div class="label-box" id="labelBox"></div>
+            <span class="label-size">640 × 360</span>
+          </div>
+          <div>
+            <div class="norm-row"><span>x1</span><input type="range" id="lx1" min="0" max="600" value="120"><span id="lx1v">120</span></div>
+            <div class="norm-row"><span>y1</span><input type="range" id="ly1" min="0" max="320" value="60"><span id="ly1v">60</span></div>
+            <div class="norm-row"><span>x2</span><input type="range" id="lx2" min="40" max="640" value="360"><span id="lx2v">360</span></div>
+            <div class="norm-row"><span>y2</span><input type="range" id="ly2" min="40" max="360" value="300"><span id="ly2v">300</span></div>
+            <div class="formula" id="labelLine" style="font-size:.72rem">0 0.375000 0.500000 0.375000 0.666667</div>
+          </div>
+        </div>
+      </div>
+
+      <h3 style="margin-top:22px">② 데이터셋 폴더 만들기</h3>
+      <div class="code-cap"><span>lab5_yolo11.py · 48–61행</span><span>원문 그대로</span></div>
+      <pre class="code"><code>def write_dataset(train: list[dict], valid: list[dict]) -> Path:
+    """images/labels 폴더와 data.yaml을 만듭니다. 라벨 폴더는 images를 labels로 바꾼 경로여야 한다."""
+    shutil.rmtree(YOLO_ROOT, ignore_errors=True)   # 이전 실행의 파일이 섞이지 않게 한다
+    for split, split_samples in (("train", train), ("valid", valid)):
+        (YOLO_ROOT / split / "images").mkdir(parents=True)
+        (YOLO_ROOT / split / "labels").mkdir(parents=True)
+        for s in split_samples:
+            shutil.copy(s["path"], YOLO_ROOT / split / "images" / s["path"].name)
+            rows = [" ".join(["0"] + [f"{v:.6f}" for v in to_yolo_label(b, s["width"], s["height"])]) for b in s["boxes"]]
+            (YOLO_ROOT / split / "labels" / f"{s['path'].stem}.txt").write_text("\n".join(rows) + "\n")
+    config = {"path": str(YOLO_ROOT), "train": "train/images", "val": "valid/images", "nc": 1, "names": ["person"]}
+    config_path = YOLO_ROOT / "data.yaml"
+    config_path.write_text(yaml.safe_dump(config))
+    return config_path</code></pre>
+
+      <div class="steps">
+        <div class="step"><p><b>이전 결과 삭제</b>: <code>rmtree(... ignore_errors=True)</code>. 남은 파일이 섞이지 않게. <strong>되돌릴 수 없으니</strong> 경로를 확인하세요.</p></div>
+        <div class="step"><p><b>폴더 구조</b>: <code>train/images</code>, <code>train/labels</code>, <code>valid/images</code>, <code>valid/labels</code>.</p></div>
+        <div class="step"><p><b>사진 복사</b>: 원본을 그대로 복사. 이름은 <code>s["path"].name</code>.</p></div>
+        <div class="step"><p><b>라벨 줄</b>: <code>"0 cx cy w h"</code>, 소수점 6자리. 클래스 0은 person.</p></div>
+        <div class="step"><p><b>라벨 파일</b>: 사진과 <strong>같은 stem</strong>의 <code>.txt</code>. YOLO는 이 짝을 찾아 읽습니다.</p></div>
+        <div class="step"><p><b>data.yaml</b>: <code>path</code>, <code>train</code>, <code>val</code>, <code>nc=1</code>, <code>names=["person"]</code>.</p></div>
+      </div>
+
+      <div class="layer gotcha">
+        <span class="tag">⚠️ 함정</span>
+        <ul class="arrow-list" style="margin-bottom:0">
+          <li>라벨 폴더 경로는 <code>images</code>를 <code>labels</code>로 바꾼 구조여야 합니다. YOLO가 규칙으로 찾아요.</li>
+          <li>박스가 하나도 없으면 <code>"\n".join([]) + "\n"</code> → 빈 줄 하나짜리 파일이 됩니다. Penn-Fudan은 모든 사진에 사람이 있어 보통 문제없지만, 다른 데이터에 쓸 땐 확인하세요.</li>
+          <li><code>rmtree</code>는 <code>data/PennFudan_yolo</code> 전체를 지웁니다. lab5를 다시 돌리면 이전 학습 데이터가 사라져요(원본 Penn-Fudan은 그대로).</li>
+          <li>YOLO는 이미지와 라벨을 <strong>같은 stem</strong>으로 짝지음. 사진 이름을 바꾸면 라벨도 같이 바꿔야 합니다.</li>
+        </ul>
+      </div>
+
+      <h3 style="margin-top:22px">③ 학습과 평가</h3>
+      <div class="code-cap"><span>lab5_yolo11.py · 64–116행</span><span>원문 그대로</span></div>
+      <pre class="code"><code>def print_progress(trainer: BaseTrainer) -> None:
+    """정해진 주기마다 검증 성능을 한 줄로 출력합니다."""
+    epoch = trainer.epoch + 1
+    if epoch % PRINT_EVERY == 0 or epoch == 1:
+        print(f"epoch {epoch:3d} | mAP50 {trainer.metrics['metrics/mAP50(B)']:.3f} | mAP50-95 {trainer.metrics['metrics/mAP50-95(B)']:.3f}", flush=True)
+
+
+def main() -> None:
+    device = 0 if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu"
+    train, valid = load_split()
+    print("train:", len(train), "/ valid:", len(valid), "/ device:", device)
+
+    # 1) 라벨 한 줄 확인과 되돌리기 검사
+    config_path = write_dataset(train, valid)
+    first = train[0]
+    lines = (YOLO_ROOT / "train" / "labels" / f"{first['path'].stem}.txt").read_text().strip().splitlines()
+    print("라벨 파일", first["path"].stem + ".txt:", *lines, sep="\n  ")
+    for line, box in zip(lines, first["boxes"]):
+        restored = yolo_to_xyxy([float(v) for v in line.split()[1:]], first["width"], first["height"])
+        assert max(abs(a - b) for a, b in zip(restored, box)) < 1.0, (restored, box)
+    print("되돌린 박스가 원래 박스와 1픽셀 이내: 통과")
+
+    # 2) 사전학습 모델(COCO 80클래스)로 검증 이미지 한 장
+    pretrained = YOLO(WEIGHTS)
+    print(f"사전학습 {WEIGHTS}: 클래스 {len(pretrained.names)}개, 파라미터 {sum(p.numel() for p in pretrained.model.parameters()) / 1e6:.1f}M")
+    sample_image = str(YOLO_ROOT / "valid" / "images" / valid[0]["path"].name)
+    result = pretrained(sample_image, verbose=False)[0]
+    names = [result.names[int(c)] for c in result.boxes.cls]
+    print(f"사전학습으로 {valid[0]['path'].name}: {dict((n, names.count(n)) for n in sorted(set(names)))} / 정답 사람 {len(valid[0]['boxes'])}명")
+
+    # 3) 전이학습
+    start = time.time()
+    model = YOLO(WEIGHTS)
+    model.add_callback("on_fit_epoch_end", print_progress)
+    model.train(data=str(config_path), imgsz=IMAGE_SIZE, batch=BATCH, epochs=EPOCHS, device=device,
+                project=str(RUN_DIR), name="person", exist_ok=True, seed=SEED, plots=False)
+    print(f"학습 시간: {time.time() - start:.0f}초 ({EPOCHS} epoch)")
+
+    # 4) best.pt를 명시적으로 불러 평가
+    best = YOLO(str(RUN_DIR / "person" / "weights" / "best.pt"))
+    metrics = best.val(data=str(config_path), imgsz=IMAGE_SIZE, plots=False, device=device, verbose=False)
+    print(f"best.pt  mAP50 = {metrics.box.map50:.3f} / mAP50-95 = {metrics.box.map:.3f} / 클래스 {best.names}")
+    with open(RUN_DIR / "person" / "results.csv") as f:
+        rows = list(csv.DictReader(f))
+    best_row = max(rows, key=lambda r: float(r["metrics/mAP50-95(B)"].strip()))
+    print("가장 좋은 epoch:", int(float(best_row["epoch"])))
+
+    # 5) 기준 점수와 탐지 수
+    counts = {conf: len(best.predict(sample_image, conf=conf, verbose=False)[0].boxes) for conf in (0.25, 0.5, 0.9)}
+    print("conf별 탐지 수:", counts, "/ 정답", len(valid[0]["boxes"]))
+    assert counts[0.25] >= counts[0.5] >= counts[0.9]   # 기준을 높이면 줄어들기만 한다
+    total = sum(len(r.boxes) for r in best.predict([str(YOLO_ROOT / "valid" / "images" / s["path"].name) for s in valid], conf=0.5, verbose=False, stream=True))
+    print("검증 34장 conf 0.5 탐지 합계:", total, "/ 정답", sum(len(s["boxes"]) for s in valid))</code></pre>
+
+      <div class="steps">
+        <div class="step"><p><b>장치</b>: CUDA면 숫자 <code>0</code>, Mac이면 <code>"mps"</code>, 아니면 <code>"cpu"</code>. ultralytics는 CUDA를 <strong>번호</strong>로 받습니다.</p></div>
+        <div class="step"><p><b>데이터</b>: <code>load_split()</code> → 136 train / 34 valid. 출력으로 확인.</p></div>
+        <div class="step"><p><b>라벨 왕복 검사</b>: 첫 사진의 라벨을 다시 xyxy로 풀어 원래 박스와 1픽셀 이내인지 <code>assert</code>. 형식 변환이 맞는지 스스로 검증하는 장치.</p></div>
+        <div class="step"><p><b>사전학습 확인</b>: COCO 80클래스 모델로 검증 사진 한 장을 추론. 사람 말고 다른 클래스가 나올 수 있음. 정답 사람 수와 비교.</p></div>
+        <div class="step"><p><b>전이학습</b>: <code>YOLO(WEIGHTS)</code>에서 시작해 Penn-Fudan 사람 1클래스로 <code>train</code>. <code>plots=False</code>로 그림 저장을 끔.</p></div>
+        <div class="step"><p><b>best.pt 평가</b>: 학습이 고른 최고 체크포인트를 다시 불러 <code>val</code>. mAP50 / mAP50-95 출력.</p></div>
+        <div class="step"><p><b>results.csv</b>: epoch별 지표를 읽어 mAP50-95가 가장 높은 epoch를 찾음. “best.pt가 몇 번째 epoch인지” 확인.</p></div>
+        <div class="step"><p><b>conf 실험</b>: 0.25 / 0.5 / 0.9로 예측해 탐지 수가 단조 감소하는지 <code>assert</code>. 마지막으로 34장 전체 탐지 합계와 정답 합계를 비교.</p></div>
+      </div>
+
+      <div class="layer precise">
+        <span class="tag">🔬 정확히는 — mAP</span>
+        <p><strong>mAP50</strong>은 IoU 0.5 이상을 맞음으로 볼 때의 평균 정밀도(AP)를 클래스 평균한 값. <strong>mAP50-95</strong>는 IoU 0.5~0.95를 0.05 간격으로 10번 재서 평균합니다. 더 엄격한 점수라 보통 더 낮아요. lab7에서 이 숫자를 한 겹씩 뜯어봅니다.</p>
+      </div>
+
+      <div class="layer gotcha">
+        <span class="tag">⚠️ 함정</span>
+        <ul class="arrow-list" style="margin-bottom:0">
+          <li><code>YOLO_VERBOSE=False</code>는 ultralytics import <strong>전에</strong> 설정해야 합니다. 그래서 파일 맨 위, import보다 먼저 나옵니다.</li>
+          <li><code>EPOCHS</code>는 환경변수 <code>YOLO_EPOCHS</code>로 줄일 수 있습니다. 수업에선 10으로도 충분.</li>
+          <li>학습 결과는 <code>runs/person/</code>에 덮어씁니다(<code>exist_ok=True</code>). 다시 돌리면 이전 best.pt가 사라져요.</li>
+          <li><code>best.pt</code>는 <strong>검증 점수</strong>로 고릅니다. 그래서 검증 점수는 낙관적일 수 있고, lab9가 이 문제를 다룹니다.</li>
+          <li>ultralytics는 AGPL-3.0. 이 파일과 학습된 모델에도 적용됩니다. 교안의 MIT 범위 밖.</li>
+        </ul>
+      </div>
+
+      <div class="layer analogy">
+        <span class="tag">🍭 5살 비유</span>
+        <p>이미 세상 많은 사진을 본 <strong>탐정</strong>(COCO 학습)에게 “우리 동네 사람 사진”을 보여 주며 다시 훈련시키는 거예요. 처음부터 가르치는 것보다 훨씬 빨리 배웁니다. 이걸 <strong>전이학습</strong>이라고 해요.</p>
+      </div>
+    </section>
+
+    <section id="lab9" data-lecture-section="lab9">
+      <div class="sec-head">
+        <p class="sec-kicker">08 · lab9_test_split.py</p>
+        <h2>연습 문제와 시험 문제를 완전히 분리하기</h2>
+        <p class="sub">lab5의 136장 학습 데이터를 다시 102/34로 쪼갭니다. lab5의 34장 검증은 이제 <strong>시험(test)</strong>으로만 씁니다. 검증 점수가 얼마나 낙관적인지 재는 실험.</p>
+      </div>
+
+      <div class="code-cap"><span>lab9_test_split.py · 18–21행</span><span>원문 그대로</span></div>
+      <pre class="code"><code>SPLIT_ROOT = HERE / "data" / "PennFudan_3way"
+RUN = HERE / "runs" / "person_3way"
+EPOCHS = 50
+VALID_SHARE = 0.25   # 학습 136장 가운데 검증으로 뗄 몫</code></pre>
+
+      <div class="steps">
+        <div class="step"><p><b>lab5 데이터 재사용</b>: <code>load_split()</code>가 136 train / 34 test를 줍니다. lab5와 같은 나눔.</p></div>
+        <div class="step"><p><b>136장 다시 섞기</b>: <code>random.Random(SEED).shuffle</code>. <code>SEED</code>는 lab5에서 import한 1729.</p></div>
+        <div class="step"><p><b>25% 검증</b>: <code>int(136 * 0.25) = 34</code>. 앞 34장 valid, 나머지 102장 train.</p></div>
+        <div class="step"><p><b>3개 폴더로 저장</b>: train / valid / test 각각 images·labels. 라벨은 lab5의 <code>to_yolo_label</code> 재사용.</p></div>
+        <div class="step"><p><b>겹침 검사</b>: 파일명 집합의 교집합이 모두 비었는지 <code>assert</code>. train∩valid, train∩test, valid∩test.</p></div>
+        <div class="step"><p><b>data.yaml</b>: <code>test: test/images</code>까지 포함. ultralytics가 test split을 알 수 있게.</p></div>
+        <div class="step"><p><b>재학습</b>: <code>YOLO(WEIGHTS)</code>에서 50 epoch. 결과는 <code>runs/person_3way/</code>.</p></div>
+        <div class="step"><p><b>best.pt / last.pt 비교</b>: 각각 <code>val</code>과 <code>test</code>에서 mAP50·mAP50-95를 출력. 검증 점수와 시험 점수의 차이를 봄.</p></div>
+      </div>
+
+      <div class="layer precise">
+        <span class="tag">🔬 정확히는 — 왜 점수가 달라질까?</span>
+        <p><code>best.pt</code>는 <strong>검증 점수</strong>가 가장 좋은 epoch를 고른 결과입니다. 검증으로 고르고 검증으로 평가하면 “시험 문제를 보고 답을 고른” 셈이라 점수가 낙관적이에요. lab9는 새 모델을 102장으로 학습하고, 한 번도 보지 않은 34장(test)에서 다시 재서 <strong>정직한 점수</strong>를 확인합니다. lab5의 검증 34장은 lab5 학습에 쓰이지 않았으므로 test로 쓸 수 있습니다.</p>
+      </div>
+
+      <div class="grid-2" style="margin-top:14px">
+        <div class="card flat">
+          <h4>lab5의 나눔</h4>
+          <div class="formula" style="font-size:.74rem">전체 170<br>├ train 136 → 학습<br>└ valid 34 → best.pt 고르기</div>
+        </div>
+        <div class="card flat">
+          <h4>lab9의 3-way</h4>
+          <div class="formula" style="font-size:.74rem">전체 170<br>├ train 102 → 학습<br>├ valid 34 → best.pt 고르기<br>└ test 34 → 마지막에 한 번</div>
+        </div>
+      </div>
+
+      <div class="layer gotcha">
+        <span class="tag">⚠️ 함정</span>
+        <ul class="arrow-list" style="margin-bottom:0">
+          <li>lab9의 <code>EPOCHS=50</code>은 환경변수가 아니라 하드코딩입니다. lab5의 <code>YOLO_EPOCHS</code>를 줄여도 lab9는 50번 돌아요.</li>
+          <li><code>write_split</code>는 폴더를 만들지만 지우지는 않습니다. <code>main</code>이 먼저 <code>rmtree(SPLIT_ROOT)</code>로 전체를 비웁니다.</li>
+          <li>lab9의 valid는 lab5의 train 안에서 다시 뽑은 것입니다. lab5의 valid(34)와는 다른 사진 집합.</li>
+          <li>test 점수를 보고 모델을 고르면 안 됩니다. “마지막에 한 번” 보는 게 원칙.</li>
+          <li>lab9는 <code>best.pt</code>와 <code>last.pt</code>를 모두 평가합니다. last.pt는 마지막 epoch, best.pt는 검증 최고.</li>
+        </ul>
+      </div>
+
+      <div class="layer analogy">
+        <span class="tag">🍭 5살 비유</span>
+        <p>연습장으로 공부하고, <strong>모의고사</strong>로 “어떤 공부법이 제일 좋은지” 고른 다음, 진짜 시험지는 <strong>봉투에 넣어 두었다가</strong> 마지막에 한 번만 여는 거예요. 모의고사 점수만 믿으면 진짜 시험에서 놀랄 수 있죠.</p>
+      </div>
+    </section>
+
+    <section id="fullcode" data-lecture-section="fullcode">
+      <div class="sec-head">
+        <p class="sec-kicker">09 · 전체 코드</p>
+        <h2>원문 그대로</h2>
+        <p class="sub">common.py 91줄은 줄 번호와 함께, lab5·lab9는 접이식으로 실었습니다.</p>
+      </div>
+
+      <details class="card flat" style="padding:0;overflow:hidden" open>
+        <summary style="cursor:pointer;padding:16px 20px;font-weight:850;display:flex;align-items:center;justify-content:space-between;gap:10px;list-style:none">
+          <span>📄 common.py 전체 보기 (91줄)</span>
+          <span style="display:flex;gap:8px;align-items:center">
+            <button class="btn" type="button" id="copyCode" style="font-size:.7rem;padding:5px 10px">복사</button>
+            <span style="color:var(--coral);font-weight:900">+</span>
+          </span>
+        </summary>
+        <div style="padding:0 14px 14px">
+          <div class="codewrap">
+            <pre class="gutter" id="codeGutter" aria-hidden="true"></pre>
+            <pre class="code" style="max-height:600px"><code id="fullCodeSource">"""YOLO 덱 실습판 공통 부분: Penn-Fudan 데이터를 6강 노트북과 같은 방식으로 읽고 나눕니다."""
+import os
+import random
+import shutil
+import ssl
+import urllib.error
+import urllib.request
+import zipfile
+from pathlib import Path
+
+import numpy as np
+from PIL import Image
+
+PENN_URL = "https://www.cis.upenn.edu/~jshi/ped_html/PennFudanPed.zip"
+DOWNLOAD_TIMEOUT_SEC = 180
+SPLIT_SEED = 1729
+TRAIN_RATIO = 0.8
+# 데이터 위치는 환경변수로 바꿀 수 있다. 없으면 실습 폴더 아래 data/에 내려받는다
+DATA_ROOT = Path(os.environ.get("PENN_DATA_ROOT", Path(__file__).parent / "data"))
+
+
+def ssl_context() -> ssl.SSLContext:
+    """인증서 목록을 고릅니다. 파이썬 기본 목록만으로는 이 서버의 인증서를 확인하지 못하는 컴퓨터가 있습니다.
+
+    1) truststore가 깔려 있으면 운영체제의 인증서 저장소를 그대로 씁니다(학원·회사 보안 프록시 인증서도 포함).
+    2) 없으면 certifi(ultralytics와 함께 깔림)의 목록을 씁니다. 서버 인증서의 뿌리(emSign Root CA - G1)가 들어 있습니다.
+    3) 둘 다 없으면 파이썬 기본값.
+    """
+    try:
+        import truststore
+        return truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+    except ImportError:
+        pass
+    try:
+        import certifi
+        return ssl.create_default_context(cafile=certifi.where())
+    except ImportError:
+        return ssl.create_default_context()
+
+
+def penn_root() -> Path:
+    """Penn-Fudan 폴더를 돌려줍니다. 없으면 내려받아 풉니다."""
+    target = DATA_ROOT / "PennFudanPed"
+    if target.exists():
+        return target
+    DATA_ROOT.mkdir(parents=True, exist_ok=True)
+    zip_path = DATA_ROOT / "PennFudanPed.zip"
+    try:
+        with urllib.request.urlopen(PENN_URL, timeout=DOWNLOAD_TIMEOUT_SEC, context=ssl_context()) as response, open(zip_path, "wb") as f:
+            shutil.copyfileobj(response, f)
+    except urllib.error.URLError as error:
+        zip_path.unlink(missing_ok=True)   # 반쯤 받은 파일이 남으면 다음 실행에서 깨진 zip을 풀게 된다
+        if not isinstance(error.reason, ssl.SSLCertVerificationError):
+            raise
+        raise SystemExit(
+            f"인증서 확인에 실패해 데이터를 받지 못했습니다: {error.reason}\n"
+            "학원·회사 네트워크의 보안 장비가 인증서를 바꿔 끼우는 경우가 많습니다. 둘 중 하나를 하세요.\n"
+            "  1) 명령에 --with truststore를 더해 다시 실행합니다(운영체제 인증서 저장소를 씁니다).\n"
+            f"  2) 브라우저로 {PENN_URL} 을 받아 {DATA_ROOT} 에 풀고 다시 실행합니다.\n"
+            "     다른 곳에 풀었다면 PENN_DATA_ROOT에 PennFudanPed 폴더의 상위 폴더를 알려 줍니다."
+        ) from error
+    with zipfile.ZipFile(zip_path) as z:
+        z.extractall(DATA_ROOT)
+    return target
+
+
+def mask_to_boxes(mask_path: Path) -> list[list[int]]:
+    """인스턴스 마스크에서 사람별 xyxy 박스를 구합니다. 노트북 1.4절과 같은 규칙입니다."""
+    mask = np.array(Image.open(mask_path))
+    boxes = []
+    for object_id in np.unique(mask)[1:]:   # 0은 배경
+        ys, xs = np.where(mask == object_id)
+        boxes.append([int(xs.min()), int(ys.min()), int(xs.max()) + 1, int(ys.max()) + 1])
+    return boxes
+
+
+def load_split() -> tuple[list[dict], list[dict]]:
+    """샘플을 읽고 노트북과 같은 난수로 섞어 8:2로 나눕니다."""
+    root = penn_root()
+    samples = []
+    for image_path in sorted((root / "PNGImages").glob("*.png")):
+        with Image.open(image_path) as image:
+            width, height = image.size
+        boxes = mask_to_boxes(root / "PedMasks" / f"{image_path.stem}_mask.png")
+        samples.append({"path": image_path, "width": width, "height": height, "boxes": boxes})
+    shuffled = samples.copy()
+    random.Random(SPLIT_SEED).shuffle(shuffled)
+    num_train = int(len(shuffled) * TRAIN_RATIO)
+    return shuffled[:num_train], shuffled[num_train:]
+
+</code></pre>
+          </div>
+          <p class="note" style="margin:10px 0 0">줄 번호는 원문 기준. 빈 줄도 그대로.</p>
+        </div>
+      </details>
+
+      <details class="card flat" style="padding:0;overflow:hidden;margin-top:12px">
+        <summary style="cursor:pointer;padding:15px 20px;font-weight:850;list-style:none">📄 lab5_yolo11.py 전체 보기 (120줄) <span style="color:var(--coral)">+</span></summary>
+        <div style="padding:0 14px 14px">
+          <pre class="code"><code>"""5차시 실습: ultralytics YOLO11로 사람 탐지 전이학습 (6강 노트북 5.4절, 실습 8).
+
+라이선스: ultralytics는 AGPL-3.0이고, 약관상 직접 학습한 모델에도 적용됩니다.
+이 파일은 교안 코드의 MIT 라이선스에서 제외하며 AGPL-3.0 조건을 따릅니다.
+"""
+import csv
+import os
+import shutil
+import sys
+import time
+import warnings
+from pathlib import Path
+
+os.environ.setdefault("YOLO_VERBOSE", "False")   # import 전에 정해야 적용된다
+# MPS에서 결정적 구현이 없다는 경고가 배치마다 나와 출력을 덮으므로 그것만 끈다
+warnings.filterwarnings("ignore", message=".*does not have a deterministic implementation.*")
+
+import torch
+import yaml
+from ultralytics import YOLO
+from ultralytics.engine.trainer import BaseTrainer
+
+from common import load_split
+
+WEIGHTS = "yolo11s.pt"
+IMAGE_SIZE = 416
+BATCH = 16
+EPOCHS = int(os.environ.get("YOLO_EPOCHS", "50"))   # 수업 시간이 짧으면 YOLO_EPOCHS=10
+PRINT_EVERY = 10
+SEED = 1729
+HERE = Path(__file__).resolve().parent
+YOLO_ROOT = HERE / "data" / "PennFudan_yolo"
+RUN_DIR = HERE / "runs"
+
+
+def to_yolo_label(box: list[int], width: int, height: int) -> tuple[float, float, float, float]:
+    """xyxy 픽셀 박스를 YOLO 형식(중심과 크기, 0~1)으로 바꿉니다."""
+    x1, y1, x2, y2 = box
+    return ((x1 + x2) / 2 / width, (y1 + y2) / 2 / height, (x2 - x1) / width, (y2 - y1) / height)
+
+
+def yolo_to_xyxy(label: list[float], width: int, height: int) -> list[float]:
+    """YOLO 형식(0~1)을 xyxy 픽셀 박스로 되돌립니다."""
+    center_x, center_y, w, h = label
+    return [(center_x - w / 2) * width, (center_y - h / 2) * height, (center_x + w / 2) * width, (center_y + h / 2) * height]
+
+
+def write_dataset(train: list[dict], valid: list[dict]) -> Path:
+    """images/labels 폴더와 data.yaml을 만듭니다. 라벨 폴더는 images를 labels로 바꾼 경로여야 한다."""
+    shutil.rmtree(YOLO_ROOT, ignore_errors=True)   # 이전 실행의 파일이 섞이지 않게 한다
+    for split, split_samples in (("train", train), ("valid", valid)):
+        (YOLO_ROOT / split / "images").mkdir(parents=True)
+        (YOLO_ROOT / split / "labels").mkdir(parents=True)
+        for s in split_samples:
+            shutil.copy(s["path"], YOLO_ROOT / split / "images" / s["path"].name)
+            rows = [" ".join(["0"] + [f"{v:.6f}" for v in to_yolo_label(b, s["width"], s["height"])]) for b in s["boxes"]]
+            (YOLO_ROOT / split / "labels" / f"{s['path'].stem}.txt").write_text("\n".join(rows) + "\n")
+    config = {"path": str(YOLO_ROOT), "train": "train/images", "val": "valid/images", "nc": 1, "names": ["person"]}
+    config_path = YOLO_ROOT / "data.yaml"
+    config_path.write_text(yaml.safe_dump(config))
+    return config_path
+
+
+def print_progress(trainer: BaseTrainer) -> None:
+    """정해진 주기마다 검증 성능을 한 줄로 출력합니다."""
+    epoch = trainer.epoch + 1
+    if epoch % PRINT_EVERY == 0 or epoch == 1:
+        print(f"epoch {epoch:3d} | mAP50 {trainer.metrics['metrics/mAP50(B)']:.3f} | mAP50-95 {trainer.metrics['metrics/mAP50-95(B)']:.3f}", flush=True)
+
+
+def main() -> None:
+    device = 0 if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu"
+    train, valid = load_split()
+    print("train:", len(train), "/ valid:", len(valid), "/ device:", device)
+
+    # 1) 라벨 한 줄 확인과 되돌리기 검사
+    config_path = write_dataset(train, valid)
+    first = train[0]
+    lines = (YOLO_ROOT / "train" / "labels" / f"{first['path'].stem}.txt").read_text().strip().splitlines()
+    print("라벨 파일", first["path"].stem + ".txt:", *lines, sep="\n  ")
+    for line, box in zip(lines, first["boxes"]):
+        restored = yolo_to_xyxy([float(v) for v in line.split()[1:]], first["width"], first["height"])
+        assert max(abs(a - b) for a, b in zip(restored, box)) < 1.0, (restored, box)
+    print("되돌린 박스가 원래 박스와 1픽셀 이내: 통과")
+
+    # 2) 사전학습 모델(COCO 80클래스)로 검증 이미지 한 장
+    pretrained = YOLO(WEIGHTS)
+    print(f"사전학습 {WEIGHTS}: 클래스 {len(pretrained.names)}개, 파라미터 {sum(p.numel() for p in pretrained.model.parameters()) / 1e6:.1f}M")
+    sample_image = str(YOLO_ROOT / "valid" / "images" / valid[0]["path"].name)
+    result = pretrained(sample_image, verbose=False)[0]
+    names = [result.names[int(c)] for c in result.boxes.cls]
+    print(f"사전학습으로 {valid[0]['path'].name}: {dict((n, names.count(n)) for n in sorted(set(names)))} / 정답 사람 {len(valid[0]['boxes'])}명")
+
+    # 3) 전이학습
+    start = time.time()
+    model = YOLO(WEIGHTS)
+    model.add_callback("on_fit_epoch_end", print_progress)
+    model.train(data=str(config_path), imgsz=IMAGE_SIZE, batch=BATCH, epochs=EPOCHS, device=device,
+                project=str(RUN_DIR), name="person", exist_ok=True, seed=SEED, plots=False)
+    print(f"학습 시간: {time.time() - start:.0f}초 ({EPOCHS} epoch)")
+
+    # 4) best.pt를 명시적으로 불러 평가
+    best = YOLO(str(RUN_DIR / "person" / "weights" / "best.pt"))
+    metrics = best.val(data=str(config_path), imgsz=IMAGE_SIZE, plots=False, device=device, verbose=False)
+    print(f"best.pt  mAP50 = {metrics.box.map50:.3f} / mAP50-95 = {metrics.box.map:.3f} / 클래스 {best.names}")
+    with open(RUN_DIR / "person" / "results.csv") as f:
+        rows = list(csv.DictReader(f))
+    best_row = max(rows, key=lambda r: float(r["metrics/mAP50-95(B)"].strip()))
+    print("가장 좋은 epoch:", int(float(best_row["epoch"])))
+
+    # 5) 기준 점수와 탐지 수
+    counts = {conf: len(best.predict(sample_image, conf=conf, verbose=False)[0].boxes) for conf in (0.25, 0.5, 0.9)}
+    print("conf별 탐지 수:", counts, "/ 정답", len(valid[0]["boxes"]))
+    assert counts[0.25] >= counts[0.5] >= counts[0.9]   # 기준을 높이면 줄어들기만 한다
+    total = sum(len(r.boxes) for r in best.predict([str(YOLO_ROOT / "valid" / "images" / s["path"].name) for s in valid], conf=0.5, verbose=False, stream=True))
+    print("검증 34장 conf 0.5 탐지 합계:", total, "/ 정답", sum(len(s["boxes"]) for s in valid))
+
+
+if __name__ == "__main__":
+    sys.exit(main())</code></pre>
+        </div>
+      </details>
+
+      <details class="card flat" style="padding:0;overflow:hidden;margin-top:12px">
+        <summary style="cursor:pointer;padding:15px 20px;font-weight:850;list-style:none">📄 lab9_test_split.py 전체 보기 (64줄) <span style="color:var(--coral)">+</span></summary>
+        <div style="padding:0 14px 14px">
+          <pre class="code"><code>"""8차시 실습: 고르는 데 쓴 데이터와 성적을 매기는 데이터를 나눈다(학습 / 검증 / 시험).
+
+lab5의 학습 136장을 다시 학습 102장, 검증 34장으로 나누고, lab5의 검증 34장은 '시험'으로만 쓴다.
+best.pt는 검증으로 고르므로 검증 점수는 낙관적이다. 시험 점수와 얼마나 다른지 잰다.
+"""
+import random
+import shutil
+import sys
+import time
+
+import yaml
+from ultralytics import YOLO
+
+from common import load_split
+from common_yolo import HERE, IMAGE_SIZE, pick_device
+from lab5_yolo11 import BATCH, SEED, WEIGHTS, to_yolo_label
+
+SPLIT_ROOT = HERE / "data" / "PennFudan_3way"
+RUN = HERE / "runs" / "person_3way"
+EPOCHS = 50
+VALID_SHARE = 0.25   # 학습 136장 가운데 검증으로 뗄 몫
+
+
+def write_split(name: str, samples: list[dict]) -> None:
+    for sub in ("images", "labels"):
+        (SPLIT_ROOT / name / sub).mkdir(parents=True)
+    for s in samples:
+        shutil.copy(s["path"], SPLIT_ROOT / name / "images" / s["path"].name)
+        rows = [" ".join(["0"] + [f"{v:.6f}" for v in to_yolo_label(b, s["width"], s["height"])]) for b in s["boxes"]]
+        (SPLIT_ROOT / name / "labels" / f"{s['path'].stem}.txt").write_text("\n".join(rows) + "\n")
+
+
+def main() -> int:
+    device = pick_device()
+    train_all, test = load_split()
+    shuffled = train_all.copy()
+    random.Random(SEED).shuffle(shuffled)
+    n_valid = int(len(shuffled) * VALID_SHARE)
+    valid, train = shuffled[:n_valid], shuffled[n_valid:]
+    shutil.rmtree(SPLIT_ROOT, ignore_errors=True)
+    for name, part in (("train", train), ("valid", valid), ("test", test)):
+        write_split(name, part)
+    names = {n: {s["path"].name for s in p} for n, p in (("train", train), ("valid", valid), ("test", test))}
+    assert not (names["train"] & names["valid"]) and not (names["train"] & names["test"]) and not (names["valid"] & names["test"])
+    print(f"학습 {len(train)} / 검증 {len(valid)} / 시험 {len(test)}  (겹치는 사진 없음)")
+    config = {"path": str(SPLIT_ROOT), "train": "train/images", "val": "valid/images", "test": "test/images", "nc": 1, "names": ["person"]}
+    (SPLIT_ROOT / "data.yaml").write_text(yaml.safe_dump(config))
+
+    start = time.time()
+    YOLO(WEIGHTS).train(data=str(SPLIT_ROOT / "data.yaml"), imgsz=IMAGE_SIZE, batch=BATCH, epochs=EPOCHS, device=device,
+                        project=str(RUN.parent), name=RUN.name, exist_ok=True, seed=SEED, plots=False, verbose=False)
+    print(f"학습 {time.time() - start:.0f}초")
+    for weights in ("best.pt", "last.pt"):
+        model = YOLO(str(RUN / "weights" / weights))
+        row = []
+        for split in ("val", "test"):
+            box = model.val(data=str(SPLIT_ROOT / "data.yaml"), split=split, imgsz=IMAGE_SIZE, plots=False, device=device, verbose=False).box
+            row.append(f"{'검증' if split == 'val' else '시험'} mAP50 {box.map50:.3f} / mAP50-95 {box.map:.3f}")
+        print(f"{weights:8s}: " + " | ".join(row))
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())</code></pre>
+        </div>
+      </details>
+    </section>
+
+    <section id="quiz" data-lecture-section="quiz">
+      <div class="sec-head">
+        <p class="sec-kicker">10 · 퀴즈</p>
+        <h2>데이터 준비, 진짜 이해했나요?</h2>
+        <p class="sub">12문제. 함정을 섞었습니다.</p>
+      </div>
+      <div class="panel" id="quizPanel">
+        <div class="quiz-top">
+          <span class="quiz-count" id="quizCount">1 / 12</span>
+          <div class="quiz-track" aria-hidden="true"><i id="quizBar"></i></div>
+          <span class="quiz-count" id="quizScore">0점</span>
+        </div>
+        <div id="quizBody">
+          <p class="quiz-q" id="quizQ">문제를 불러오는 중…</p>
+          <div class="quiz-opts" id="quizOpts"></div>
+          <div class="quiz-fb" id="quizFb" aria-live="polite"></div>
+          <div class="quiz-actions"><button class="btn primary" type="button" id="quizNext" hidden>다음 문제 →</button></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="glossary" data-lecture-section="glossary">
+      <div class="sec-head">
+        <p class="sec-kicker">11 · 용어 사전</p>
+        <h2>막히면 여기로</h2>
+      </div>
+      <details class="acc"><summary>Penn-Fudan Pedestrian</summary><div class="body"><p>보행자 탐지 데이터셋. 170장의 사진과 사람별 인스턴스 마스크(PedMasks)가 있습니다. 원 배포처 조건을 따릅니다.</p></div></details>
+      <details class="acc"><summary>인스턴스 마스크</summary><div class="body"><p>사진의 픽셀마다 “사람 1, 사람 2, 배경 0”을 적어 둔 이미지. 같은 클래스라도 개체를 구분합니다.</p></div></details>
+      <details class="acc"><summary>xyxy</summary><div class="body"><p>박스를 (왼쪽 위 x, 왼쪽 위 y, 오른쪽 아래 x, 오른쪽 아래 y)로 표현. 여기서 x2·y2는 exclusive(그 좌표는 포함하지 않음)라서 max+1을 씁니다.</p></div></details>
+      <details class="acc"><summary>YOLO 라벨 형식</summary><div class="body"><p><code>class cx cy w h</code>. cx·cy·w·h는 이미지 크기로 나눈 0~1 값입니다. 클래스 번호가 맨 앞에 옵니다.</p></div></details>
+      <details class="acc"><summary>split / train / valid / test</summary><div class="body"><p>데이터를 학습용·검증용·시험용으로 나눈 것. 검증은 모델 선택에, 시험은 마지막 성적에 씁니다. 서로 겹치면 안 됩니다.</p></div></details>
+      <details class="acc"><summary>seed</summary><div class="body"><p>난수 시작 번호. 같은 seed면 같은 섞기/초기화가 재현됩니다. 여기서는 1729.</p></div></details>
+      <details class="acc"><summary>전이학습 (transfer learning)</summary><div class="body"><p>큰 데이터로 미리 학습된 모델에서 시작해 새 데이터에 맞게 다시 학습하는 것. lab5가 COCO 학습 YOLO11s에서 시작합니다.</p></div></details>
+      <details class="acc"><summary>mAP50 / mAP50-95</summary><div class="body"><p>평균 정밀도(AP)를 클래스 평균한 지표. mAP50은 IoU 0.5 기준, mAP50-95는 IoU 0.5~0.95를 10단계로 평균해 더 엄격합니다.</p></div></details>
+      <details class="acc"><summary>conf (confidence threshold)</summary><div class="body"><p>예측 점수가 이 값 이상인 것만 남기는 기준. 높이면 탐지 수가 줄고 정밀도가 오르는 경향이 있습니다. lab5는 0.25/0.5/0.9로 단조 감소를 확인합니다.</p></div></details>
+      <details class="acc"><summary>best.pt / last.pt</summary><div class="body"><p>ultralytics가 남기는 체크포인트. best.pt는 검증 지표가 가장 좋았던 epoch, last.pt는 마지막 epoch의 가중치입니다.</p></div></details>
+      <details class="acc"><summary>data.yaml</summary><div class="body"><p>YOLO 데이터셋 설정 파일. <code>path</code>, <code>train</code>, <code>val</code>, (선택) <code>test</code>, <code>nc</code>, <code>names</code>를 담습니다.</p></div></details>
+      <details class="acc"><summary>SSL 인증서 검증</summary><div class="body"><p>HTTPS 서버가 제시한 인증서가 믿을 만한 CA 목록에 의해 서명됐는지 확인하는 절차. 회사·학원 프록시가 인증서를 바꿔 끼우면 실패할 수 있습니다.</p></div></details>
+      <details class="acc"><summary>PENN_DATA_ROOT</summary><div class="body"><p>데이터 위치를 바꾸는 환경변수. 이 폴더 아래에 <code>PennFudanPed</code>가 있어야 합니다.</p></div></details>
+    </section>
+
+    <section id="cheatsheet" data-lecture-section="cheatsheet">
+      <div class="sec-head">
+        <p class="sec-kicker">12 · 치트시트</p>
+        <h2>한 장 요약</h2>
+      </div>
+      <div class="scroll-x">
+        <table class="table">
+          <thead><tr><th>하고 싶은 것</th><th>한 줄</th></tr></thead>
+          <tbody>
+            <tr><td>데이터 확보</td><td><code>root = penn_root()</code></td></tr>
+            <tr><td>마스크 → 박스</td><td><code>boxes = mask_to_boxes(mask_path)</code></td></tr>
+            <tr><td>8:2 나눔</td><td><code>train, valid = load_split()</code></td></tr>
+            <tr><td>YOLO 라벨로</td><td><code>to_yolo_label(box, w, h)</code> → <code>0 cx cy w h</code></td></tr>
+            <tr><td>YOLO 데이터셋</td><td><code>write_dataset(train, valid)</code> → <code>data.yaml</code></td></tr>
+            <tr><td>3-way</td><td>lab9: 102 train / 34 valid / 34 test</td></tr>
+            <tr><td>학습 epoch 줄이기</td><td><code>YOLO_EPOCHS=10 uv run python lab5_yolo11.py</code></td></tr>
+            <tr><td>데이터 위치 변경</td><td><code>PENN_DATA_ROOT=/path uv run ...</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="scroll-x" style="margin-top:14px">
+        <table class="table">
+          <thead><tr><th>함정</th><th>기억할 말</th></tr></thead>
+          <tbody>
+            <tr><td><code>mask_to_boxes</code>의 +1</td><td>x2·y2는 exclusive. max+1.</td></tr>
+            <tr><td><code>np.unique[1:]</code></td><td>0은 배경.</td></tr>
+            <tr><td><code>load_split</code>의 RNG</td><td><code>random.Random(1729)</code> 지역 인스턴스.</td></tr>
+            <tr><td>폴더 존재 = 다운로드 완료</td><td>깨진 데이터는 직접 지워야 함.</td></tr>
+            <tr><td>라벨 짝</td><td>이미지와 같은 stem의 <code>.txt</code>.</td></tr>
+            <tr><td>검증 점수의 낙관성</td><td>best.pt를 검증으로 골랐기 때문. test로 확인.</td></tr>
+            <tr><td>lab9 EPOCHS</td><td>환경변수 무시, 50 고정.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="card flat" style="margin-top:18px;background:var(--teal-soft);border-color:#BFDDD5">
+        <h4>마지막 한 문장</h4>
+        <p style="margin:0"><strong>“common.py는 Penn-Fudan 사진을 읽어 사람별 박스를 만들고, seed 1729로 136:34로 나눠 주는 데이터 준비 상자다. lab5는 이걸 YOLO 형식으로 바꿔 학습하고, lab9는 한 번 더 쪼개 시험 점수를 정직하게 잰다.”</strong></p>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<footer class="footer">
+  <div class="footer-inner">
+    <p><strong>common.py — 데이터 준비 상자.</strong> YOLO 특강 1–2일차 공통 모듈 해설. 원문: src/lab/yolo_labs/common.py.</p>
+    <p>이 페이지는 학습용 비공식 해설입니다. Penn-Fudan 데이터는 원 배포처 조건을 따릅니다. lab5·lab9는 ultralytics(AGPL-3.0)를 사용합니다.</p>
+    <div class="footer-links">
+      <a href="#hero">맨 위로</a>
+      <a href="#fullcode">전체 코드</a>
+      <a href="#quiz">퀴즈 다시 풀기</a>
+    </div>
+  </div>
+</footer>
+
+<script>
+window.QUIZ_QUESTIONS = [
+  { q: 'PENN_DATA_ROOT 환경변수의 역할은?', o: ['모델 가중치 경로를 바꾼다', 'Penn-Fudan 데이터를 둘 폴더를 바꾼다', 'epoch 수를 바꾼다', 'GPU 번호를 바꾼다'], a: 1, why: 'DATA_ROOT = Path(os.environ.get("PENN_DATA_ROOT", ...))입니다. 그 폴더 아래에 PennFudanPed가 있어야 해요.' },
+  { q: 'Penn-Fudan 170장을 TRAIN_RATIO=0.8, seed 1729로 나누면?', o: ['85 / 85', '136 / 34', '120 / 50', '150 / 20'], a: 1, why: 'int(170 * 0.8) = 136이 train, 나머지 34가 valid입니다.' },
+  { q: 'mask_to_boxes가 xs.max()에 +1을 하는 이유는?', o: ['픽셀을 반올림하려고', 'x2·y2를 exclusive 끝 좌표로 쓰기 때문에', '배경을 빼려고', '이미지를 키우려고'], a: 1, why: 'min~max가 덮는 구간은 [min, max+1)입니다. +1을 해야 폭이 정확히 맞습니다.' },
+  { q: 'np.unique(mask)[1:]에서 [1:]이 하는 일은?', o: ['가장 큰 사람을 고른다', '배경 0을 건너뛴다', '마스크를 반으로 줄인다', '첫 사람만 고른다'], a: 1, why: 'unique는 0(배경)부터 정렬해 돌려줍니다. [1:]로 배경을 뺍니다.' },
+  { q: 'load_split의 섞기는 어떤 난수를 쓰나요?', o: ['전역 random.seed(1729)', 'random.Random(SPLIT_SEED) 지역 인스턴스', 'np.random.rand()', 'torch.manual_seed'], a: 1, why: '지역 RNG라 다른 코드가 전역 난수를 바꿔도 이 나눔은 재현됩니다.' },
+  { q: 'ssl_context의 시도 순서는?', o: ['certifi → truststore → 기본', 'truststore → certifi → 파이썬 기본', '파이썬 기본 → truststore → certifi', '무작위'], a: 1, why: '운영체제 저장소(truststore), certifi, 마지막에 파이썬 기본값 순서입니다.' },
+  { q: '다운로드가 URLError로 실패했을 때 반쯤 받은 zip을 지우는 이유는?', o: ['용량을 아끼려고', '다음 실행에서 깨진 zip을 푸는 사고를 막으려고', '바이러스를 지우려고', '압축을 빠르게 하려고'], a: 1, why: '다음 실행에서 zip이 있으면 다시 받지 않고 그대로 풀 수 있기 때문입니다.' },
+  { q: 'YOLO 라벨 한 줄의 형식은?', o: ['x1 y1 x2 y2 class', 'class cx cy w h (0~1 정규화)', 'class x1 y1 w h (픽셀)', 'cx cy class'], a: 1, why: '클래스 번호 + 중심·크기를 이미지 크기로 나눈 0~1 값입니다.' },
+  { q: 'lab5의 IMAGE_SIZE와 BATCH 기본값은?', o: ['320 / 8', '416 / 16', '640 / 32', '512 / 4'], a: 1, why: 'IMAGE_SIZE = 416, BATCH = 16입니다.' },
+  { q: 'lab9의 3-way 나눔 결과는?', o: ['136 / 34 / 0', '102 / 34 / 34', '120 / 25 / 25', '102 / 68 / 0'], a: 1, why: 'lab5 train 136장을 다시 섞어 25%인 34장을 valid로 떼고, 나머지 102장이 train. lab5 valid 34장은 test.' },
+  { q: 'lab9에서 검증 점수가 낙관적일 수 있는 이유는?', o: ['검증 사진이 학습에 쓰였기 때문', 'best.pt를 검증 점수로 골랐기 때문', 'epoch가 너무 적기 때문', '이미지가 64×64라서'], a: 1, why: '검증으로 고르고 검증으로 평가하면 “답을 보고 고른” 셈입니다. 그래서 test를 따로 둡니다.' },
+  { q: 'lab5의 epoch 수를 줄이는 환경변수는?', o: ['YOLO_EPOCHS', 'EPOCHS', 'TRAIN_EPOCHS', 'YOLO_BATCH'], a: 0, why: 'EPOCHS = int(os.environ.get("YOLO_EPOCHS", "50"))입니다. lab9는 이 값을 쓰지 않고 50 고정.' }
+];
+
+</script>
+<script>
+
+(function () {
+  'use strict';
+
+  var $ = function (s, r) { return (r || document).querySelector(s); };
+  var $$ = function (s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); };
+
+  /* ---------------- Python syntax highlighter (display only) ---------------- */
+  function esc(s) {
+    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+  function enc(n) {
+    var s = '';
+    do { s += String.fromCharCode(97 + (n % 26)); n = Math.floor(n / 26); } while (n > 0);
+    return s;
+  }
+  function dec(s) {
+    var n = 0;
+    for (var i = s.length - 1; i >= 0; i--) n = n * 26 + (s.charCodeAt(i) - 97);
+    return n;
+  }
+  var KEYWORDS = 'def|return|if|else|elif|for|while|in|not|and|or|is|import|from|as|with|lambda|None|True|False|try|except|raise|yield|pass|break|continue';
+
+  function highlightBlock(raw) {
+    var inDoc = false;
+    return raw.replace(/\r\n/g, '\n').split('\n').map(function (line) {
+      var t = line.trim();
+      if (inDoc) {
+        if (t.slice(-3) === '"""' || t.slice(-3) === "'''") inDoc = false;
+        return '<span class="tok-doc">' + esc(line) + '</span>';
+      }
+      if (t.slice(0, 3) === '"""' || t.slice(0, 3) === "'''") {
+        var q = t.slice(0, 3);
+        if (!(t.length > 3 && t.slice(-3) === q)) inDoc = true;
+        return '<span class="tok-doc">' + esc(line) + '</span>';
+      }
+      var cut = -1, quote = null;
+      for (var i = 0; i < line.length; i++) {
+        var ch = line[i];
+        if (quote) {
+          if (ch === '\\') { i++; continue; }
+          if (ch === quote) quote = null;
+        } else if (ch === '"' || ch === "'") {
+          quote = ch;
+        } else if (ch === '#') {
+          cut = i; break;
+        }
+      }
+      var code = cut >= 0 ? line.slice(0, cut) : line;
+      var comment = cut >= 0 ? line.slice(cut) : '';
+      var strings = [];
+      code = esc(code);
+      code = code.replace(/"[^"]*"|'[^']*'/g, function (m) {
+        strings.push(m);
+        return '\u0003' + enc(strings.length - 1) + '\u0003';
+      });
+      code = code.replace(/^(\s*)(@[\w.]+)/, function (m, a, b) { return a + '<span class="tok-dec">' + b + '</span>'; });
+      code = code.replace(new RegExp('\\b(' + KEYWORDS + ')\\b', 'g'), '<span class="tok-k">$1</span>');
+      code = code.replace(/(<span class="tok-k">def<\/span>\s+)([A-Za-z_]\w*)/g, '$1<span class="tok-fn">$2</span>');
+      code = code.replace(/\b(\d+(?:\.\d+)?)\b/g, '<span class="tok-n">$1</span>');
+      code = code.replace(/\u0003([a-z]+)\u0003/g, function (m, idx) {
+        return '<span class="tok-str">' + strings[dec(idx)] + '</span>';
+      });
+      if (comment) comment = '<span class="tok-com">' + esc(comment) + '</span>';
+      return code + comment;
+    }).join('\n');
+  }
+
+  $$('pre.code code').forEach(function (el) {
+    var raw = el.textContent.replace(/\r\n/g, '\n');
+    el.dataset.raw = raw;
+    el.innerHTML = highlightBlock(raw);
+  });
+
+  /* ---------------- full code: gutter + copy ---------------- */
+  var fullCode = $('#fullCodeSource');
+  if (fullCode) {
+    var raw = fullCode.dataset.raw || fullCode.textContent;
+    var lines = raw.split('\n');
+    var gutter = $('#codeGutter');
+    if (gutter) {
+      gutter.textContent = lines.map(function (_, i) { return String(i + 1); }).join('\n');
+    }
+    var copyBtn = $('#copyCode');
+    if (copyBtn) {
+      copyBtn.addEventListener('click', function (e) {
+        e.preventDefault(); e.stopPropagation();
+        var done = function () {
+          copyBtn.textContent = '복사됨 ✓';
+          setTimeout(function () { copyBtn.textContent = '복사'; }, 1500);
+        };
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(raw).then(done, function () { fallbackCopy(raw, done); });
+        } else {
+          fallbackCopy(raw, done);
+        }
+      });
+    }
+  }
+  function fallbackCopy(text, done) {
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand('copy'); done(); } catch (err) { /* ignore */ }
+    document.body.removeChild(ta);
+  }
+
+  /* ---------------- progress + active TOC ---------------- */
+  var progress = $('#progress');
+  var sections = $$('[data-lecture-section]');
+  var tocLinks = $$('#toc a');
+  var ticking = false;
+  function updateScroll() {
+    ticking = false;
+    var max = document.documentElement.scrollHeight - window.innerHeight;
+    if (progress) progress.style.width = (max > 0 ? Math.min(100, Math.max(0, window.scrollY / max * 100)) : 0) + '%';
+    var current = sections[0];
+    for (var i = 0; i < sections.length; i++) {
+      if (sections[i].getBoundingClientRect().top <= 130) current = sections[i];
+    }
+    if (current) {
+      tocLinks.forEach(function (a) {
+        a.classList.toggle('active', a.getAttribute('href') === '#' + current.id);
+      });
+    }
+  }
+  function onScroll() {
+    if (!ticking) { ticking = true; window.requestAnimationFrame(updateScroll); }
+  }
+  window.addEventListener('scroll', onScroll, { passive: true });
+  window.addEventListener('resize', onScroll);
+  updateScroll();
+
+  /* ---------------- device picker ---------------- */
+  var hasCuda = $('#hasCuda'), hasMps = $('#hasMps');
+  if (hasCuda && hasMps) {
+    var deviceOut = $('#deviceOut'), deviceWhy = $('#deviceWhy');
+    var updateDevice = function () {
+      var d = hasCuda.checked ? 'cuda' : (hasMps.checked ? 'mps' : 'cpu');
+      deviceOut.textContent = 'torch.device("' + d + '")';
+      if (hasCuda.checked) {
+        deviceWhy.textContent = hasMps.checked
+          ? 'CUDA가 먼저라서 첫 번째 if에서 바로 반환합니다. MPS 체크박스가 켜져 있어도 무시돼요.'
+          : 'CUDA가 있으니 첫 번째 if에서 바로 반환합니다. MPS는 검사하지 않아요.';
+      } else if (hasMps.checked) {
+        deviceWhy.textContent = 'CUDA가 없으니 MPS를 검사하고, 있으니 "mps"를 반환합니다.';
+      } else {
+        deviceWhy.textContent = '둘 다 없으니 CPU로 떨어집니다. 느리지만 어디서든 돌아가요.';
+      }
+    };
+    hasCuda.addEventListener('change', updateDevice);
+    hasMps.addEventListener('change', updateDevice);
+    updateDevice();
+  }
+
+  /* ---------------- pretrained conceptual viz ---------------- */
+  var viz = $('#pretrainedViz');
+  if (viz) {
+    var structured = [16, 22, 30, 26, 38, 34, 46, 42, 54, 50, 60, 56, 68, 64, 74, 70, 80, 76, 84, 80, 88, 84, 92, 88];
+    var noisy = [42, 18, 74, 28, 56, 88, 34, 66, 22, 80, 48, 30, 70, 52, 90, 26, 62, 38, 76, 44, 58, 84, 32, 68];
+    var bars = [];
+    for (var bi = 0; bi < 24; bi++) {
+      var bar = document.createElement('i');
+      bar.style.width = '12px';
+      bar.style.height = structured[bi] + 'px';
+      bar.style.background = 'var(--teal)';
+      bar.style.opacity = '0.8';
+      viz.appendChild(bar);
+      bars.push(bar);
+    }
+    var btnP = $('#btnPretrained'), btnR = $('#btnRandom'), cap = $('#pretrainedCaption');
+    var setMode = function (pretrained) {
+      bars.forEach(function (bar, i) {
+        var h = pretrained ? structured[i] : noisy[i];
+        bar.style.height = h + 'px';
+        bar.style.background = pretrained ? 'var(--teal)' : 'var(--coral)';
+      });
+      btnP.classList.toggle('primary', pretrained);
+      btnR.classList.toggle('primary', !pretrained);
+      btnP.setAttribute('aria-pressed', String(pretrained));
+      btnR.setAttribute('aria-pressed', String(!pretrained));
+      cap.textContent = pretrained
+        ? '학습된 특징은 사진의 구조를 따라 규칙적으로 변합니다. (개념을 위한 그림이지 실제 수치가 아니에요.)'
+        : '무작위 가중치는 같은 구조라도 규칙성이 없습니다. “학습이 얼마나 큰 차이를 만드는가”의 기준선이에요.';
+    };
+    btnP.addEventListener('click', function () { setMode(true); });
+    btnR.addEventListener('click', function () { setMode(false); });
+  }
+
+  /* ---------------- normalization calculator ---------------- */
+  var normX = $('#normX');
+  if (normX) {
+    var channels = [
+      { name: 'R', mean: 0.485, std: 0.229 },
+      { name: 'G', mean: 0.456, std: 0.224 },
+      { name: 'B', mean: 0.406, std: 0.225 }
+    ];
+    var chSel = $('#normChannel');
+    var meanSlider = $('#normMean'), stdSlider = $('#normStd');
+    var xVal = $('#normXVal'), meanVal = $('#normMeanVal'), stdVal = $('#normStdVal');
+    var nfX = $('#nfX'), nfM = $('#nfM'), nfS = $('#nfS'), nfOut = $('#nfOut');
+    var swatch = $('#normSwatch');
+    var outs = [$('#normR'), $('#normG'), $('#normB')];
+
+    var fmt = function (v) { return (v >= 0 ? '+' : '') + v.toFixed(3); };
+    var calcNorm = function () {
+      var x = Number(normX.value);
+      var ch = Number(chSel.value);
+      channels[ch].mean = Number(meanSlider.value);
+      channels[ch].std = Number(stdSlider.value);
+      xVal.textContent = String(x);
+      meanVal.textContent = channels[ch].mean.toFixed(3);
+      stdVal.textContent = channels[ch].std.toFixed(3);
+      var xn = x / 255;
+      nfX.textContent = xn.toFixed(3);
+      nfM.textContent = channels[ch].mean.toFixed(3);
+      nfS.textContent = channels[ch].std.toFixed(3);
+      nfOut.textContent = fmt((xn - channels[ch].mean) / channels[ch].std);
+      channels.forEach(function (c, i) {
+        if (outs[i]) outs[i].textContent = fmt((xn - c.mean) / c.std);
+      });
+      swatch.style.background = 'rgb(' + x + ',' + x + ',' + x + ')';
+      swatch.textContent = 'x = ' + x;
+      swatch.style.color = x > 150 ? '#211D18' : '#fff';
+      swatch.style.textShadow = x > 150 ? 'none' : '0 1px 3px rgba(0,0,0,.55)';
+    };
+    var syncChannel = function () {
+      var ch = Number(chSel.value);
+      meanSlider.value = channels[ch].mean;
+      stdSlider.value = channels[ch].std;
+      calcNorm();
+    };
+    normX.addEventListener('input', calcNorm);
+    meanSlider.addEventListener('input', calcNorm);
+    stdSlider.addEventListener('input', calcNorm);
+    chSel.addEventListener('change', syncChannel);
+    syncChannel();
+  }
+
+  /* ---------------- cosine playground ---------------- */
+  var cv = $('#cosCanvas');
+  if (cv) {
+    var ctx = cv.getContext('2d');
+    var box = cv.parentElement;
+    var state = { a: { x: 1.12, y: 0.52 }, b: { x: 0.38, y: 1.02 }, norm: false, drag: null };
+    var W = 600, H = 320, DPR = 1;
+    var cosDot = $('#cosDot'), cosNa = $('#cosNa'), cosNb = $('#cosNb'), cosCos = $('#cosCos'), cosAngle = $('#cosAngle'), cosNote = $('#cosNote'), cosNorm = $('#cosNorm');
+
+    var unit = function (v) {
+      var n = Math.hypot(v.x, v.y) || 1;
+      return { x: v.x / n, y: v.y / n };
+    };
+    var shown = function (v) { return state.norm ? unit(v) : v; };
+    var scaleFor = function () { return Math.min(W, H) * 0.3; };
+    var cx = function () { return W / 2; };
+    var cy = function () { return H / 2; };
+    var toScreen = function (v) { var s = scaleFor(); return { x: cx() + v.x * s, y: cy() - v.y * s }; };
+    var toData = function (p) { var s = scaleFor(); return { x: (p.x - cx()) / s, y: (cy() - p.y) / s }; };
+    var clampVec = function (v) {
+      var n = Math.hypot(v.x, v.y);
+      var max = 1.55, min = 0.22;
+      if (n < 1e-6) return { x: min, y: 0 };
+      if (n > max) { v.x = v.x / n * max; v.y = v.y / n * max; }
+      if (n < min) { v.x = v.x / n * min; v.y = v.y / n * min; }
+      if (state.norm) return unit(v);
+      return v;
+    };
+    var normUnit = function (v) { var n = Math.hypot(v.x, v.y) || 1; return { x: v.x / n, y: v.y / n }; };
+
+    function draw() {
+      ctx.clearRect(0, 0, W, H);
+      var s = scaleFor(), x0 = cx(), y0 = cy();
+      ctx.save();
+      ctx.strokeStyle = 'rgba(33,29,24,.08)';
+      ctx.lineWidth = 1;
+      for (var g = -1.5; g <= 1.5; g += 0.5) {
+        ctx.beginPath(); ctx.moveTo(x0 + g * s, 0); ctx.lineTo(x0 + g * s, H); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(0, y0 + g * s); ctx.lineTo(W, y0 + g * s); ctx.stroke();
+      }
+      ctx.strokeStyle = 'rgba(33,29,24,.28)';
+      ctx.beginPath(); ctx.moveTo(0, y0); ctx.lineTo(W, y0); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(x0, 0); ctx.lineTo(x0, H); ctx.stroke();
+      ctx.setLineDash([5, 5]);
+      ctx.strokeStyle = 'rgba(31,122,108,.45)';
+      ctx.beginPath(); ctx.arc(x0, y0, s, 0, Math.PI * 2); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = 'rgba(33,29,24,.5)';
+      ctx.font = '600 11px ui-monospace, monospace';
+      ctx.fillText('1', x0 + s + 5, y0 - 6);
+      ctx.fillText('−1', x0 - s - 22, y0 - 6);
+      ctx.restore();
+
+      var a = shown(state.a), b = shown(state.b);
+      var pa = toScreen(a), pb = toScreen(b);
+      var drawVec = function (p, color, label) {
+        ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = 3.2;
+        ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(p.x, p.y); ctx.stroke();
+        var ang = Math.atan2(p.y - y0, p.x - x0);
+        ctx.beginPath();
+        ctx.moveTo(p.x, p.y);
+        ctx.lineTo(p.x - 12 * Math.cos(ang - 0.42), p.y - 12 * Math.sin(ang - 0.42));
+        ctx.lineTo(p.x - 12 * Math.cos(ang + 0.42), p.y - 12 * Math.sin(ang + 0.42));
+        ctx.closePath(); ctx.fill();
+        ctx.beginPath(); ctx.arc(p.x, p.y, 6, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#FFFDF8'; ctx.beginPath(); ctx.arc(p.x, p.y, 2.4, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = color;
+        ctx.font = '800 13px "Pretendard Variable", Pretendard, sans-serif';
+        ctx.fillText(label, p.x + 9, p.y - 9);
+      };
+      drawVec(pa, '#E4572E', 'a');
+      drawVec(pb, '#1F7A6C', 'b');
+
+      var a1 = Math.atan2(pa.y - y0, pa.x - x0);
+      var a2 = Math.atan2(pb.y - y0, pb.x - x0);
+      var delta = a2 - a1;
+      while (delta > Math.PI) delta -= Math.PI * 2;
+      while (delta < -Math.PI) delta += Math.PI * 2;
+      if (Math.abs(delta) > 0.04) {
+        ctx.strokeStyle = 'rgba(233,180,76,.9)'; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(x0, y0, 48, a1, a1 + delta, delta < 0); ctx.stroke();
+        ctx.fillStyle = '#8A6412';
+        ctx.font = '700 11px ui-monospace, monospace';
+        var mid = a1 + delta / 2;
+        ctx.fillText('θ', x0 + Math.cos(mid) * 60 - 4, y0 + Math.sin(mid) * 60 + 4);
+      }
+    }
+
+    function readout() {
+      var a = shown(state.a), b = shown(state.b);
+      var dot = a.x * b.x + a.y * b.y;
+      var na = Math.hypot(a.x, a.y), nb = Math.hypot(b.x, b.y);
+      var cos = dot / ((na * nb) || 1);
+      var angle = Math.acos(Math.max(-1, Math.min(1, cos))) * 180 / Math.PI;
+      cosDot.textContent = dot.toFixed(3);
+      cosNa.textContent = na.toFixed(3);
+      cosNb.textContent = nb.toFixed(3);
+      cosCos.textContent = cos.toFixed(3);
+      cosAngle.textContent = angle.toFixed(1) + '°';
+      cosNote.textContent = state.norm
+        ? '길이를 1로 맞췄으니 내적과 코사인이 같습니다. 두 숫자가 같은지 보세요.'
+        : '정규화가 꺼져 있으면 내적과 코사인은 다릅니다. 길이가 다르기 때문이에요.';
+    }
+
+    function refresh() { draw(); readout(); }
+
+    function resize() {
+      var rect = box.getBoundingClientRect();
+      DPR = Math.min(window.devicePixelRatio || 1, 2);
+      W = Math.max(280, Math.round(box.clientWidth || rect.width));
+      H = 320;
+      cv.width = W * DPR; cv.height = H * DPR;
+      cv.style.width = W + 'px'; cv.style.height = H + 'px';
+      ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+      refresh();
+    }
+
+    var localPos = function (e) {
+      var r = cv.getBoundingClientRect();
+      return { x: e.clientX - r.left, y: e.clientY - r.top };
+    };
+    cv.addEventListener('pointerdown', function (e) {
+      var p = localPos(e);
+      var pa = toScreen(shown(state.a)), pb = toScreen(shown(state.b));
+      var da = Math.hypot(p.x - pa.x, p.y - pa.y);
+      var db = Math.hypot(p.x - pb.x, p.y - pb.y);
+      if (Math.min(da, db) < 34) {
+        state.drag = da <= db ? 'a' : 'b';
+        cv.setPointerCapture(e.pointerId);
+        cv.style.cursor = 'grabbing';
+        e.preventDefault();
+      }
+    });
+    cv.addEventListener('pointermove', function (e) {
+      if (!state.drag) return;
+      var v = toData(localPos(e));
+      state[state.drag] = clampVec(v);
+      refresh();
+    });
+    var endDrag = function (e) {
+      if (!state.drag) return;
+      state.drag = null;
+      cv.style.cursor = 'crosshair';
+      try { cv.releasePointerCapture(e.pointerId); } catch (err) { /* ignore */ }
+    };
+    cv.addEventListener('pointerup', endDrag);
+    cv.addEventListener('pointercancel', endDrag);
+
+    cv.addEventListener('keydown', function (e) {
+      if (e.key.indexOf('Arrow') !== 0) return;
+      e.preventDefault();
+      var v = e.shiftKey ? state.b : state.a;
+      var step = e.altKey ? 0.02 : 0.1;
+      if (e.key === 'ArrowLeft') v.x -= step;
+      if (e.key === 'ArrowRight') v.x += step;
+      if (e.key === 'ArrowUp') v.y += step;
+      if (e.key === 'ArrowDown') v.y -= step;
+      state[e.shiftKey ? 'b' : 'a'] = clampVec(v);
+      refresh();
+    });
+
+    if (cosNorm) {
+      cosNorm.addEventListener('change', function () {
+        state.norm = cosNorm.checked;
+        if (state.norm) { state.a = normUnit(state.a); state.b = normUnit(state.b); }
+        refresh();
+      });
+    }
+
+    var presets = {
+      same: { a: { x: 1.15, y: 0.42 }, b: { x: 1.05, y: 0.38 } },
+      right: { a: { x: 1.12, y: 0 }, b: { x: 0, y: 1.12 } },
+      opposite: { a: { x: 1.1, y: 0.32 }, b: { x: -1.1, y: -0.32 } },
+      reset: { a: { x: 1.12, y: 0.52 }, b: { x: 0.38, y: 1.02 } }
+    };
+    $$('[data-preset]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var p = presets[btn.getAttribute('data-preset')];
+        if (!p) return;
+        state.a = { x: p.a.x, y: p.a.y };
+        state.b = { x: p.b.x, y: p.b.y };
+        if (state.norm) { state.a = normUnit(state.a); state.b = normUnit(state.b); }
+        refresh();
+      });
+    });
+
+    if (window.ResizeObserver) {
+      new ResizeObserver(resize).observe(box);
+    } else {
+      window.addEventListener('resize', resize);
+    }
+    resize();
+  }
+
+  /* ---------------- batch calculator ---------------- */
+  var batchTotal = $('#batchTotal');
+  if (batchTotal) {
+    var batchSize = $('#batchSize');
+    var btVal = $('#batchTotalVal'), bsVal = $('#batchSizeVal');
+    var callsOut = $('#batchCalls'), lastOut = $('#batchLast'), maxOut = $('#batchMax');
+    var visual = $('#batchVisual');
+    var updateBatch = function () {
+      var n = Number(batchTotal.value), b = Number(batchSize.value);
+      var calls = Math.max(1, Math.ceil(n / b));
+      var last = n - (calls - 1) * b;
+      btVal.textContent = String(n);
+      bsVal.textContent = String(b);
+      callsOut.textContent = String(calls);
+      lastOut.textContent = last + '장';
+      maxOut.textContent = b + '장';
+      visual.innerHTML = '';
+      var show = Math.min(calls, 48);
+      for (var i = 0; i < show; i++) {
+        var bar = document.createElement('i');
+        if (i === show - 1) bar.style.background = 'var(--coral)';
+        if (i === show - 1 && show === 1) bar.style.width = '18px';
+        visual.appendChild(bar);
+      }
+      if (calls > 48) {
+        var more = document.createElement('span');
+        more.className = 'more';
+        more.textContent = '… +' + (calls - 48) + '번';
+        visual.appendChild(more);
+      }
+    };
+    batchTotal.addEventListener('input', updateBatch);
+    batchSize.addEventListener('input', updateBatch);
+    updateBatch();
+  }
+
+  /* ---------------- euroSAT split simulator ---------------- */
+  var splitRows = $('#splitRows');
+  if (splitRows) {
+    var classes = [
+      ['AnnualCrop', '연간 작물'], ['Forest', '숲'], ['HerbaceousVegetation', '초본 식생'],
+      ['Highway', '고속도로'], ['Industrial', '산업 지역'], ['Pasture', '목초지'],
+      ['PermanentCrop', '영구 작물'], ['Residential', '주거 지역'], ['River', '강'], ['SeaLake', '바다·호수']
+    ];
+    var rowRefs = [];
+    classes.forEach(function (c, ci) {
+      var row = document.createElement('div');
+      row.className = 'split-row';
+      var name = document.createElement('div');
+      name.className = 'split-name';
+      name.innerHTML = esc(c[0]) + '<em>' + esc(c[1]) + ' · class ' + ci + '</em>';
+      var blocks = document.createElement('div');
+      blocks.className = 'blocks';
+      for (var i = 0; i < 15; i++) {
+        var b = document.createElement('span');
+        b.className = 'block';
+        b.title = '사진 10장 묶음';
+        blocks.appendChild(b);
+      }
+      var count = document.createElement('div');
+      count.className = 'split-count';
+      count.textContent = '50 + 100';
+      row.appendChild(name); row.appendChild(blocks); row.appendChild(count);
+      splitRows.appendChild(row);
+      rowRefs.push({ row: row, blocks: blocks });
+    });
+
+    var applySplit = function (animate) {
+      rowRefs.forEach(function (ref, ri) {
+        ref.blocks.classList.toggle('shuffling', !!animate);
+        var bs = Array.prototype.slice.call(ref.blocks.children);
+        bs.forEach(function (b, i) {
+          b.className = 'block';
+          b.style.transitionDelay = animate ? (ri * 25 + i * 9) + 'ms' : '0ms';
+        });
+      });
+      setTimeout(function () {
+        rowRefs.forEach(function (ref) {
+          ref.blocks.classList.remove('shuffling');
+          var bs = Array.prototype.slice.call(ref.blocks.children);
+          bs.forEach(function (b, i) {
+            b.classList.add(i < 5 ? 'pool' : (i < 15 ? 'test' : 'unused'));
+          });
+        });
+      }, animate ? 340 : 0);
+    };
+    applySplit(false);
+
+    var splitResult = $('#splitResult');
+    $('#shuffleSplit').addEventListener('click', function () {
+      applySplit(true);
+      splitResult.className = 'split-result';
+      splitResult.textContent = '다시 섞었어요. pool 500장 / test 1,000장.';
+    });
+    $('#checkOverlap').addEventListener('click', function () {
+      var pool = new Set(), test = new Set();
+      var seed = 7;
+      var rnd = function () {
+        seed |= 0; seed = seed + 0x6D2B79F5 | 0;
+        var t = Math.imul(seed ^ seed >>> 15, 1 | seed);
+        t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+        return ((t ^ t >>> 14) >>> 0) / 4294967296;
+      };
+      for (var c = 0; c < 10; c++) {
+        var idx = [];
+        for (var i = 0; i < 3000; i++) idx.push(i);
+        for (var j = idx.length - 1; j > 0; j--) {
+          var k = Math.floor(rnd() * (j + 1));
+          var tmp = idx[j]; idx[j] = idx[k]; idx[k] = tmp;
+        }
+        idx.slice(0, 50).forEach(function (v) { pool.add(c + ':' + v); });
+        idx.slice(50, 150).forEach(function (v) { test.add(c + ':' + v); });
+      }
+      var overlap = 0;
+      test.forEach(function (key) { if (pool.has(key)) overlap++; });
+      splitResult.className = 'split-result ' + (overlap === 0 ? 'ok' : 'bad');
+      splitResult.textContent = overlap === 0
+        ? '겹친 사진: 0장 — pool과 test가 완전히 분리됐어요. (시드 7 시뮬레이션)'
+        : '겹친 사진: ' + overlap + '장 — 나눔 로직을 확인하세요!';
+    });
+  }
+
+  /* ---------------- cache simulator ---------------- */
+  var cacheName = $('#cacheName');
+  if (cacheName) {
+    var cacheModel = $('#cacheModel');
+    var cacheLog = $('#cacheLog');
+    var cacheWarn = $('#cacheWarn');
+    var cacheRun = $('#cacheRun');
+    var cacheReset = $('#cacheReset');
+    var cache = new Map();
+    var busy = false;
+    var cacheLines = [{ text: '[대기] 실행을 눌러 주세요.', cls: 'dim' }];
+
+    var renderLog = function () {
+      cacheLog.innerHTML = cacheLines.map(function (l) {
+        return '<span class="' + l.cls + '">' + esc(l.text) + '</span>';
+      }).join('\n');
+      cacheLog.scrollTop = cacheLog.scrollHeight;
+    };
+    var pushLog = function (text, cls) {
+      if (cacheLines.length === 1 && cacheLines[0].text.indexOf('[대기]') === 0) cacheLines.shift();
+      cacheLines.push({ text: text, cls: cls || '' });
+      if (cacheLines.length > 7) cacheLines.shift();
+      renderLog();
+    };
+
+    cacheRun.addEventListener('click', function () {
+      if (busy) return;
+      var name = cacheName.value.trim() || 'eurosat';
+      var model = cacheModel.value;
+      if (cache.has(name)) {
+        var prev = cache.get(name);
+        pushLog('[HIT] runs/dino/' + name + '.npy 를 불러왔어요.', 'hit');
+        if (prev !== model) {
+          cacheWarn.classList.add('show');
+          cacheWarn.innerHTML = '⚠️ <strong>오래된 캐시!</strong> 이 이름은 <code>' + esc(prev) + '</code>로 저장됐는데 지금은 <code>' + esc(model) + '</code>을(를) 선택했어요. 코드는 이름만 보고 불러오므로 <strong>옛 특징</strong>이 나옵니다. 이름을 바꾸거나 <code>.npy</code>를 지우세요.';
+        } else {
+          cacheWarn.classList.remove('show');
+          cacheWarn.textContent = '';
+        }
+        return;
+      }
+      busy = true; cacheRun.disabled = true;
+      cacheWarn.classList.remove('show'); cacheWarn.textContent = '';
+      pushLog('[MISS] ' + name + ' 계산 시작… (' + model + ')', 'miss');
+      setTimeout(function () {
+        cache.set(name, model);
+        pushLog('[SAVE] runs/dino/' + name + '.npy 저장 완료', 'hit');
+        busy = false; cacheRun.disabled = false;
+      }, 1100);
+    });
+
+    cacheReset.addEventListener('click', function () {
+      cache.clear();
+      cacheLines = [];
+      pushLog('[RESET] 캐시를 비웠어요. 다음 실행은 다시 계산합니다.', 'dim');
+      cacheWarn.classList.remove('show');
+      cacheWarn.textContent = '';
+    });
+    renderLog();
+  }
+
+  /* ---------------- patch grid ---------------- */
+  var patchGrid = $('#patchGrid');
+  if (patchGrid) {
+    var patchReadout = $('#patchReadout');
+    var prefixToggle = $('#prefixToggle');
+    var prefixStrip = $('#prefixStrip');
+    for (var r = 0; r < 14; r++) {
+      for (var c = 0; c < 14; c++) {
+        var b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'patch';
+        b.setAttribute('data-r', String(r));
+        b.setAttribute('data-c', String(c));
+        b.setAttribute('aria-label', '패치 행 ' + (r + 1) + ', 열 ' + (c + 1));
+        b.title = 'row ' + r + ', col ' + c;
+        patchGrid.appendChild(b);
+      }
+    }
+    var showPatch = function (el, selected) {
+      var rr = Number(el.getAttribute('data-r'));
+      var cc = Number(el.getAttribute('data-c'));
+      var flat = rr * 14 + cc;
+      patchReadout.innerHTML = '패치 <b>row ' + rr + ', col ' + cc + '</b> · flat index ' + flat +
+        '<br>이 칸의 특징: <b>384개 숫자</b>' + (selected ? ' · 선택됨' : '');
+      if (selected) {
+        $$('.patch.sel', patchGrid).forEach(function (x) { x.classList.remove('sel'); x.setAttribute('aria-pressed', 'false'); });
+        el.classList.add('sel');
+        el.setAttribute('aria-pressed', 'true');
+      }
+    };
+    patchGrid.addEventListener('pointerover', function (e) {
+      var t = e.target.closest('.patch');
+      if (t) showPatch(t, false);
+    });
+    patchGrid.addEventListener('focusin', function (e) {
+      var t = e.target.closest('.patch');
+      if (t) showPatch(t, false);
+    });
+    patchGrid.addEventListener('click', function (e) {
+      var t = e.target.closest('.patch');
+      if (t) showPatch(t, true);
+    });
+    if (prefixToggle) {
+      prefixToggle.addEventListener('change', function () {
+        prefixStrip.classList.toggle('show', prefixToggle.checked);
+        if (prefixToggle.checked) {
+          patchReadout.innerHTML = '앞쪽 <b>5개 토큰</b>(CLS 1 + 레지스터 4)을 잘라냅니다. 실제 개수는 <b>model.num_prefix_tokens</b>.';
+        } else {
+          patchReadout.innerHTML = '칸을 골라 보세요. 각 칸은 <b>384개 숫자</b>를 가집니다.';
+        }
+      });
+    }
+  }
+
+  /* ---------------- quiz ---------------- */
+  var questions = window.QUIZ_QUESTIONS || [];
+  var quizBody = $('#quizBody');
+  if (quizBody && questions.length) {
+    var qi = 0, score = 0, answered = false;
+    var quizQ = $('#quizQ'), quizOpts = $('#quizOpts'), quizFb = $('#quizFb'), quizNext = $('#quizNext');
+    var quizCount = $('#quizCount'), quizScore = $('#quizScore'), quizBar = $('#quizBar');
+
+    var renderQuestion = function () {
+      answered = false;
+      var q = questions[qi];
+      quizQ.textContent = q.q;
+      quizOpts.innerHTML = '';
+      quizFb.className = 'quiz-fb';
+      quizFb.innerHTML = '';
+      quizNext.hidden = true;
+      quizNext.textContent = qi === questions.length - 1 ? '결과 보기 →' : '다음 문제 →';
+      quizCount.textContent = (qi + 1) + ' / ' + questions.length;
+      quizScore.textContent = score + '점';
+      quizBar.style.width = ((qi) / questions.length * 100) + '%';
+      q.o.forEach(function (text, i) {
+        var b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'opt';
+        b.innerHTML = '<span class="ltr">' + 'ABCD'[i] + '</span><span>' + esc(text) + '</span>';
+        b.addEventListener('click', function () { choose(i, b); });
+        quizOpts.appendChild(b);
+      });
+    };
+
+    var choose = function (i, btn) {
+      if (answered) return;
+      answered = true;
+      var q = questions[qi];
+      var opts = $$('.opt', quizOpts);
+      opts.forEach(function (b, idx) {
+        b.disabled = true;
+        if (idx === q.a) b.classList.add('correct');
+        if (idx === i && i !== q.a) b.classList.add('wrong');
+      });
+      var ok = i === q.a;
+      if (ok) score++;
+      quizScore.textContent = score + '점';
+      quizFb.className = 'quiz-fb show ' + (ok ? 'ok' : 'no');
+      quizFb.innerHTML = '<b>' + (ok ? '정답! 🎉' : '아쉬워요. 정답은 ' + 'ABCD'[q.a] + '.') + '</b>' + esc(q.why);
+      quizNext.hidden = false;
+    };
+
+    var handleNext = function () {
+      if (!answered) return;
+      if (qi < questions.length - 1) {
+        qi++;
+        renderQuestion();
+      } else {
+        quizBar.style.width = '100%';
+        quizCount.textContent = questions.length + ' / ' + questions.length;
+        var pct = Math.round(score / questions.length * 100);
+        var msg = pct >= 90 ? '완벽에 가까워요. 이 파일의 주인이네요!' : pct >= 70 ? '좋아요. 함정 몇 개만 다시 보면 됩니다.' : pct >= 50 ? '절반은 잡았어요. 캐시와 패치 부분을 복습해 보세요.' : '괜찮아요. 위로 올라가 천천히 다시 읽으면 금방 이해됩니다.';
+        quizBody.innerHTML = '<div class="quiz-result"><div class="score">' + score + '<small> / ' + questions.length + '</small></div><p style="margin:10px 0 4px;font-weight:800">' + msg + '</p><p class="note">정답률 ' + pct + '%</p><button class="btn primary" type="button" id="quizRestart">다시 풀기</button></div>';
+        $('#quizRestart').addEventListener('click', function () {
+          qi = 0; score = 0;
+          quizBody.innerHTML = '<p class="quiz-q" id="quizQ"></p><div class="quiz-opts" id="quizOpts"></div><div class="quiz-fb" id="quizFb" aria-live="polite"></div><div class="quiz-actions"><button class="btn primary" type="button" id="quizNext" hidden>다음 문제 →</button></div>';
+          quizQ = $('#quizQ'); quizOpts = $('#quizOpts'); quizFb = $('#quizFb'); quizNext = $('#quizNext');
+          quizNext.addEventListener('click', handleNext);
+          renderQuestion();
+        });
+      }
+    };
+    quizNext.addEventListener('click', handleNext);
+
+    renderQuestion();
+  }
+})();
+
+</script>
+<script>
+(function () {
+  'use strict';
+
+  /* ---- 170 dots split simulator ---- */
+  var dots = document.getElementById('splitDots');
+  if (dots) {
+    var N = 170, TRAIN = 136;
+    function mulberry32(a) {
+      return function () {
+        a |= 0; a = a + 0x6D2B79F5 | 0;
+        var t = Math.imul(a ^ a >>> 15, 1 | a);
+        t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+        return ((t ^ t >>> 14) >>> 0) / 4294967296;
+      };
+    }
+    function render(seed) {
+      dots.innerHTML = '';
+      var arr = [];
+      for (var i = 0; i < N; i++) arr.push(i >= TRAIN);
+      var rnd = mulberry32(seed);
+      for (var j = arr.length - 1; j > 0; j--) {
+        var k = Math.floor(rnd() * (j + 1));
+        var tmp = arr[j]; arr[j] = arr[k]; arr[k] = tmp;
+      }
+      arr.forEach(function (isValid, idx) {
+        var d = document.createElement('i');
+        if (isValid) d.className = 'valid';
+        d.style.transitionDelay = Math.min(idx * 2, 300) + 'ms';
+        d.title = isValid ? 'valid' : 'train';
+        dots.appendChild(d);
+      });
+    }
+    render(1729);
+    var btn = document.getElementById('splitShuffle');
+    var cap = document.getElementById('splitCaption');
+    if (btn) {
+      btn.addEventListener('click', function () {
+        render(1729);
+        cap.textContent = '같은 seed 1729 → 언제나 같은 136:34 나눔. 위치만 섞여 보입니다.';
+      });
+    }
+  }
+
+  /* ---- xyxy -> YOLO label converter ---- */
+  var lx1 = document.getElementById('lx1');
+  if (lx1) {
+    var W = 640, H = 360;
+    var lx2 = document.getElementById('lx2');
+    var ly1 = document.getElementById('ly1');
+    var ly2 = document.getElementById('ly2');
+    var boxEl = document.getElementById('labelBox');
+    var lineEl = document.getElementById('labelLine');
+    var spans = {
+      lx1: document.getElementById('lx1v'),
+      lx2: document.getElementById('lx2v'),
+      ly1: document.getElementById('ly1v'),
+      ly2: document.getElementById('ly2v')
+    };
+    function updateLabel() {
+      var x1 = Number(lx1.value), y1 = Number(ly1.value);
+      var x2 = Math.max(Number(lx2.value), x1 + 10);
+      var y2 = Math.max(Number(ly2.value), y1 + 10);
+      x2 = Math.min(x2, W); y2 = Math.min(y2, H);
+      x1 = Math.min(x1, x2 - 10); y1 = Math.min(y1, y2 - 10);
+      spans.lx1.textContent = String(x1);
+      spans.lx2.textContent = String(x2);
+      spans.ly1.textContent = String(y1);
+      spans.ly2.textContent = String(y2);
+      boxEl.style.left = (x1 / W * 100) + '%';
+      boxEl.style.top = (y1 / H * 100) + '%';
+      boxEl.style.width = ((x2 - x1) / W * 100) + '%';
+      boxEl.style.height = ((y2 - y1) / H * 100) + '%';
+      var cx = (x1 + x2) / 2 / W;
+      var cy = (y1 + y2) / 2 / H;
+      var w = (x2 - x1) / W;
+      var h = (y2 - y1) / H;
+      lineEl.textContent = '0 ' + [cx, cy, w, h].map(function (v) { return v.toFixed(6); }).join(' ');
+    }
+    [lx1, lx2, ly1, ly2].forEach(function (el) {
+      el.addEventListener('input', updateLabel);
+    });
+    updateLabel();
+  }
+})();
+
+</script>
+</body>
+</html>

@@ -1,0 +1,645 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="오일러 각, 짐벌락, 쿼터니언과 SLERP를 직접 조작하는 Three.js 회전 실험실">
+<meta name="color-scheme" content="dark"><title>회전 실험실 | 짐벌락에서 쿼터니언까지</title>
+<style>:root{color-scheme:dark;--bg:#0c121b;--panel:#111b28;--raised:#162231;--line:#283547;--text:#edf1f5;--muted:#9aaabd;--dim:#6f8299;--accent:#edd296;--x:#ff917b;--y:#b9db82;--z:#80bcff;--q:#80ddca;--mono:ui-monospace,SFMono-Regular,Consolas,"Liberation Mono",monospace;--sans:"Pretendard","Noto Sans KR","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif}
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--bg);color:var(--text);font:15px/1.7 var(--sans);word-break:keep-all}button,input,select{font:inherit}button{cursor:pointer}button,select,input[type=number]{color:var(--text);border:1px solid var(--line);border-radius:7px;background:var(--raised)}button{transition:background .15s,border-color .15s;color:var(--text);padding:9px 13px;line-height:1.4}button:hover{background:#223248;border-color:#60738a}button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-offset:4px}button:disabled{cursor:not-allowed;opacity:.45}button.primary{background:var(--accent);color:#171a1e;border-color:var(--accent);font-weight:750}button.primary:hover{background:#f9dfab}button.quiet{background:transparent}a{color:var(--z);text-underline-offset:4px}p{margin:0 0 12px}h1,h2,h3{line-height:1.35;letter-spacing:-.04em}h1,h2,h3,p{overflow-wrap:anywhere}h2{font-size:23px;margin:8px 0 14px}h3{font-size:17px;margin:0 0 8px}strong{font-weight:730;color:#f4f5f7}code,.mono{font-family:var(--mono);font-size:.95em}small{font-size:12px}button svg{vertical-align:-3px;margin-right:4px}svg{flex:none}input[type=range]{width:100%;accent-color:var(--accent);height:22px;cursor:pointer;margin:6px 0}input[type=checkbox]{accent-color:var(--accent);width:15px;height:15px}select{padding:10px 12px;width:100%}[hidden]{display:none!important}.shell{width:min(1480px,100%);margin:auto;padding:0 44px}.masthead{display:flex;justify-content:space-between;align-items:center;gap:20px;border-bottom:1px solid var(--line);padding:24px 0 21px}.brand{display:flex;align-items:center;gap:12px;font:600 12px/1.3 var(--mono);letter-spacing:.15em}.brandmark{width:25px;height:25px;border:1.5px solid var(--accent);border-radius:50%;position:relative;transform:rotate(-25deg)}.brandmark:before,.brandmark:after{content:"";position:absolute;inset:3px -4px;border:1px solid var(--accent);border-radius:50%;transform:rotate(70deg)}.brandmark:after{inset:-4px 8px;transform:rotate(0)}.topmeta{display:flex;align-items:center;gap:18px;font-size:12px;color:var(--muted)}.smalltag{border:1px solid var(--line);padding:3px 10px;border-radius:20px}.hero{display:flex;align-items:flex-end;justify-content:space-between;gap:36px;padding:37px 0 31px}.eyebrow{font:500 11px/1.5 var(--mono);letter-spacing:.14em;color:var(--accent);text-transform:uppercase}.hero h1{font-size:clamp(32px,4vw,53px);font-weight:780;line-height:1.18;margin:13px 0 17px;letter-spacing:-.055em}.hero h1 span{color:var(--accent)}.hero p{max-width:660px;color:var(--muted);font-size:15px;line-height:1.8;margin-bottom:0}.hero-note{min-width:200px;border-left:1px solid var(--line);padding-left:24px;margin-bottom:5px;color:var(--muted);font-size:12px;line-height:1.9}.hero-note b{display:block;color:var(--text);font:500 23px/1.5 var(--mono);margin-bottom:7px}.steps{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:0 0 20px}.step{position:relative;display:flex;text-align:left;gap:12px;padding:14px 16px;background:transparent;border:1px solid var(--line);border-radius:8px;align-items:center}.step-no{font:500 12px var(--mono);color:var(--dim)}.step b{display:block;font-size:14px;font-weight:650;margin-bottom:4px}.step small{display:block;color:var(--dim);font:10px var(--mono);letter-spacing:.045em}.step[aria-selected=true]{background:#292920;border-color:#bda978}.step[aria-selected=true] b,.step[aria-selected=true] .step-no{color:var(--accent)}.step[aria-selected=true] small{color:#bfb28f}.lab{display:grid;grid-template-columns:minmax(0,1fr) 356px;gap:20px;align-items:start}.visual-panel{min-width:0;border:1px solid var(--line);border-radius:11px;overflow:hidden;background:var(--panel)}.stage-top{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:17px 21px;border-bottom:1px solid var(--line)}.stage-title{font-size:15px;font-weight:680;letter-spacing:-.025em}.stage-subtitle{color:var(--dim);font:11px/1.5 var(--mono);margin-top:3px}.view-tools{display:flex;gap:5px}.view-tools button{padding:6px 9px;font-size:11px;background:transparent;white-space:nowrap}.stage{position:relative;height:486px;isolation:isolate;background:radial-gradient(ellipse at 45% 42%,#172a3b 0,#101c2a 44%,#0d1723 100%)}.stage canvas{position:absolute;inset:0;width:100%;height:100%;display:block}.stage #overlay-canvas{z-index:2;touch-action:none;cursor:grab}.stage #overlay-canvas:active{cursor:grabbing}.stage #gl-canvas{z-index:1;pointer-events:none}.stage-view-labels{position:absolute;inset:17px 20px auto;z-index:3;display:flex;pointer-events:none;gap:15px}.view-label{flex:1;font-size:12px;line-height:1.5;color:var(--muted)}.view-label b{display:block;font-size:13px;font-weight:650;color:var(--text)}.view-label small{display:block;color:var(--dim);font-size:10px;margin-top:3px}.viewport-divider{position:absolute;z-index:3;left:50%;top:0;bottom:0;width:1px;background:var(--line);pointer-events:none}.canvas-hint{position:absolute;bottom:15px;left:20px;z-index:3;color:#7e93ac;font-size:11px;pointer-events:none}.engine{position:absolute;bottom:15px;right:17px;z-index:3;font:10px var(--mono);color:#8198ac;padding:3px 7px;background:#0c1521aa;border-radius:4px;pointer-events:none}.axis-legend{display:flex;align-items:center;flex-wrap:wrap;gap:15px;padding:12px 21px;border-top:1px solid var(--line);font-size:12px;color:var(--muted)}.axis-pill{display:inline-flex;gap:7px;align-items:center;white-space:nowrap}.dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:currentColor}.color-x{color:var(--x)}.color-y{color:var(--y)}.color-z{color:var(--z)}.color-q{color:var(--q)}.legend-note{margin-left:auto;font-size:10px;color:var(--dim)}.metric-row{display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid var(--line)}.metric{padding:17px 21px;border-right:1px solid var(--line)}.metric:last-child{border-right:0}.metric-name{color:var(--muted);font-size:11px;line-height:1.4}.metric-value{font:500 24px/1.5 var(--mono);margin:5px 0 3px;color:var(--text)}.metric-detail{font-size:10px;color:var(--dim)}.q-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--line);border-top:1px solid var(--line)}.q-component{background:var(--panel);padding:12px 19px;display:flex;gap:12px;align-items:center;justify-content:space-between}.q-component span:first-child{font:12px var(--mono);color:var(--dim)}.q-component strong{font:500 15px var(--mono)}.value-foot{padding:8px 21px;color:var(--dim);font:10px/1.6 var(--mono);border-top:1px solid var(--line);display:flex;justify-content:space-between;gap:10px}.side{background:var(--panel);border:1px solid var(--line);border-radius:11px;padding:24px}.side .eyebrow{color:var(--dim)}.story{color:var(--muted);font-size:13px;line-height:1.85}.story strong{color:var(--accent)}.control-section{border-top:1px solid var(--line);margin-top:19px;padding-top:18px}.control-section-label{font-size:11px;color:var(--muted);margin-bottom:12px;display:flex;justify-content:space-between}.slider-block{margin:0 0 15px}.slider-header{display:flex;align-items:center;justify-content:space-between;gap:10px}.slider-label{font-size:12px;display:flex;align-items:center;gap:8px}.slider-label small{color:var(--dim);font-size:10px;margin-left:2px}.degree-input{display:flex;align-items:center;gap:5px;color:var(--muted);font:12px var(--mono)}.degree-input input{width:72px;padding:4px 4px 4px 9px;font:12px var(--mono);background:#0b1520;border-color:var(--line)}.slider-block[data-axis=yaw] input[type=range]{accent-color:var(--z)}.slider-block[data-axis=pitch] input[type=range]{accent-color:var(--y)}.slider-block[data-axis=roll] input[type=range]{accent-color:var(--x)}.slider-endpoints{display:flex;justify-content:space-between;font:9px var(--mono);color:var(--dim);line-height:1}.preset-row{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 16px}.preset-row button{font:11px var(--mono);padding:6px 9px;flex:1;white-space:nowrap}.preset-row button.active{border-color:var(--y);color:var(--y);background:#243222}.button-row{display:flex;gap:7px}.button-row>*{flex:1}.button-row button{font-size:11px}.action-stack{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:15px}.action-stack button{font-size:11px}.action-stack .wide{grid-column:1/-1;color:var(--accent);border-color:#615e4c}.feedback{margin:12px 0 0;padding:10px 12px;font-size:11px;line-height:1.65;border:1px solid #354451;background:#152433;border-radius:6px;color:var(--muted);min-height:57px}.warning{color:var(--accent);background:#29281e;border-color:#5c5238}.checkboxes{display:flex;gap:16px;flex-wrap:wrap;font-size:11px;color:var(--muted);margin:16px 0 6px}.checkboxes label{display:flex;gap:6px;align-items:center;cursor:pointer}.next-button{width:100%;margin-top:19px;text-align:left;display:flex;justify-content:space-between;align-items:center;font-size:12px}.side-foot{font-size:10px;line-height:1.8;color:var(--dim);margin-top:14px}.segmented{display:flex;padding:3px;border:1px solid var(--line);background:#0a1420;border-radius:7px;gap:3px}.segmented button{border:0;flex:1;font-size:11px;background:none;padding:7px 6px;color:var(--dim)}.segmented button[aria-pressed=true]{background:#263849;color:var(--text)}.axis-buttons{margin:15px 0;display:grid;gap:8px}.axis-button-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px;align-items:center}.axis-button-row span{font:12px var(--mono)}.axis-button-row button{font:12px var(--mono);padding:8px}.axis-angle-info{font:11px/1.9 var(--mono);background:#0a1420;padding:12px;border:1px solid var(--line);border-radius:6px;margin-top:14px;color:var(--muted)}.axis-angle-info .formula{color:var(--q);margin-bottom:7px}.norm-mini{display:flex;justify-content:space-between;margin-top:13px;font:10px var(--mono);color:var(--dim)}.progress-header{display:flex;justify-content:space-between;font:12px var(--mono);color:var(--muted);margin:20px 0 3px}.path-info{border:1px solid var(--line);border-radius:6px;overflow:hidden;margin-top:15px}.path-info>div{display:flex;justify-content:space-between;padding:8px 11px;font-size:11px}.path-info>div+div{border-top:1px solid var(--line)}.path-info b{font:12px var(--mono)}.insight{display:flex;gap:14px;padding:21px 23px;border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:0 7px 7px 0;background:#141d29;margin-top:18px;align-items:flex-start}.insight .eyebrow{white-space:nowrap;line-height:1.8;font-size:10px}.insight p{font-size:12px;line-height:1.8;color:var(--muted);margin:0}.insight strong{color:var(--text)}.notes{margin-top:44px;border-top:1px solid var(--line);padding-top:27px}.notes-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;gap:20px}.notes-header h2{font-size:21px;margin:0}.notes-header span{font:10px var(--mono);color:var(--dim);letter-spacing:.06em}.summary-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin:0 0 26px}.summary-card{padding:20px;border:1px solid var(--line);border-radius:8px;background:#101a27}.summary-card .eyebrow{font-size:10px;margin-bottom:10px;color:var(--dim)}.summary-card p{font-size:12px;line-height:1.85;color:var(--muted);margin:0}.summary-card h3{font-size:16px}.details-grid{display:grid;grid-template-columns:1fr 1fr;gap:15px;align-items:start}details{border:1px solid var(--line);border-radius:8px;background:#101a27;overflow:hidden}summary{cursor:pointer;padding:16px 19px;font-size:13px;font-weight:600;line-height:1.6;list-style:none;display:flex;justify-content:space-between;gap:15px}summary::-webkit-details-marker{display:none}summary:after{content:"+";font:18px var(--mono);color:var(--dim)}details[open]>summary:after{content:"−"}details[open]>summary{border-bottom:1px solid var(--line)}.detail-content{padding:18px 20px;color:var(--muted);font-size:12px;line-height:1.85}.detail-content h3{color:var(--text);font-size:14px;margin-top:15px}.detail-content p:last-child{margin-bottom:0}.math-block{font:12px/1.9 var(--mono);padding:13px 15px;background:#0b1420;color:#d7e4e9;border-left:2px solid var(--q);margin:12px 0;overflow:auto;white-space:pre-wrap;word-break:normal}.source-ref{font:10px var(--mono);text-decoration:none;vertical-align:super;margin-left:3px}.code-head{display:flex;justify-content:space-between;align-items:center;margin:13px 0 5px;color:var(--dim);font:10px var(--mono)}.code-head button{font-size:10px;padding:3px 8px}pre{font:11px/1.9 var(--mono);background:#0a121c;border:1px solid var(--line);border-radius:6px;overflow:auto;padding:15px;color:#c4d7de;margin:8px 0 15px;tab-size:2;word-break:normal}pre code{font-size:inherit}.comment{color:#71879a}.source-list{margin:8px 0 15px;padding-left:20px}.source-list li{margin:8px 0;color:var(--muted);font-size:12px}.source-list a{overflow-wrap:anywhere}.runtime-note{font-size:11px;line-height:1.8;color:var(--dim);margin:15px 0 0}.sources{margin-top:18px}.footer{padding:25px 0 32px;margin-top:30px;border-top:1px solid var(--line);display:flex;justify-content:space-between;gap:20px;color:var(--dim);font:10px/1.8 var(--mono)}.nojs{padding:20px;background:#552a2a;color:#fff}.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--accent);color:#16191f;padding:10px 20px;border-radius:7px;font-size:12px;z-index:100;max-width:90vw}.hint-chip{background:#0e1b2bca;border:1px solid #405369;font:10px var(--mono);color:#a7c0d3;padding:3px 7px;display:inline-block;border-radius:3px}.status-pill{font:10px var(--mono);border:1px solid #405369;border-radius:20px;padding:3px 8px;color:var(--q)}
+@media(min-width:1450px){.stage{height:530px}.side{padding:25px}.lab{grid-template-columns:minmax(0,1fr) 375px}}
+@media(max-width:1150px){.shell{padding:0 26px}.lab{grid-template-columns:minmax(0,1fr) 324px;gap:15px}.side{padding:20px}.stage{height:465px}.q-component{padding:11px 12px;gap:6px}.q-component strong{font-size:12px}.metric{padding:15px}.metric-value{font-size:22px}.legend-note{display:none}.hero-note{display:none}}
+@media(max-width:900px){.lab{grid-template-columns:1fr}.side{padding:24px}.stage{height:500px}.side h2{font-size:24px}.story{font-size:14px}.control-section{max-width:100%}.steps{gap:7px}.step{padding:13px 10px;gap:8px}.step b{font-size:12px}.step small{font-size:9px}.summary-grid{gap:10px}.summary-card{padding:17px}.hero{padding-top:30px}.hero h1{font-size:44px}.q-component strong{font-size:16px}.q-component{padding:13px 18px}.checkboxes{font-size:12px}.insight{margin-top:16px}.details-grid{grid-template-columns:1fr}}
+@media(max-width:560px){body{font-size:14px}.shell{padding:0 17px}.masthead{padding:19px 0}.brand{font-size:10px;gap:10px}.topmeta{font-size:10px;gap:0}.topmeta .smalltag{display:none}.hero{padding:25px 0 24px}.hero h1{font-size:37px;margin:11px 0 15px;line-height:1.2}.hero p{font-size:12px;line-height:1.9}.eyebrow{font-size:10px}.steps{grid-template-columns:1fr 1fr;gap:6px;margin-bottom:14px}.step{padding:12px}.step b{font-size:12px}.step small{font-size:9px}.step-no{font-size:11px}.lab{gap:13px}.stage-top{padding:13px}.stage-title{font-size:12px}.stage-subtitle{font-size:9px}.view-tools{gap:4px}.view-tools button{font-size:10px;padding:5px 7px}.stage{height:375px}.stage.split{height:590px}.stage.split .viewport-divider{top:50%;left:0;width:100%;height:1px;bottom:auto}.stage-view-labels{inset:13px 14px auto;gap:0}.stage.split .stage-view-labels{inset:0;display:block;height:100%}.stage.split .view-label{position:absolute;left:14px;right:10px;top:12px}.stage.split .view-label:nth-child(2){top:calc(50% + 12px)}.view-label b{font-size:11px}.view-label small{font-size:9px}.canvas-hint{font-size:9px;bottom:10px;left:13px}.engine{font-size:8px;right:8px;bottom:9px;padding:3px 4px}.axis-legend{padding:11px 13px;gap:12px;font-size:10px}.metric{padding:12px 11px}.metric-name{font-size:9px}.metric-value{font-size:20px}.metric-detail{font-size:8px}.q-component{padding:10px 8px;display:block}.q-component strong{display:block;font-size:13px;margin-top:3px}.q-component span:first-child{font-size:10px}.value-foot{padding:8px 11px;font-size:9px}.side{padding:22px 19px}.side h2{font-size:23px}.story{font-size:13px}.side-foot{font-size:10px}.insight{padding:15px 16px;display:block}.insight .eyebrow{margin-bottom:5px}.insight p{font-size:11px}.notes{margin-top:30px;padding-top:23px}.notes-header{margin-bottom:15px;align-items:flex-end}.notes-header h2{font-size:19px}.notes-header span{font-size:8px;max-width:90px;text-align:right}.summary-grid{grid-template-columns:1fr;gap:9px}.summary-card{padding:17px 19px}.summary-card .eyebrow{margin-bottom:6px}.summary-card h3{font-size:15px}.summary-card p{font-size:12px}summary{font-size:12px;padding:14px 16px}.detail-content{padding:16px;font-size:11px}.math-block{font-size:10px;padding:12px}pre{font-size:10px;padding:11px}.footer{font-size:9px;display:block;line-height:2.1}.footer span{display:block}.source-list{padding-left:17px}.source-list li{font-size:11px}}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}button{transition:none}}
+@media print{body{color:#111;background:#fff}.shell{padding:0 10px}.hero h1 span,strong{color:#111}.stage{print-color-adjust:exact}.steps,.view-tools,.side,.footer{display:none}.lab{display:block}.notes{break-before:page}.details-grid{display:block}details{margin-bottom:15px}details:not([open]) .detail-content{display:block}p,.detail-content,.summary-card p{color:#222}.summary-card,details{background:#fff}.math-block,pre{background:#eee;color:#111}}
+</style>
+</head>
+<body>
+<noscript><div class="nojs">3D 조작에는 JavaScript가 필요합니다. 아래의 수식과 해설은 그대로 읽을 수 있습니다.</div></noscript>
+<div class="shell">
+<header class="masthead"><div class="brand"><span class="brandmark" aria-hidden="true"></span><span>ROTATION LAB<br><span style="color:var(--dim);font-size:9px;letter-spacing:.09em">직접 움직여 이해하는 수학</span></span></div><div class="topmeta"><span>로봇 기초 / 좌표와 회전</span><span class="smalltag">INTERACTIVE HTML</span></div></header>
+<section class="hero" aria-labelledby="page-title"><div><div class="eyebrow">THREE.JS · A HANDS-ON GUIDE TO 3D ROTATION</div><h1 id="page-title">짐벌락에서<br><span>쿼터니언까지.</span></h1><p>회전 손잡이는 세 개인데, 왜 한 방향을 잃어버릴까요?<br>축을 겹쳐 보고, 자세를 다른 방법으로 저장하고, 두 회전 경로를 비교해 보세요.</p></div><div class="hero-note"><b>3 angles → 4 values</b>오일러 각 / Euler angles<br>짐벌락 / Gimbal lock<br>쿼터니언 / Quaternion</div></section>
+<nav class="steps" role="tablist" aria-label="학습 단계">
+<button class="step" id="tab-0" data-step="0" role="tab" aria-selected="true" aria-controls="lesson"><span class="step-no">01</span><span><b>회전축 이해하기</b><small>EULER ANGLES</small></span></button>
+<button class="step" id="tab-1" data-step="1" role="tab" aria-selected="false" aria-controls="lesson" tabindex="-1"><span class="step-no">02</span><span><b>짐벌락 만들기</b><small>THE SINGULARITY</small></span></button>
+<button class="step" id="tab-2" data-step="2" role="tab" aria-selected="false" aria-controls="lesson" tabindex="-1"><span class="step-no">03</span><span><b>쿼터니언으로 회전</b><small>UNIT QUATERNIONS</small></span></button>
+<button class="step" id="tab-3" data-step="3" role="tab" aria-selected="false" aria-controls="lesson" tabindex="-1"><span class="step-no">04</span><span><b>보간 경로 비교</b><small>EULER LERP / SLERP</small></span></button>
+</nav>
+<main id="lesson" role="tabpanel" aria-labelledby="tab-0">
+<div class="lab">
+<div class="visual-column">
+<section class="visual-panel" aria-label="3차원 회전 시각화">
+<div class="stage-top"><div><div class="stage-title" id="stage-title">세 개의 고리, 세 개의 회전</div><div class="stage-subtitle" id="stage-subtitle">INTRINSIC Z → Y′ → X″ / Z-UP</div></div><div class="view-tools"><button id="camera-front" title="축의 정렬을 보기 좋은 옆 시점">옆에서</button><button id="camera-reset" title="관찰 카메라만 초기화">시점 초기화</button></div></div>
+<div class="stage" id="stage">
+<canvas id="gl-canvas" aria-hidden="true"></canvas><canvas id="overlay-canvas" tabindex="0" aria-label="3D 모형. 드래그로 관찰 시점을 돌리고 휠 또는 핀치로 확대합니다. 키보드 방향키로 시점을 회전할 수도 있습니다."></canvas>
+<div class="stage-view-labels"><div class="view-label" id="view-label-left"><b>오일러 회전 장치</b><small>고리를 돌리면 안쪽 고리도 따라갑니다.</small></div><div class="view-label" id="view-label-right" hidden></div></div>
+<div class="viewport-divider" id="viewport-divider" hidden></div>
+<div class="canvas-hint">드래그 · 시점 회전 &nbsp; / &nbsp; 휠·핀치 · 확대</div><div class="engine" id="engine-status">내장 3D · Three.js 연결 중</div>
+</div>
+<div class="axis-legend"><span class="axis-pill color-x"><i class="dot"></i>X / 롤</span><span class="axis-pill color-y"><i class="dot"></i>Y / 피치</span><span class="axis-pill color-z"><i class="dot"></i>Z / 요</span><span class="legend-note" id="legend-note">긴 화살표 = 조작축 · 작은 축 = 물체 좌표축</span></div>
+<div class="metric-row" id="gimbal-metrics">
+<div class="metric"><div class="metric-name">바깥·안쪽 조작축 사이</div><div class="metric-value" id="separation-value">60.0°</div><div class="metric-detail">방향 부호를 무시한 예각</div></div>
+<div class="metric"><div class="metric-name">순간 독립 회전 방향</div><div class="metric-value"><span id="rank-value">3</span><span style="font-size:13px;color:var(--dim)"> / 3</span></div><div class="metric-detail" id="rank-detail">회전속도 야코비안의 rank</div></div>
+<div class="metric"><div class="metric-name">세 조작축이 만드는 부피</div><div class="metric-value" id="volume-value">0.866</div><div class="metric-detail">|det J| = |cos(피치)|</div></div>
+</div>
+<div class="metric-row" id="quat-metrics" hidden>
+<div class="metric"><div class="metric-name">시작 자세와의 각도</div><div class="metric-value" id="q-distance">0.0°</div><div class="metric-detail">누적 이동량 아닌 자세 차이</div></div>
+<div class="metric"><div class="metric-name">물체 X · Y 축 내적</div><div class="metric-value" id="body-dot">0.000</div><div class="metric-detail">항상 직교: 내적 = 0</div></div>
+<div class="metric"><div class="metric-name">추가 회전의 기준</div><div class="metric-value" id="frame-metric" style="font-size:20px">WORLD</div><div class="metric-detail" id="frame-detail">q ← Δq × q</div></div>
+</div>
+<div class="metric-row" id="interp-metrics" hidden>
+<div class="metric"><div class="metric-name">오일러 경로의 총 회전량</div><div class="metric-value color-x" id="euler-path-length">340.0°</div><div class="metric-detail">경로의 작은 회전을 합한 값</div></div>
+<div class="metric"><div class="metric-name">SLERP 경로의 총 회전량</div><div class="metric-value color-q" id="slerp-path-length">20.0°</div><div class="metric-detail">두 자세 사이 짧은 회전</div></div>
+<div class="metric"><div class="metric-name">현재 두 결과의 자세 차이</div><div class="metric-value" id="interp-difference">180.0°</div><div class="metric-detail">같은 t, 다른 중간 경로</div></div>
+</div>
+<div class="q-strip" id="q-values" aria-label="현재 쿼터니언 성분"><div class="q-component"><span>x</span><strong id="qx">0.0000</strong></div><div class="q-component"><span>y</span><strong id="qy">0.0000</strong></div><div class="q-component"><span>z</span><strong id="qz">0.0000</strong></div><div class="q-component"><span>w</span><strong id="qw">1.0000</strong></div></div>
+<div class="value-foot"><span id="q-source">현재 자세의 quaternion · (x, y, z, w)</span><span>‖q‖ = <span id="q-norm">1.000000</span></span></div>
+</section>
+<div class="insight"><div class="eyebrow">OBSERVATION</div><p id="observation">바깥 고리가 돌면 안쪽 축의 방향도 달라집니다. <strong>회전 순서</strong>는 단순한 표기법이 아니라 결과를 바꾸는 규칙입니다.</p></div>
+</div>
+<aside class="side" aria-label="해설과 회전 조작">
+<div class="eyebrow" id="story-kicker">01 / UNDERSTAND THE CONTROLS</div><h2 id="story-title">먼저, 손잡이 세 개.</h2><p class="story" id="story-text">짐벌은 물체를 돌리는 고리 장치입니다. <strong>바깥 Z축 → 가운데 Y′축 → 안쪽 X″축</strong> 순서로 연결되어 있어요. 슬라이더를 하나씩 움직여 보세요.</p>
+<div id="euler-controls" class="control-section">
+<div class="control-section-label"><span id="euler-control-title">오일러 각 / Euler angles</span><span class="mono">단위 °</span></div>
+<div id="lock-presets" class="preset-row" hidden><button data-pitch="0">0°</button><button data-pitch="89">89°</button><button data-pitch="90">+90°</button><button data-pitch="-90">−90°</button></div>
+<div class="slider-block" data-axis="yaw"><div class="slider-header"><label class="slider-label" for="yaw-slider"><i class="dot color-z"></i>요 <small>Yaw · Z</small></label><span class="degree-input"><input id="yaw-number" type="number" aria-label="요 각도" min="-180" max="180" step="0.5" value="25">°</span></div><input id="yaw-slider" type="range" min="-180" max="180" step="0.5" value="25" aria-label="요 각도 슬라이더"><div class="slider-endpoints"><span>−180°</span><span>0°</span><span>180°</span></div></div>
+<div class="slider-block" data-axis="pitch"><div class="slider-header"><label class="slider-label" for="pitch-slider"><i class="dot color-y"></i>피치 <small>Pitch · Y′</small></label><span class="degree-input"><input id="pitch-number" type="number" aria-label="피치 각도" min="-180" max="180" step="0.5" value="30">°</span></div><input id="pitch-slider" type="range" min="-180" max="180" step="0.5" value="30" aria-label="피치 각도 슬라이더"><div class="slider-endpoints"><span>−180°</span><span>0°</span><span>180°</span></div></div>
+<div class="slider-block" data-axis="roll"><div class="slider-header"><label class="slider-label" for="roll-slider"><i class="dot color-x"></i>롤 <small>Roll · X″</small></label><span class="degree-input"><input id="roll-number" type="number" aria-label="롤 각도" min="-180" max="180" step="0.5" value="-15">°</span></div><input id="roll-slider" type="range" min="-180" max="180" step="0.5" value="-15" aria-label="롤 각도 슬라이더"><div class="slider-endpoints"><span>−180°</span><span>0°</span><span>180°</span></div></div>
+<div id="lock-actions" hidden><div class="action-stack"><button id="yaw-plus">요만 +15°</button><button id="roll-plus">롤만 +15°</button><button class="wide" id="both-plus">요와 롤을 동시에 +15°</button></div><div class="feedback" id="action-feedback" role="status">동시에 +15°를 눌러 보세요.</div></div>
+<div id="normal-actions" class="button-row"><button id="euler-reset">모두 0°</button><button id="pitch-sweep">피치 90°까지 재생</button></div>
+</div>
+<div id="quaternion-controls" class="control-section" hidden>
+<div class="control-section-label"><span>추가 회전의 기준 좌표계</span><span class="mono">Δ = 15°</span></div>
+<div class="segmented" role="group" aria-label="회전 기준"><button data-frame="world" aria-pressed="true">월드 축 · 고정된 축</button><button data-frame="local" aria-pressed="false">물체 축 · 함께 도는 축</button></div>
+<div class="axis-buttons"><div class="axis-button-row"><span class="color-x">X 회전</span><button data-qaxis="x" data-sign="-1" aria-label="X축으로 -15도">−15°</button><button data-qaxis="x" data-sign="1" aria-label="X축으로 +15도">+15°</button></div><div class="axis-button-row"><span class="color-y">Y 회전</span><button data-qaxis="y" data-sign="-1" aria-label="Y축으로 -15도">−15°</button><button data-qaxis="y" data-sign="1" aria-label="Y축으로 +15도">+15°</button></div><div class="axis-button-row"><span class="color-z">Z 회전</span><button data-qaxis="z" data-sign="-1" aria-label="Z축으로 -15도">−15°</button><button data-qaxis="z" data-sign="1" aria-label="Z축으로 +15도">+15°</button></div></div>
+<div class="button-row"><button id="q-reset">90° 자세로 재시작</button><button id="q-import">오일러 자세 가져오기</button></div>
+<div class="feedback" id="q-feedback" role="status">왼쪽은 출발 자세입니다. 오른쪽 물체를 월드 X축으로 돌려 보세요.</div>
+<div class="axis-angle-info"><div class="formula">q = (u · sin(α/2), cos(α/2))</div><div>회전축 u = <span id="axis-vector">(0, 1, 0)</span></div><div>회전각 α = <span id="axis-angle">90.0°</span></div><div id="axis-arbitrary" hidden>0° / 360°에서는 회전축을 하나로 정할 수 없습니다.</div></div>
+<button id="q-flip" style="width:100%;font-size:11px;margin-top:12px">q ↔ −q · 네 성분의 부호를 뒤집기</button>
+</div>
+<div id="interpolation-controls" class="control-section" hidden>
+<label for="interp-preset" class="control-section-label">비교할 시작·끝 자세</label><select id="interp-preset"><option value="wrap">Z축 +170° → −170°</option><option value="mixed">세 축이 모두 달라지는 자세</option></select>
+<div class="progress-header"><label for="progress">보간 비율 t</label><span id="progress-value">0.500</span></div><input id="progress" type="range" min="0" max="1" step="0.001" value="0.5" aria-label="보간 비율"><div class="slider-endpoints"><span>0 · 출발</span><span>1 · 도착</span></div>
+<div class="button-row" style="margin-top:17px"><button id="play" class="primary">재생</button><button id="interp-reset">처음으로</button></div>
+<div class="path-info"><div><span>출발 (roll, pitch, yaw)</span><b id="interp-start">0, 0, 170</b></div><div><span>도착 (roll, pitch, yaw)</span><b id="interp-end">0, 0, −170</b></div></div>
+<div class="feedback" id="interp-feedback">왼쪽은 각 숫자를 직선으로 섞습니다. 오른쪽은 두 자세 사이의 짧은 회전 경로를 따릅니다.</div>
+<p class="side-foot">곡선은 기수 방향의 궤적입니다. 이 예의 ±180° 경계 문제는 짐벌락 자체와는 다릅니다. 한 축만의 문제는 각도 범위를 풀어서(unwrapping) 보간해도 해결할 수 있습니다.</p>
+</div>
+<div class="checkboxes"><label><input id="show-body-axes" type="checkbox" checked>물체 좌표축</label><label id="rings-option"><input id="show-rings" type="checkbox" checked>짐벌 고리</label></div>
+<button id="next-step" class="next-button primary"><span id="next-text">다음 · 90°에서 생기는 일</span><span aria-hidden="true">→</span></button>
+<p class="side-foot" id="coordinate-note">오른손 좌표계 · +X 전방 / +Y 왼쪽 / +Z 위.<br>양의 회전은 오른손 법칙입니다. 이 규약에서 피치 +90°는 기수를 아래로 향하게 합니다.</p>
+</aside>
+</div>
+</main>
+<section class="notes" aria-labelledby="notes-title"><div class="notes-header"><h2 id="notes-title">움직여 봤다면, 원리까지.</h2><span>THE IDEA BEHIND THE MOTION</span></div>
+<div class="summary-grid">
+<article class="summary-card"><div class="eyebrow">01 / EULER ANGLES</div><h3>각도 세 개 + 순서 하나</h3><p>“어느 축으로 얼마나 돌릴까”를 적는 방법입니다. 각도만 같아도 <strong>축의 순서가 다르면 결과가 달라집니다.</strong><a class="source-ref" href="#source-1">[1]</a></p></article>
+<article class="summary-card"><div class="eyebrow">02 / GIMBAL LOCK</div><h3>물체가 아니라, 표현이 막힌다</h3><p>특정 자세에서 첫째와 셋째 <strong>조작축이 같은 직선</strong>에 놓입니다. 두 조작이 겹쳐 순간적으로 독립인 회전 방향이 하나 줄어듭니다.<a class="source-ref" href="#source-2">[2]</a><a class="source-ref" href="#source-4">[4]</a></p></article>
+<article class="summary-card"><div class="eyebrow">03 / QUATERNION</div><h3>네 숫자로 자세를 저장한다</h3><p>회전축과 회전각을 함께 담는 <strong>단위 쿼터니언</strong>을 사용합니다. 숫자는 네 개지만 길이 1이라는 제약이 있어 회전 자유도는 여전히 세 개입니다.<a class="source-ref" href="#source-5">[5]</a></p></article>
+</div>
+<div class="details-grid">
+<details open><summary>왜 하필 90°에서 두 조작이 겹칠까?</summary><div class="detail-content">
+<p>이 실험의 규약은 <strong>내재 회전(intrinsic rotation) Z → Y′ → X″</strong>입니다. 프라임(′, ″)은 앞선 회전을 따라 축이 이미 움직였다는 표시예요. 열벡터에 작용하는 최종 회전행렬은 다음과 같습니다.</p>
+<div class="math-block">R = Rz(ψ) · Ry(θ) · Rx(φ)
+φ = roll, θ = pitch, ψ = yaw</div>
+<p>고리의 연결 순서는 바깥 Z, 가운데 Y′, 안쪽 X″입니다. 행렬을 한 벡터에 곱할 때 오른쪽부터 계산하는 것과, 고리를 바깥부터 연결하는 것은 구분해야 합니다.</p>
+<p>월드 좌표로 본 세 조작축은 다음과 같습니다.</p>
+<div class="math-block">aψ = (0, 0, 1)
+aθ = Rz(ψ) · (0, 1, 0)
+aφ = Rz(ψ) · Ry(θ) · (1, 0, 0)
+
+θ = +90° → aφ = −aψ
+θ = −90° → aφ = +aψ</div>
+<p>+90°에서는 요를 +15°, 롤도 +15° 바꾸면 <strong>서로 반대 방향의 회전이 상쇄</strong>됩니다. 두 숫자가 바뀌어도 자세는 같아요. −90°에서는 요 +15°, 롤 −15°가 상쇄됩니다. 같은 직선에서 반대 방향인 축도 독립적인 새 방향은 아닙니다.</p>
+<h3>자유도 감소는 “순간적인” 이야기입니다</h3><p>야코비안(Jacobian)은 “손잡이 속도”를 “물체의 회전속도”로 바꾸는 표입니다. 이 표의 서로 독립인 방향 수를 <strong>rank</strong>라고 합니다.</p>
+<div class="math-block">ω = [aψ aθ aφ] · (ψ̇, θ̇, φ̇)ᵀ
+|det J| = |cos θ|
+
+θ = 89° → rank 3 · 불안정한 근접 상태
+θ = 90° → rank 2 · 정확한 특이점</div>
+<p>피치를 바꾸어 특이점 밖으로 나갈 수 있습니다. 물체의 모든 회전이 영원히 막힌 것이 아닙니다. 또 <strong>물체 자체의 X·Y·Z 좌표축은 계속 직교</strong>합니다. 겹치는 것은 서로 다른 단계의 조작축이에요. 오일러 각으로 다시 분해할 때는 첫째·셋째 각을 유일하게 정할 수 없어집니다.<a class="source-ref" href="#source-4">[4]</a></p>
+</div></details>
+<details open><summary>쿼터니언의 x, y, z, w는 무엇일까?</summary><div class="detail-content">
+<p><strong>쿼터니언(quaternion, 사원수)</strong>은 네 성분을 가진 수 체계입니다. 여기서는 그중 길이가 1인 것만 골라 3D 자세를 나타냅니다.</p>
+<p>먼저 길이 1인 회전축 <strong>u = (uₓ, uᵧ, u𝓏)</strong>를 고릅니다. 그 축으로 α만큼 돌리는 회전을 다음 네 숫자로 적습니다.<a class="source-ref" href="#source-5">[5]</a></p>
+<div class="math-block">x = uₓ · sin(α/2)
+y = uᵧ · sin(α/2)
+z = u𝓏 · sin(α/2)
+w = cos(α/2)
+
+x² + y² + z² + w² = 1</div>
+<p><strong>x·y·z는 위치도, 롤·피치·요도 아닙니다.</strong> 회전축 방향에 sin(α/2)를 곱한 값입니다. w도 “네 번째 공간축”이 아니라 cos(α/2)라는 스칼라 값이에요.</p>
+<div class="math-block">Y축으로 90° 회전
+u = (0, 1, 0), α/2 = 45°
+q ≈ (0, 0.7071, 0, 0.7071)</div>
+<h3>왜 각도의 절반이 들어갈까?</h3><p>벡터를 회전할 때는 순허수 쿼터니언 p = (vₓ, vᵧ, v𝓏, 0)로 만든 뒤 <code>p′ = q · p · q⁻¹</code>처럼 양쪽에서 곱합니다. 이 연산을 전개하면 <code>cos α</code>, <code>sin α</code>가 나와 실제 회전각 α가 됩니다. 그래서 q 자체에는 반각 α/2가 들어갑니다.</p>
+<h3>q와 −q는 같은 자세입니다</h3><p>네 성분의 부호를 모두 뒤집어도 회전 결과는 같습니다. 위 연산에서 두 마이너스 부호가 상쇄되기 때문입니다. 실험 03의 부호 뒤집기 버튼으로 확인할 수 있어요.<a class="source-ref" href="#source-5">[5]</a></p>
+<p>단, 쿼터니언은 <strong>기계의 고리 배치를 바꾸지 않습니다.</strong> 물리적인 짐벌의 특이점을 없애 주는 장치가 아니라, 소프트웨어에서 자세를 저장하고 합성할 때 오일러 각의 특이점을 피하는 표현입니다.</p>
+</div></details>
+<details><summary>Three.js 코드에서 무엇을 바꿔야 할까?</summary><div class="detail-content">
+<p>Three.js의 <code>rotation</code>은 오일러 각, <code>quaternion</code>은 쿼터니언입니다. 두 속성은 연결되어 있습니다. 이 실험은 Three.js가 연결되면 아래의 쿼터니언 연산과 WebGL 렌더링을 사용합니다.<a class="source-ref" href="#source-2">[2]</a><a class="source-ref" href="#source-3">[3]</a></p>
+<div class="code-head"><span>01 · 출발 자세 만들기</span><button data-copy="code-euler">코드 복사</button></div><pre id="code-euler"><code>const rad = THREE.MathUtils.degToRad;
+
+// 생성자 인자는 항상 x, y, z 순서입니다.
+// 'ZYX'는 적용할 회전 순서입니다.
+const euler = new THREE.Euler(
+  rad(roll), rad(pitch), rad(yaw), 'ZYX'
+);
+mesh.quaternion.setFromEuler(euler);</code></pre>
+<div class="code-head"><span>02 · 추가 회전은 쿼터니언으로 합성</span><button data-copy="code-compose">코드 복사</button></div><pre id="code-compose"><code>const delta = new THREE.Quaternion()
+  .setFromAxisAngle(
+    new THREE.Vector3(1, 0, 0),
+    THREE.MathUtils.degToRad(15)
+  );
+
+// mesh의 부모에 회전이 없다는 조건입니다.
+// 고정된 월드 X축으로 추가 회전
+mesh.quaternion.premultiply(delta);
+
+// 물체 자신의 X축 기준이라면 대신:
+// mesh.quaternion.multiply(delta);
+
+mesh.quaternion.normalize();</code></pre>
+<p><strong>주의:</strong> 값을 한 번 쿼터니언으로 바꿔 놓고 이후에도 롤·피치·요 세 각도만 계속 더하면 입력 방식의 특이점은 남습니다. 현재 q를 상태로 보관하고 증분 회전 Δq를 곱해야 합니다. 오일러 각으로 다시 표시할 때는 각도가 뛰거나 유일하지 않을 수 있어요.<a class="source-ref" href="#source-4">[4]</a></p>
+<p>또한 회전된 부모 아래의 객체라면 <code>mesh.quaternion</code>은 부모 기준 자세입니다. 위의 “월드 축” 예제를 그대로 쓰지 말고 월드 회전축을 부모 좌표계로 변환해야 합니다.</p>
+<div class="code-head"><span>03 · 두 자세 사이 보간</span><button data-copy="code-slerp">코드 복사</button></div><pre id="code-slerp"><code>// 매 프레임 출발 qA에서 계산합니다.
+// 직전 결과를 다시 출발점으로 삼지 않습니다.
+mesh.quaternion.slerpQuaternions(qA, qB, t);
+// t=0: 출발, t=1: 도착</code></pre>
+<p>쿼터니언 곱도 순서를 바꾸면 결과가 달라집니다. <code>qA × qB ≠ qB × qA</code>가 일반적입니다. 짐벌락을 피한다는 말이 “회전 순서가 사라진다”는 뜻은 아닙니다.</p>
+</div></details>
+<details><summary>SLERP는 무엇이며, 언제 유용할까?</summary><div class="detail-content">
+<p><strong>보간(interpolation)</strong>은 출발과 도착 사이의 중간 상태를 채우는 일입니다. <strong>SLERP</strong>는 Spherical Linear Interpolation의 약자로, 단위 쿼터니언 사이를 구면 위에서 보간합니다.</p>
+<p>실험 04의 첫 예에서는 +170°와 −170°가 숫자로는 340° 떨어져 있지만, 실제 자세는 20°만 다릅니다. 각도 숫자를 그대로 섞으면 0°를 거쳐 크게 돌아갑니다. SLERP는 q와 −q가 같은 자세라는 점까지 고려해 짧은 경로를 고릅니다.<a class="source-ref" href="#source-5">[5]</a><a class="source-ref" href="#source-6">[6]</a></p>
+<div class="math-block">각도 선형 보간: 170° → 0° → −170°
+SLERP:         170° → 180° → 190°
+                              ≡ −170°</div>
+<p>여기서 표시한 SLERP의 190°는 경로 이해를 돕는 연속 각도입니다. 저장된 오일러 각을 다시 읽으면 −170° 등 다른 대표값으로 표시될 수 있습니다.</p>
+<p>두 단위 쿼터니언의 내적을 양수로 맞춘 뒤, Ω = acos(q₀·q₁)라 두면 다음과 같이 보간합니다. 여기서 Ω는 <strong>쿼터니언 공간의 각도</strong>이며 실제 상대 회전각은 2Ω입니다.</p>
+<div class="math-block">slerp(q₀,q₁,t)
+= sin((1−t)Ω)/sin Ω · q₀
++ sin(tΩ)/sin Ω · q₁</div>
+<p>t가 시간에 따라 일정하게 증가하면 한 구간에서 회전의 각속도도 일정합니다.<a class="source-ref" href="#source-6">[6]</a> Ω가 거의 0이면 0으로 나누는 수치 문제를 피하기 위해 정규화된 선형 보간으로 처리합니다.</p>
+<p><strong>짐벌락과 구별하세요.</strong> ±180° 경계는 각도 대표값의 불연속 문제입니다. 정확한 짐벌락은 회전속도에 대한 오일러 좌표의 특이점입니다. 이들은 관련은 있지만 같은 현상은 아닙니다.</p>
+<p>여러 바퀴 도는 애니메이션은 시작·끝 자세 두 개만으로 회전 횟수를 복원할 수 없습니다. 중간 키프레임이나 누적 회전량을 따로 지정해야 합니다. 여러 SLERP 구간을 이어도 경계에서 각속도 방향까지 매끄럽다고 보장되지는 않습니다.</p>
+</div></details>
+</div>
+<details class="sources"><summary>출처 · 좌표 규약 · 실행 환경</summary><div class="detail-content">
+<ol class="source-list"><li id="source-1"><a href="https://threejs.org/docs/pages/Euler.html" target="_blank" rel="noopener noreferrer">Three.js 공식 문서 — Euler</a> · 각 성분, 라디안, 회전 순서.</li><li id="source-2"><a href="https://threejs.org/manual/en/matrix-transformations.html" target="_blank" rel="noopener noreferrer">Three.js 공식 매뉴얼 — Matrix Transformations</a> · 객체 변환, 오일러 각과 쿼터니언.</li><li id="source-3"><a href="https://threejs.org/docs/pages/Quaternion.html" target="_blank" rel="noopener noreferrer">Three.js 공식 문서 — Quaternion</a> · 정규화, 곱셈, 축·각 표현, SLERP.</li><li id="source-4"><a href="https://docs.scipy.org/doc/scipy/reference/generated/scipy.spatial.transform.Rotation.as_euler.html" target="_blank" rel="noopener noreferrer">SciPy 공식 문서 — Rotation.as_euler</a> · 짐벌락에서 첫째·셋째 각의 비유일성.</li><li id="source-5"><a href="https://docs.scipy.org/doc/scipy/reference/generated/scipy.spatial.transform.Rotation.as_quat.html" target="_blank" rel="noopener noreferrer">SciPy 공식 문서 — Rotation.as_quat</a> · 축·각 공식, 성분 순서, q와 −q.</li><li id="source-6"><a href="https://docs.scipy.org/doc/scipy/reference/generated/scipy.spatial.transform.Slerp.html" target="_blank" rel="noopener noreferrer">SciPy 공식 문서 — Slerp</a> · 두 자세 사이 짧은 경로와 일정 각속도.</li></ol>
+<p>이 페이지의 좌표계는 <strong>오른손, Z-up</strong>입니다. Three.js의 기본 Y-up과 달리 카메라의 up을 (0,0,1)로 지정합니다. 오일러 규약은 ZYX 하나로 고정해 혼동을 줄였습니다. θ는 피치, α는 축·각 표현의 회전각으로 서로 다른 기호입니다.</p>
+<p>외부 연결이 가능하면 고정 버전 <strong>Three.js 0.180.0</strong>을 jsDelivr 또는 unpkg에서 불러옵니다. 네트워크 또는 WebGL이 사용할 수 없으면 같은 기하와 수학을 사용하는 <strong>내장 Canvas 원근 투영 렌더러</strong>로 동작합니다. 화면 오른쪽 아래에 실제 엔진이 표시됩니다. 해설·조작·수학 계산은 네트워크 없이도 동작합니다.</p>
+<p>외부 요청은 라이브러리 다운로드뿐이며, 입력값 전송·분석 추적·로그인은 없습니다. 참고 링크를 열 때에는 인터넷이 필요합니다. 3D 장면은 개념 설명용으로 직접 구성했으며 기계적인 관절 한계·충돌·동역학은 시뮬레이션하지 않습니다.</p>
+<p class="runtime-note">검증: 단위 쿼터니언 계산과 짐벌락 조건에 대한 자동 테스트를 포함합니다. 작성 환경에서는 외부 라이브러리 다운로드가 차단되어 내장 렌더러 경로를 브라우저로 검증했습니다. Three.js WebGL 경로는 해당 환경에서 실제 구동하지 못했습니다.</p>
+<button id="retry-engine" class="quiet" style="font-size:11px;margin-top:12px">Three.js 연결 다시 시도</button>
+</div></details>
+</section>
+<footer class="footer"><span>ROTATION LAB / EULER · GIMBAL LOCK · QUATERNION · SLERP</span><span>학습용 인터랙티브 문서 · 2026.11.16</span></footer>
+</div>
+<div class="toast" id="toast" role="status" hidden></div>
+<script>/* RotationMath: right-handed, Z-up; degrees at the public interface; xyzw quaternions. */
+(function(root,factory){
+  const api=factory();
+  if(typeof module==='object' && module.exports) module.exports=api;
+  else root.RotationMath=api;
+})(typeof globalThis!=='undefined'?globalThis:this,function(){
+  'use strict';
+  const D=Math.PI/180, I=[0,0,0,1];
+  const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
+  const add=(a,b)=>a.map((v,i)=>v+b[i]);
+  const sub=(a,b)=>a.map((v,i)=>v-b[i]);
+  const scale=(a,s)=>a.map(v=>v*s);
+  const dot=(a,b)=>a.reduce((s,v,i)=>s+v*b[i],0);
+  const cross=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];
+  const length=a=>Math.hypot(...a);
+  function unit(a){const n=length(a);if(!Number.isFinite(n)||n<1e-14)throw new RangeError('영벡터는 회전축이 될 수 없습니다.');return scale(a,1/n);}
+  function normalizeQ(q){if(q.length!==4)throw new TypeError('쿼터니언은 4성분입니다.');return unit(q);}
+  function mul(a,b){
+    const [x,y,z,w]=a,[X,Y,Z,W]=b;
+    return [w*X+x*W+y*Z-z*Y,w*Y-x*Z+y*W+z*X,w*Z+x*Y-y*X+z*W,w*W-x*X-y*Y-z*Z];
+  }
+  const conjugate=q=>[-q[0],-q[1],-q[2],q[3]];
+  function axisQ(axis,degrees){
+    if(!Number.isFinite(degrees))throw new TypeError('각도는 유한한 숫자여야 합니다.');
+    const u=unit(axis),h=degrees*D/2,s=Math.sin(h);
+    return [u[0]*s,u[1]*s,u[2]*s,Math.cos(h)];
+  }
+  function eulerQ(roll,pitch,yaw){
+    return normalizeQ(mul(axisQ([0,0,1],yaw),mul(axisQ([0,1,0],pitch),axisQ([1,0,0],roll))));
+  }
+  function rotate(v,q){
+    // v' = v + 2w(u × v) + 2u × (u × v), for a unit quaternion q=(u,w).
+    const u=q.slice(0,3),t=scale(cross(u,v),2);
+    return add(v,add(scale(t,q[3]),cross(u,t)));
+  }
+  const basis=q=>[[1,0,0],[0,1,0],[0,0,1]].map(v=>rotate(v,q));
+  function distance(a,b){
+    const r=normalizeQ(mul(conjugate(normalizeQ(a)),normalizeQ(b)));
+    return 2*Math.atan2(length(r.slice(0,3)),Math.abs(r[3]))/D;
+  }
+  function compose(q,axis,degrees,frame='world'){
+    const delta=axisQ(axis,degrees);
+    if(frame!=='world'&&frame!=='local')throw new TypeError('frame must be world or local');
+    return normalizeQ(frame==='world'?mul(delta,q):mul(q,delta));
+  }
+  function slerp(a,b,t){
+    if(!Number.isFinite(t))throw new TypeError('보간 비율은 숫자여야 합니다.');
+    a=normalizeQ(a);b=normalizeQ(b);t=clamp(t,0,1);
+    let c=dot(a,b);if(c<0){b=scale(b,-1);c=-c;}
+    c=clamp(c,-1,1);
+    if(c>.9995)return normalizeQ(a.map((v,i)=>v+(b[i]-v)*t));
+    const angle=Math.acos(c),s=Math.sin(angle);
+    return normalizeQ(a.map((v,i)=>(v*Math.sin((1-t)*angle)+b[i]*Math.sin(t*angle))/s));
+  }
+  function axisAngle(q){
+    q=normalizeQ(q);const h=Math.acos(clamp(q[3],-1,1)),s=Math.sin(h);
+    return {axis:Math.abs(s)<1e-8?[1,0,0]:scale(q.slice(0,3),1/s),angle:2*h/D,arbitrary:Math.abs(s)<1e-8};
+  }
+  function metrics(roll,pitch,yaw){
+    const yawQ=axisQ([0,0,1],yaw),pitchQ=mul(yawQ,axisQ([0,1,0],pitch));
+    const axes=[[0,0,1],rotate([0,1,0],yawQ),rotate([1,0,0],pitchQ)];
+    const volume=Math.abs(Math.cos(pitch*D));
+    return {axes,volume,rank:volume<1e-10?2:3,
+      separation:Math.acos(clamp(Math.abs(dot(axes[0],axes[2])),0,1))/D,
+      jointDelta:distance(eulerQ(roll,pitch,yaw),eulerQ(roll+15,pitch,yaw+15))};
+  }
+  function pathLength(at,steps=240){let total=0,prev=at(0);for(let i=1;i<=steps;i++){const q=at(i/steps);total+=distance(prev,q);prev=q;}return total;}
+  return {D,I,clamp,add,sub,scale,dot,cross,length,unit,qnorm:length,normalizeQ,mul,conjugate,axisQ,eulerQ,rotate,basis,distance,compose,slerp,axisAngle,metrics,pathLength};
+});
+</script>
+<script>/* Shared 3D geometry. WebGL and offline Canvas use the same poses and primitives. */
+(function(root){
+ 'use strict';
+ const M=root.RotationMath, I=M.I, C={x:'#ff917b',y:'#b9db82',z:'#80bcff',q:'#80ddca',gold:'#edd296'};
+ const axes=[[1,0,0],[0,1,0],[0,0,1]];
+ const circle=(radius,n=128)=>Array.from({length:n+1},(_,i)=>[radius*Math.cos(i*2*Math.PI/n),radius*Math.sin(i*2*Math.PI/n),0]);
+ const gridPoints=[];
+ for(let i=-6;i<=6;i++){gridPoints.push([-6,i,-2.9],[6,i,-2.9],[i,-6,-2.9],[i,6,-2.9]);}
+ const grid={id:'grid',type:'segments',points:gridPoints,color:'#304359',width:.7,opacity:.44};
+ function makeShip(){
+  const vertices=[],faces=[];
+  function solid(v,f,colors){let n=vertices.length;vertices.push(...v);f.forEach((inds,i)=>faces.push({v:inds.map(j=>j+n),color:colors[i%colors.length]}));}
+  function box(cx,cy,cz,sx,sy,sz,colors){
+   let v=[[-1,-1,-1],[1,-1,-1],[1,1,-1],[-1,1,-1],[-1,-1,1],[1,-1,1],[1,1,1],[-1,1,1]].map(p=>[cx+p[0]*sx/2,cy+p[1]*sy/2,cz+p[2]*sz/2]);
+   solid(v,[[0,3,2,1],[4,5,6,7],[0,1,5,4],[1,2,6,5],[2,3,7,6],[3,0,4,7]],colors);
+  }
+  function extrudeXY(poly,z,t,colors){const n=poly.length,v=[...poly.map(p=>[...p,z]),...poly.map(p=>[...p,z+t])],f=[Array.from({length:n},(_,i)=>n-1-i),Array.from({length:n},(_,i)=>n+i)];for(let i=0;i<n;i++)f.push([i,(i+1)%n,(i+1)%n+n,i+n]);solid(v,f,colors);}
+  box(-.05,0,0,1.85,.44,.40,['#667e90','#edf0e6','#b7c7cb','#c7d1ce']);
+  solid([[.875,-.22,-.2],[.875,.22,-.2],[.875,.22,.2],[.875,-.22,.2],[1.52,0,0]],[[0,4,1],[1,4,2],[2,4,3],[3,4,0],[0,1,2,3]],['#b89f6e','#edd296','#f4ddb0','#e4c686']);
+  for(const sign of [-1,1]){
+   const wing=[[.35,.18*sign],[-.35,1.3*sign],[-.93,1.3*sign],[-.65,.18*sign]];
+   extrudeXY(wing,-.07,.105,['#52697e','#c8d5d7','#728b9c']);
+   extrudeXY([[-.42,.98*sign],[-.35,1.3*sign],[-.93,1.3*sign],[-.86,.98*sign]],.04,.015,['#edd296']);
+   extrudeXY([[-.75,.17*sign],[-1.05,.64*sign],[-1.35,.64*sign],[-1.2,.17*sign]],.06,.07,['#798f9b','#b8c9cd']);
+  }
+  box(.22,0,.29,.65,.32,.20,['#173244','#75bbc5','#2e596b','#3c7285']);
+  solid([[-1.15,-.035,.17],[-.63,-.035,.17],[-.94,-.035,.74],[-1.24,-.035,.74],[-1.15,.035,.17],[-.63,.035,.17],[-.94,.035,.74],[-1.24,.035,.74]],[[0,1,2,3],[4,7,6,5],[0,4,5,1],[1,5,6,2],[2,6,7,3],[3,7,4,0]],['#d8c28b','#edd296','#a38e66']);
+  return {vertices,faces};
+ }
+ const ship=makeShip();
+ function appendBody(out,q,showAxes,prefix='body',opacity=1){
+  out.push({id:prefix+'-ship',type:'mesh',...ship,q,opacity});
+  if(showAxes)axes.forEach((v,i)=>{
+   const end=M.scale(M.rotate(v,q),1.72),color=[C.x,C.y,C.z][i];
+   out.push({id:prefix+'-axis-'+i,type:'arrow',a:[0,0,0],b:end,color,width:1.3,opacity:.86});
+   out.push({id:prefix+'-label-'+i,type:'label',point:M.scale(end,1.08),text:['x','y','z'][i],color,size:11,opacity:1});
+  });
+ }
+ function createScene(options){
+  const o={kind:'gimbal',roll:0,pitch:0,yaw:0,showRings:true,showAxes:true,...options};
+  const out=[grid];
+  const wOrigin=[-3.45,-2.7,-2.88];
+  axes.forEach((a,i)=>out.push({id:'world-'+i,type:'arrow',a:wOrigin,b:M.add(wOrigin,M.scale(a,.58)),color:[C.x,C.y,C.z][i],width:.85,opacity:.6}));
+  out.push({id:'world-label',type:'label',point:M.add(wOrigin,[-.3,0,-.1]),text:'WORLD',size:8,color:'#6c859b'});
+  if(o.kind==='gimbal'){
+   const yz=M.axisQ([0,0,1],o.yaw),py=M.mul(yz,M.axisQ([0,1,0],o.pitch)),q=M.eulerQ(o.roll,o.pitch,o.yaw);
+   if(o.showRings){
+    const qs=[yz,M.mul(py,M.axisQ([1,0,0],90)),M.mul(q,M.axisQ([0,1,0],90))];
+    [2.63,2.27,1.91].forEach((radius,i)=>{
+     const color=[C.z,C.y,C.x][i];
+     out.push({id:'ring-'+i,type:'ring',radius,points:circle(radius),q:qs[i],color,width:3.5,opacity:.92});
+     const pos=M.rotate([radius,0,0],qs[i]);
+     // A small moving index mark makes rotation about a ring's own normal visible.
+     const d=.075,v=[[-d,-d,-d],[d,-d,-d],[d,d,-d],[-d,d,-d],[-d,-d,d],[d,-d,d],[d,d,d],[-d,d,d]].map(p=>M.add(p,pos));
+     out.push({id:'mark-'+i,type:'mesh',vertices:v,faces:[{v:[0,1,2,3],color},{v:[4,5,6,7],color},{v:[0,4,7,3],color},{v:[1,5,6,2],color},{v:[3,2,6,7],color},{v:[0,1,5,4],color}],opacity:1});
+    });
+   }
+   const metric=M.metrics(o.roll,o.pitch,o.yaw),lengths=[3.05,2.72,2.97];
+   metric.axes.forEach((a,i)=>{
+    const b=M.scale(a,lengths[i]),color=[C.z,C.y,C.x][i];
+    out.push({id:'joint-'+i,type:'arrow',a:M.scale(a,-lengths[i]*.9),b,color,width:2.15,opacity:.92});
+    out.push({id:'joint-label-'+i,type:'label',point:M.scale(b,1.07),text:['Z · 요','Y′ · 피치','X″ · 롤'][i],color,size:11,box:true});
+   });
+   appendBody(out,q,o.showAxes);
+  }else{
+   const q=o.q||I;
+   // A faint reference circle makes the object's changing orientation easier to read.
+   out.push({id:'reference-ring',type:'ring',radius:2.38,points:circle(2.38),color:'#476078',width:1,opacity:.30});
+   if(o.trail){out.push({id:'trail',type:'line',points:o.trail,color:o.trailColor||C.q,width:2.8,opacity:.8});
+    [0,o.trail.length-1].forEach((idx,i)=>out.push({id:'trail-label-'+i,type:'label',point:M.scale(o.trail[idx],1.12),text:i?'B':'A',color:'#aec0cf',size:10,box:true}));
+   }
+   if(o.axis){out.push({id:'command-axis',type:'arrow',a:M.scale(o.axis,-2.8),b:M.scale(o.axis,2.8),color:o.axisColor||C.q,width:1.7,opacity:.63});out.push({id:'command-axis-label',type:'label',point:M.scale(o.axis,3.1),text:o.axisLabel||'추가 회전축',color:o.axisColor||C.q,size:10,box:true});}
+   appendBody(out,q,o.showAxes);
+   if(o.startQ){const end=M.scale(M.rotate([1,0,0],o.startQ),2.1);out.push({id:'start-direction',type:'arrow',a:[0,0,0],b:end,color:'#71869b',width:1,opacity:.4,dashed:true});out.push({id:'start-direction-label',type:'label',point:M.scale(end,1.08),text:'출발 방향',color:'#71869b',size:9});}
+  }
+  return out;
+ }
+ function hexRGB(hex){return [1,3,5].map(i=>parseInt(hex.slice(i,i+2),16));}
+ function shade(hex,brightness){return 'rgb('+hexRGB(hex).map(c=>Math.round(M.clamp(c*brightness,0,255))).join(',')+')';}
+ class SceneView{
+  constructor(canvas,glCanvas,onChange){
+   this.canvas=canvas;this.glCanvas=glCanvas;this.ctx=canvas.getContext('2d');this.onChange=onChange;this.w=0;this.h=0;this.engine=null;this.reset();this.points=new Map();this.bind();
+   this.observer=new ResizeObserver(()=>this.resize());this.observer.observe(canvas.parentElement);this.resize();
+  }
+  reset(){this.azimuth=-.94;this.elevation=.47;this.distance=11.7;this.onChange?.();}
+  front(){this.azimuth=-Math.PI/2;this.elevation=.13;this.distance=11.7;this.onChange?.();}
+  resize(){
+   const r=this.canvas.parentElement.getBoundingClientRect();if(!r.width||!r.height)return;
+   this.w=r.width;this.h=r.height;this.dpr=Math.min(devicePixelRatio||1,2);this.canvas.width=Math.round(this.w*this.dpr);this.canvas.height=Math.round(this.h*this.dpr);
+   if(this.engine){this.engine.renderer.setPixelRatio(this.dpr);this.engine.renderer.setSize(this.w,this.h,false);}
+   this.onChange?.();
+  }
+  bind(){
+   const c=this.canvas;
+   c.addEventListener('pointerdown',e=>{this.points.set(e.pointerId,{x:e.clientX,y:e.clientY});c.setPointerCapture(e.pointerId);});
+   c.addEventListener('pointermove',e=>{
+    if(!this.points.has(e.pointerId))return;
+    const old=this.points.get(e.pointerId),next={x:e.clientX,y:e.clientY};
+    if(this.points.size===1){this.azimuth-=(next.x-old.x)*.008;this.elevation=M.clamp(this.elevation+(next.y-old.y)*.006,-1.2,1.45);}
+    else{const other=Array.from(this.points.entries()).find(([id])=>id!==e.pointerId)?.[1];if(other){const a=Math.hypot(old.x-other.x,old.y-other.y),b=Math.hypot(next.x-other.x,next.y-other.y);if(a>5&&b>5)this.distance=M.clamp(this.distance*a/b,7.4,22);}}
+    this.points.set(e.pointerId,next);this.onChange?.();
+   });
+   const release=e=>{this.points.delete(e.pointerId);};c.addEventListener('pointerup',release);c.addEventListener('pointercancel',release);c.addEventListener('lostpointercapture',release);
+   c.addEventListener('wheel',e=>{e.preventDefault();this.distance=M.clamp(this.distance*Math.exp(e.deltaY*.001),7.4,22);this.onChange?.();},{passive:false});
+   c.addEventListener('keydown',e=>{let used=true;switch(e.key){case'ArrowLeft':this.azimuth+=.1;break;case'ArrowRight':this.azimuth-=.1;break;case'ArrowUp':this.elevation=M.clamp(this.elevation+.08,-1.2,1.45);break;case'ArrowDown':this.elevation=M.clamp(this.elevation-.08,-1.2,1.45);break;case'+':case'=':this.distance=M.clamp(this.distance-.5,7.4,22);break;case'-':this.distance=M.clamp(this.distance+.5,7.4,22);break;case'Home':this.reset();break;default:used=false;}if(used){e.preventDefault();this.onChange?.();}});
+  }
+  panes(count){
+   if(count===1)return[{x:0,y:0,w:this.w,h:this.h}];
+   return this.w<560?[{x:0,y:0,w:this.w,h:this.h/2},{x:0,y:this.h/2,w:this.w,h:this.h/2}]:[{x:0,y:0,w:this.w/2,h:this.h},{x:this.w/2,y:0,w:this.w/2,h:this.h}];
+  }
+  camera(pane){
+   // Match the Three.js camera and the software renderer exactly.
+   const fit=Math.max(1,.96/(pane.w/pane.h)),d=this.distance*fit;
+   const pos=[d*Math.cos(this.elevation)*Math.cos(this.azimuth),d*Math.cos(this.elevation)*Math.sin(this.azimuth),d*Math.sin(this.elevation)];
+   const forward=M.unit(M.scale(pos,-1)),right=M.unit(M.cross(forward,[0,0,1])),up=M.cross(right,forward);
+   return {pos,forward,right,up,focal:pane.h/2/Math.tan(42*M.D/2)};
+  }
+  project(v,p,cam){const d=M.sub(v,cam.pos),z=M.dot(d,cam.forward);if(z<.05)return null;return {x:p.x+p.w/2+M.dot(d,cam.right)*cam.focal/z,y:p.y+p.h/2-M.dot(d,cam.up)*cam.focal/z,z};}
+  world(v,shape){return M.add(M.rotate(v,shape.q||I),shape.pos||[0,0,0]);}
+  render(sceneSets){
+   if(!this.w||!this.h)return;
+   const ctx=this.ctx;ctx.setTransform(this.dpr,0,0,this.dpr,0,0);ctx.clearRect(0,0,this.w,this.h);
+   const panes=this.panes(sceneSets.length);
+   if(this.engine){try{this.renderWebGL(sceneSets,panes);}catch(e){console.warn('WebGL 화면을 내장 3D로 전환합니다.',e);this.engine.renderer.dispose();this.engine=null;this.glCanvas.style.display='none';document.getElementById('engine-status').textContent='내장 3D · WebGL 사용 불가';}}
+   sceneSets.forEach((shapes,i)=>this.renderCanvas(shapes,panes[i],!this.engine));
+  }
+  renderCanvas(shapes,p,geometry){
+   const ctx=this.ctx,cam=this.camera(p),commands=[],labels=[];
+   const project=v=>this.project(v,p,cam);
+   for(const s of shapes){
+    if(s.type==='label'){const t=project(s.point);if(t)labels.push({...s,...t});continue;}
+    if(!geometry)continue;
+    const op=s.opacity??1;
+    if(s.type==='mesh'){
+     const world=s.vertices.map(v=>this.world(v,s)),pts=world.map(project);
+     s.faces.forEach(face=>{const v=face.v.map(i=>pts[i]);if(v.some(a=>!a))return;
+      const w=face.v.map(i=>world[i]);const n=M.cross(M.sub(w[1],w[0]),M.sub(w[2],w[0]));const nl=M.length(n);const lit=nl>1e-9?.74+.26*Math.abs(M.dot(M.scale(n,1/nl),M.unit([2,-3,6]))):1;
+      commands.push({kind:'face',points:v,z:v.reduce((sum,a)=>sum+a.z,0)/v.length,color:shade(face.color,lit),opacity:op});
+     });
+    }else if(s.type==='arrow'){
+     const a=project(s.a),b=project(s.b);if(a&&b)commands.push({kind:'arrow',a,b,z:(a.z+b.z)/2,color:s.color,width:s.width,opacity:op,dashed:s.dashed});
+    }else{
+     const v=s.points.map(x=>project(this.world(x,s))),step=s.type==='segments'?2:1;
+     for(let k=0;k<v.length-1;k+=step)if(v[k]&&v[k+1])commands.push({kind:'line',a:v[k],b:v[k+1],z:(v[k].z+v[k+1].z)/2,color:s.color,width:s.width,opacity:op,ring:s.type==='ring'});
+    }
+   }
+   ctx.save();ctx.beginPath();ctx.rect(p.x,p.y,p.w,p.h);ctx.clip();
+   commands.sort((a,b)=>b.z-a.z);
+   for(const cmd of commands){
+    ctx.globalAlpha=cmd.opacity;ctx.fillStyle=cmd.color;ctx.strokeStyle=cmd.color;ctx.lineWidth=cmd.width||1;ctx.setLineDash(cmd.dashed?[5,5]:[]);ctx.lineCap='round';ctx.lineJoin='round';
+    if(cmd.kind==='face'){
+     ctx.beginPath();cmd.points.forEach((a,i)=>i?ctx.lineTo(a.x,a.y):ctx.moveTo(a.x,a.y));ctx.closePath();ctx.fill();ctx.strokeStyle=cmd.color;ctx.lineWidth=.5;ctx.stroke();
+    }else{
+     ctx.beginPath();ctx.moveTo(cmd.a.x,cmd.a.y);ctx.lineTo(cmd.b.x,cmd.b.y);
+     // Rounded, connected segments avoid artificial gaps on the rings.
+     ctx.stroke();
+     if(cmd.kind==='arrow'){
+      const dx=cmd.b.x-cmd.a.x,dy=cmd.b.y-cmd.a.y,mag=Math.hypot(dx,dy);if(mag>6){const a=Math.atan2(dy,dx),r=cmd.width>2?10:7;ctx.setLineDash([]);ctx.beginPath();ctx.moveTo(cmd.b.x,cmd.b.y);ctx.lineTo(cmd.b.x-r*Math.cos(a-.36),cmd.b.y-r*Math.sin(a-.36));ctx.lineTo(cmd.b.x-r*Math.cos(a+.36),cmd.b.y-r*Math.sin(a+.36));ctx.closePath();ctx.fill();}
+     }
+    }
+   }
+   ctx.globalAlpha=1;ctx.setLineDash([]);
+   for(const l of labels){
+    if(l.x<p.x+8||l.x>p.x+p.w-8||l.y<p.y+58||l.y>p.y+p.h-34)continue;
+    ctx.font=`${l.box?'600':'500'} ${l.size||11}px ui-monospace, "Malgun Gothic", sans-serif`;ctx.textAlign='center';ctx.textBaseline='middle';
+    const tw=ctx.measureText(l.text).width;
+    if(l.box){ctx.fillStyle='#101c29e8';ctx.beginPath();ctx.roundRect(l.x-tw/2-6,l.y-11,tw+12,22,4);ctx.fill();ctx.strokeStyle=l.color+'70';ctx.lineWidth=.7;ctx.stroke();}
+    else{ctx.shadowColor='#09131e';ctx.shadowBlur=5;}
+    ctx.fillStyle=l.color;ctx.fillText(l.text,l.x,l.y);ctx.shadowBlur=0;
+   }
+   ctx.restore();
+  }
+  initThree(T){
+   if(this.engine)return;
+   const renderer=new T.WebGLRenderer({canvas:this.glCanvas,alpha:true,antialias:true,powerPreference:'low-power'});
+   renderer.setPixelRatio(this.dpr);renderer.setSize(this.w,this.h,false);renderer.setClearColor(0x000000,0);renderer.autoClear=false;renderer.outputColorSpace=T.SRGBColorSpace;
+   const camera=new T.PerspectiveCamera(42,1,.1,100);camera.up.set(0,0,1);
+   const scenes=[0,1].map(()=>{const scene=new T.Scene();scene.add(new T.AmbientLight(0xd6e6ff,1.6));const key=new T.DirectionalLight(0xffffff,2.4);key.position.set(3,-4,7);scene.add(key);const fill=new T.DirectionalLight(0x84bfff,1);fill.position.set(-4,3,2);scene.add(fill);return {scene,cache:new Map()};});
+   this.engine={T,renderer,camera,scenes};this.glCanvas.style.display='block';
+   this.glCanvas.addEventListener('webglcontextlost',event=>{event.preventDefault();this.engine=null;this.glCanvas.style.display='none';document.getElementById('engine-status').textContent='내장 3D · WebGL 연결 끊김';this.onChange?.();},{once:true});
+   this.onChange?.();
+  }
+  createObject(s){
+   const {T}=this.engine,opacity=s.opacity??1;
+   if(s.type==='arrow')return new T.ArrowHelper(new T.Vector3(1,0,0),new T.Vector3(),1,s.color,.16,.065);
+   if(s.type==='ring')return new T.Mesh(new T.TorusGeometry(s.radius,s.width>2?.036:.009,8,128),new T.MeshStandardMaterial({color:s.color,roughness:.45,metalness:.18,transparent:opacity<1,opacity}));
+   if(s.type==='mesh'){
+    const positions=[],colors=[];
+    for(const face of s.faces){const c=new T.Color(face.color);for(let i=1;i<face.v.length-1;i++)for(const idx of [face.v[0],face.v[i],face.v[i+1]]){positions.push(...s.vertices[idx]);colors.push(c.r,c.g,c.b);}}
+    const geom=new T.BufferGeometry();geom.setAttribute('position',new T.Float32BufferAttribute(positions,3));geom.setAttribute('color',new T.Float32BufferAttribute(colors,3));geom.computeVertexNormals();
+    return new T.Mesh(geom,new T.MeshStandardMaterial({vertexColors:true,roughness:.55,metalness:.08,side:T.DoubleSide,transparent:opacity<1,opacity}));
+   }
+   const geom=new T.BufferGeometry();geom.setAttribute('position',new T.Float32BufferAttribute(s.points.flat(),3));const mat=new T.LineBasicMaterial({color:s.color,transparent:true,opacity});return s.type==='segments'?new T.LineSegments(geom,mat):new T.Line(geom,mat);
+  }
+  updateObject(obj,s){
+   const {T}=this.engine;obj.quaternion.fromArray(s.q||I);obj.position.fromArray(s.pos||[0,0,0]);
+   if(s.type==='arrow'){
+    const diff=M.sub(s.b,s.a),len=M.length(diff);obj.position.fromArray(s.a);obj.setDirection(new T.Vector3(...M.unit(diff)));obj.setLength(len,s.width>2?.19:.14,s.width>2?.08:.06);obj.setColor(s.color);
+    [obj.line.material,obj.cone.material].forEach(mat=>{mat.transparent=true;mat.opacity=s.opacity??1;});
+   }else if(s.type==='line'||s.type==='segments'){
+    const flat=s.points.flat();if(obj.geometry.attributes.position.array.length!==flat.length)obj.geometry.setAttribute('position',new T.Float32BufferAttribute(flat,3));else{obj.geometry.attributes.position.array.set(flat);obj.geometry.attributes.position.needsUpdate=true;}
+    obj.geometry.computeBoundingSphere();obj.material.color.set(s.color);obj.material.opacity=s.opacity??1;
+   }else if(s.type==='mesh'&&s.id.startsWith('mark-')){
+    // Index marks move in world space even though their geometry is recreated by the scene model.
+    const flat=[];for(const face of s.faces)for(let i=1;i<face.v.length-1;i++)for(const idx of [face.v[0],face.v[i],face.v[i+1]])flat.push(...s.vertices[idx]);obj.geometry.attributes.position.array.set(flat);obj.geometry.attributes.position.needsUpdate=true;obj.geometry.computeBoundingSphere();
+   }
+  }
+  disposeObject(obj){obj.traverse(n=>{n.geometry?.dispose();if(Array.isArray(n.material))n.material.forEach(m=>m.dispose());else n.material?.dispose();});}
+  renderWebGL(sceneSets,panes){
+   const {renderer,camera,scenes}=this.engine;
+   renderer.setScissorTest(false);renderer.clear();renderer.setScissorTest(true);
+   sceneSets.forEach((shapes,i)=>{
+    const {scene,cache}=scenes[i],used=new Set();
+    for(const s of shapes){if(s.type==='label')continue;used.add(s.id);let obj=cache.get(s.id);if(!obj){obj=this.createObject(s);cache.set(s.id,obj);scene.add(obj);}this.updateObject(obj,s);}
+    for(const [id,obj] of cache)if(!used.has(id)){scene.remove(obj);this.disposeObject(obj);cache.delete(id);}
+    const p=panes[i],cam=this.camera(p);camera.position.fromArray(cam.pos);camera.aspect=p.w/p.h;camera.updateProjectionMatrix();camera.lookAt(0,0,0);
+    renderer.setViewport(p.x,this.h-p.y-p.h,p.w,p.h);renderer.setScissor(p.x,this.h-p.y-p.h,p.w,p.h);renderer.render(scene,camera);
+   });
+  }
+ }
+ root.RotationScene={createScene,SceneView,C};
+})(globalThis);
+</script>
+<script>(function(){
+ 'use strict';
+ const M=RotationMath, S=RotationScene, $=id=>document.getElementById(id), $$=selector=>Array.from(document.querySelectorAll(selector));
+ const axisMap={x:[1,0,0],y:[0,1,0],z:[0,0,1]};
+ const state={step:0,roll:-15,pitch:30,yaw:25,q:M.eulerQ(0,90,0),seed:M.eulerQ(0,90,0),reference:{roll:0,pitch:90,yaw:0},frame:'world',lastAxis:'x',t:.5,preset:'wrap',playing:false,sweep:null,showAxes:true,showRings:true};
+ let dirty=true,THREE=null,loading=false,toastTimer=null,previousTime=performance.now();
+ const view=new S.SceneView($('overlay-canvas'),$('gl-canvas'),()=>{dirty=true;});
+ const fmt=(n,d=1)=>(Math.abs(n)<.5*10**(-d)?0:n).toFixed(d);
+ const deg=n=>fmt(n,1)+'°';
+ const wrap=n=>((n+180)%360+360)%360-180;
+ const qFromEuler=(r,p,y)=>THREE?new THREE.Quaternion().setFromEuler(new THREE.Euler(r*M.D,p*M.D,y*M.D,'ZYX')).normalize().toArray():M.eulerQ(r,p,y);
+ function compose(q,axis,degrees,frame){
+  if(!THREE)return M.compose(q,axis,degrees,frame);
+  const current=new THREE.Quaternion(...q),delta=new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(...axis).normalize(),degrees*M.D);
+  if(frame==='world')current.premultiply(delta);else current.multiply(delta);
+  return current.normalize().toArray();
+ }
+ function slerp(a,b,t){return THREE?new THREE.Quaternion().slerpQuaternions(new THREE.Quaternion(...a),new THREE.Quaternion(...b),t).normalize().toArray():M.slerp(a,b,t);}
+ const stories=[
+  {kicker:'01 / UNDERSTAND THE CONTROLS',title:'먼저, 손잡이 세 개.',text:'짐벌은 물체를 돌리는 고리 장치입니다. <strong>바깥 Z축 → 가운데 Y′축 → 안쪽 X″축</strong> 순서로 연결되어 있어요. 슬라이더를 하나씩 움직여 보세요.',stage:'세 개의 고리, 세 개의 회전',subtitle:'INTRINSIC Z → Y′ → X″ / Z-UP',next:'다음 · 90°에서 생기는 일'},
+  {kicker:'02 / CREATE A GIMBAL LOCK',title:'두 손잡이가 겹친 순간.',text:'피치를 <strong>+90°</strong>로 만들면 바깥 Z축과 안쪽 X″축이 같은 직선에 놓입니다. 요와 롤을 함께 +15° 바꿔 보세요. 숫자는 바뀌지만 자세는 그대로입니다.',stage:'짐벌락 · 축이 같은 직선에 놓일 때',subtitle:'R = Rz(ψ) Ry(θ) Rx(φ) / |det J| = |cos θ|',next:'다음 · 쿼터니언으로 회전하기'},
+  {kicker:'03 / KEEP THE ORIENTATION',title:'각도 대신, 자세를 저장.',text:'왼쪽은 출발 자세를 고정해 놓았습니다. 오른쪽은 <strong>현재 쿼터니언 q에 추가 회전 Δq를 곱합니다.</strong> 오일러 각으로 되돌려 조작하지 않으므로 90° 자세에서도 계속 회전할 수 있어요.',stage:'같은 출발 자세, 다른 회전 제어',subtitle:'UNIT QUATERNION / (x, y, z, w)',next:'다음 · 두 보간 경로 비교하기'},
+  {kicker:'04 / COMPARE THE PATHS',title:'같은 도착점, 다른 길.',text:'<strong>보간</strong>은 출발과 도착 사이를 채우는 일입니다. 왼쪽은 오일러 각의 숫자를 직선으로 섞고, 오른쪽은 <strong>SLERP</strong>로 짧은 회전 경로를 선택합니다.',stage:'오일러 선형 보간 vs. 쿼터니언 SLERP',subtitle:'SAME ENDPOINTS / DIFFERENT INTERMEDIATE ROTATIONS',next:'처음으로 · 회전축 다시 살펴보기'}
+ ];
+ const interpolation={};
+ function rebuildInterpolation(){
+  const start=state.preset==='wrap'?[0,0,170]:[-40,50,-130];
+  const end=state.preset==='wrap'?[0,0,-170]:[85,-65,120];
+  const a=qFromEuler(...start),b=qFromEuler(...end);
+  const eulerAt=t=>qFromEuler(...start.map((v,i)=>v+(end[i]-v)*t));
+  const slerpAt=t=>slerp(a,b,t);
+  Object.assign(interpolation,{start,end,a,b,eulerAt,slerpAt,
+   eulerTrail:Array.from({length:161},(_,i)=>M.rotate([2.36,0,0],eulerAt(i/160))),
+   slerpTrail:Array.from({length:161},(_,i)=>M.rotate([2.36,0,0],slerpAt(i/160))),
+   eulerLength:M.pathLength(eulerAt),slerpLength:M.pathLength(slerpAt)});
+ }
+ rebuildInterpolation();
+ function stopMotion(){state.playing=false;state.sweep=null;dirty=true;}
+ function seedQuaternion(r,p,y){state.reference={roll:r,pitch:p,yaw:y};state.q=qFromEuler(r,p,y);state.seed=state.q.slice();state.lastAxis='x';$('q-feedback').textContent='왼쪽은 출발 자세입니다. 오른쪽 물체를 회전시켜 비교하세요.';dirty=true;}
+ function selectStep(index){
+  if(index<0||index>3)return;stopMotion();state.step=index;
+  if(index===1){state.roll=0;state.pitch=90;state.yaw=0;$('action-feedback').textContent='요와 롤을 동시에 +15° 바꾸면 어떤 일이 생길까요?';}
+  if(index===2){seedQuaternion(0,90,0);state.frame='world';}
+  if(index===3){state.preset='wrap';state.t=.5;rebuildInterpolation();}
+  const s=stories[index];$('story-kicker').textContent=s.kicker;$('story-title').textContent=s.title;$('story-text').innerHTML=s.text;$('stage-title').textContent=s.stage;$('stage-subtitle').textContent=s.subtitle;$('next-text').textContent=s.next;
+  $$('[data-step]').forEach(b=>{const selected=Number(b.dataset.step)===index;b.setAttribute('aria-selected',String(selected));b.tabIndex=selected?0:-1;});$('lesson').setAttribute('aria-labelledby','tab-'+index);
+  $('euler-controls').hidden=index>1;$('lock-presets').hidden=index!==1;$('lock-actions').hidden=index!==1;$('normal-actions').hidden=index!==0;$('quaternion-controls').hidden=index!==2;$('interpolation-controls').hidden=index!==3;
+  $('gimbal-metrics').hidden=index>1;$('quat-metrics').hidden=index!==2;$('interp-metrics').hidden=index!==3;$('rings-option').hidden=index>1;
+  const split=index>=2;$('stage').classList.toggle('split',split);$('viewport-divider').hidden=!split;$('view-label-right').hidden=!split;
+  $('view-label-left').innerHTML=index<2?'<b>오일러 회전 장치</b><small>긴 화살표는 고리의 조작축입니다.</small>':index===2?'<b>출발 자세 · 기준으로 고정</b><small>여기서는 고리를 조작하지 않습니다.</small>':'<b style="color:var(--x)">Euler LERP</b><small>세 각도의 숫자를 각각 선형 보간</small>';
+  $('view-label-right').innerHTML=index===2?'<b style="color:var(--q)">Quaternion · 직접 조작</b><small>Δq를 곱해 현재 자세를 업데이트</small>':'<b style="color:var(--q)">Quaternion SLERP</b><small>두 자세 사이 짧은 회전 경로</small>';
+  $('legend-note').textContent=index<2?'긴 화살표 = 조작축 · 작은 축 = 물체 좌표축':index===2?'좌측은 기준 자세 · 우측은 회전 결과':'A = 출발 · B = 도착 · 곡선은 기수 방향 궤적';
+  $('q-source').textContent=index<2?'현재 자세의 quaternion · (x, y, z, w)':index===2?'오른쪽 현재 자세의 quaternion':'오른쪽 SLERP 결과의 quaternion';
+  dirty=true;view.resize();
+ }
+ function updateUI(){
+  for(const axis of ['yaw','pitch','roll']){$(axis+'-slider').value=state[axis];if(document.activeElement!==$(axis+'-number')||$(axis+'-number').value!=='')$(axis+'-number').value=Number(fmt(state[axis],1));}
+  const metric=M.metrics(state.roll,state.pitch,state.yaw);
+  $('separation-value').textContent=deg(metric.separation);$('rank-value').textContent=metric.rank;$('volume-value').textContent=fmt(metric.volume,3);
+  $('rank-detail').textContent=metric.rank===2?'특이점 · 조작축 두 개가 같은 직선':metric.volume<.1?'근접 상태 · 아직 rank 3':'회전속도 야코비안의 rank';
+  $('rank-value').style.color=metric.rank===2?'var(--accent)':'var(--text)';
+  $$('[data-pitch]').forEach(b=>b.classList.toggle('active',Number(b.dataset.pitch)===state.pitch));
+  $$('[data-frame]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.frame===state.frame)));
+  $('frame-metric').textContent=state.frame.toUpperCase();$('frame-detail').textContent=state.frame==='world'?'q ← Δq × q':'q ← q × Δq';
+  $('q-distance').textContent=deg(M.distance(state.q,state.seed));const basis=M.basis(state.q);$('body-dot').textContent=fmt(M.dot(basis[0],basis[1]),3);
+  const aa=M.axisAngle(state.q);$('axis-vector').textContent='('+aa.axis.map(v=>fmt(v,3)).join(', ')+')';$('axis-angle').textContent=deg(aa.angle);$('axis-arbitrary').hidden=!aa.arbitrary;
+  $('progress').value=fmt(state.t,3);$('progress-value').textContent=fmt(state.t,3);$('interp-preset').value=state.preset;$('play').textContent=state.playing?'일시정지':'재생';$('pitch-sweep').textContent=state.sweep?'재생 멈추기':'피치 90°까지 재생';
+  $('interp-start').textContent=interpolation.start.join(', ');$('interp-end').textContent=interpolation.end.join(', ');
+  $('euler-path-length').textContent=deg(interpolation.eulerLength);$('slerp-path-length').textContent=deg(interpolation.slerpLength);$('interp-difference').textContent=deg(M.distance(interpolation.eulerAt(state.t),interpolation.slerpAt(state.t)));
+  const q=state.step<2?qFromEuler(state.roll,state.pitch,state.yaw):state.step===2?state.q:interpolation.slerpAt(state.t);
+  ['qx','qy','qz','qw'].forEach((id,i)=>$(id).textContent=fmt(q[i],4));$('q-norm').textContent=fmt(M.qnorm(q),6);
+  if(state.step===0)$('observation').innerHTML='바깥 고리를 돌리면 안쪽 <strong>조작축</strong>도 함께 움직입니다. 작은 x·y·z는 물체에 붙은 좌표축이며, 긴 Z·Y′·X″ 화살표와 구별해서 보세요.';
+  if(state.step===1){
+   if(metric.rank===2)$('observation').innerHTML=state.pitch>0?'<strong>+90°: 롤 축 X″ = −요 축 Z.</strong> 같은 직선에서 반대 방향이므로 요와 롤의 같은 크기 변화가 상쇄됩니다. 물체의 작은 x·y·z 축은 여전히 서로 직각입니다.':'<strong>−90°: 롤 축 X″ = +요 축 Z.</strong> 이번에는 같은 방향입니다. 요 +15°와 롤 −15°가 상쇄되고, 두 각도를 모두 +15° 바꾸면 30° 회전합니다.';
+   else $('observation').innerHTML=metric.volume<.1?'<strong>짐벌락에 가깝지만, 정확한 짐벌락은 아닙니다.</strong> 독립 방향은 아직 3개입니다. 다만 두 축이 거의 겹쳐, 원하는 회전을 만들기 위해 큰 각속도 조합이 필요해질 수 있습니다.':'<strong>지금은 세 조작축이 독립적입니다.</strong> +90° 프리셋을 누른 뒤 “요와 롤을 동시에 +15°”를 눌러, 같은 조작이 왜 다른 결과를 만드는지 비교하세요.';
+  }
+  if(state.step===2)$('observation').innerHTML='<strong>쿼터니언은 회전 상태를 저장하는 방식입니다.</strong> 세계의 고정된 축이나 물체 자신의 직교축을 기준으로 Δq를 곱합니다. 물리적 짐벌의 고리 배치를 바꾸는 것은 아닙니다.';
+  if(state.step===3)$('observation').innerHTML=state.preset==='wrap'?'<strong>340°와 20°.</strong> 같은 출발·도착 자세라도 숫자를 어떻게 보간하느냐에 따라 경로가 달라집니다. 이 ±180° 경계 예제는 짐벌락 자체가 아니라 각도 대표값을 섞을 때의 문제입니다.':'<strong>세 축이 동시에 달라지는 경우.</strong> 오일러 선형 보간은 각 좌표의 숫자를 따릅니다. SLERP는 두 자세 사이의 짧은 회전을 따릅니다. 선은 기수 방향만의 궤적이므로 총 회전량과 선 길이는 같은 값이 아닙니다.';
+ }
+ function buildScenes(){
+  const common={showAxes:state.showAxes,showRings:state.showRings};
+  if(state.step<2)return[S.createScene({...common,kind:'gimbal',roll:state.roll,pitch:state.pitch,yaw:state.yaw})];
+  if(state.step===2){
+   const axis=state.frame==='world'?axisMap[state.lastAxis]:M.rotate(axisMap[state.lastAxis],state.q);
+   return [S.createScene({...common,kind:'gimbal',...state.reference}),S.createScene({...common,kind:'free',q:state.q,startQ:state.seed,axis,axisColor:S.C[state.lastAxis],axisLabel:(state.frame==='world'?'월드 ':'물체 ')+state.lastAxis.toUpperCase()+' 회전축'})];
+  }
+  return[S.createScene({...common,kind:'free',q:interpolation.eulerAt(state.t),trail:interpolation.eulerTrail,trailColor:S.C.x}),S.createScene({...common,kind:'free',q:interpolation.slerpAt(state.t),trail:interpolation.slerpTrail,trailColor:S.C.q})];
+ }
+ function frame(now){
+  const dt=Math.min((now-previousTime)/1000,.05);previousTime=now;
+  if(!document.hidden){
+   if(state.playing){state.t=Math.min(1,state.t+dt/6);if(state.t>=1)state.playing=false;dirty=true;}
+   if(state.sweep){state.sweep.elapsed+=dt;const t=Math.min(1,state.sweep.elapsed/3.5);state.pitch=state.sweep.start+(90-state.sweep.start)*(t*t*(3-2*t));if(t===1){state.pitch=90;state.sweep=null;}dirty=true;}
+   if(dirty){updateUI();view.render(buildScenes());dirty=false;}
+  }
+  requestAnimationFrame(frame);
+ }
+ function setAngle(axis,value){if(!Number.isFinite(value))return;stopMotion();state[axis]=M.clamp(value,-180,180);$('action-feedback').textContent='각도를 바꿨습니다. 같은 조작을 다시 비교해 보세요.';dirty=true;}
+ ['roll','pitch','yaw'].forEach(axis=>{
+  $(axis+'-slider').addEventListener('input',e=>setAngle(axis,Number(e.target.value)));
+  $(axis+'-number').addEventListener('input',e=>{if(e.target.value!=='')setAngle(axis,Number(e.target.value));});
+  $(axis+'-number').addEventListener('blur',e=>{if(e.target.value===''||!Number.isFinite(Number(e.target.value)))e.target.value=state[axis];else setAngle(axis,Number(e.target.value));dirty=true;});
+ });
+ $$('[data-step]').forEach(b=>b.addEventListener('click',()=>selectStep(Number(b.dataset.step))));
+ document.querySelector('.steps').addEventListener('keydown',e=>{let index=state.step;if(e.key==='ArrowRight')index=(index+1)%4;else if(e.key==='ArrowLeft')index=(index+3)%4;else if(e.key==='Home')index=0;else if(e.key==='End')index=3;else return;e.preventDefault();selectStep(index);$('tab-'+index).focus();});
+ $('next-step').addEventListener('click',()=>{selectStep((state.step+1)%4);$('lesson').scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth',block:'start'});});
+ $$('[data-pitch]').forEach(b=>b.addEventListener('click',()=>{stopMotion();state.pitch=Number(b.dataset.pitch);state.yaw=0;state.roll=0;$('action-feedback').textContent='피치'+' '+state.pitch+'°에서 요와 롤의 효과를 비교하세요.';dirty=true;}));
+ function bump(yaw,roll){
+  stopMotion();const before=qFromEuler(state.roll,state.pitch,state.yaw);state.yaw=wrap(state.yaw+yaw);state.roll=wrap(state.roll+roll);const difference=M.distance(before,qFromEuler(state.roll,state.pitch,state.yaw));
+  $('action-feedback').textContent=`요 ${yaw?'+'+yaw:'0'}°, 롤 ${roll?'+'+roll:'0'}° → 자세 변화 ${fmt(difference,3)}°. `+(difference<1e-7?'두 조작이 상쇄되어 같은 자세입니다.':'실제로 물체의 자세가 달라졌습니다.');
+  $('action-feedback').classList.toggle('warning',difference<1e-7);dirty=true;
+ }
+ $('yaw-plus').addEventListener('click',()=>bump(15,0));$('roll-plus').addEventListener('click',()=>bump(0,15));$('both-plus').addEventListener('click',()=>bump(15,15));
+ $('euler-reset').addEventListener('click',()=>{stopMotion();state.roll=state.pitch=state.yaw=0;dirty=true;});
+ $('pitch-sweep').addEventListener('click',()=>{if(state.sweep){state.sweep=null;}else{if(Math.abs(state.pitch-90)<.1)state.pitch=0;state.sweep={start:state.pitch,elapsed:0};}dirty=true;});
+ $$('[data-frame]').forEach(b=>b.addEventListener('click',()=>{state.frame=b.dataset.frame;$('q-feedback').textContent=state.frame==='world'?'다음 회전은 공간에 고정된 월드 축을 기준으로 합니다.':'다음 회전은 현재 물체에 붙어 있는 축을 기준으로 합니다.';dirty=true;}));
+ $$('[data-qaxis]').forEach(b=>b.addEventListener('click',()=>{
+  const axis=b.dataset.qaxis,amount=Number(b.dataset.sign)*15,before=state.q;state.q=compose(state.q,axisMap[axis],amount,state.frame);state.lastAxis=axis;
+  $('q-feedback').textContent=(state.frame==='world'?'월드 ':'물체 ')+axis.toUpperCase()+'축 '+(amount>0?'+':'')+amount+'° → 직전 자세와 '+fmt(M.distance(before,state.q),3)+'° 차이. q를 곱해 업데이트했습니다.';dirty=true;
+ }));
+ $('q-reset').addEventListener('click',()=>seedQuaternion(0,90,0));$('q-import').addEventListener('click',()=>{seedQuaternion(state.roll,state.pitch,state.yaw);$('q-feedback').textContent=`오일러 자세 (${fmt(state.roll)}, ${fmt(state.pitch)}, ${fmt(state.yaw)})°를 출발점으로 가져왔습니다.`;});
+ $('q-flip').addEventListener('click',()=>{state.q=state.q.map(v=>-v);$('q-feedback').textContent='네 성분의 부호를 뒤집었습니다. q와 −q는 같은 자세이므로 물체는 움직이지 않습니다.';dirty=true;});
+ $('interp-preset').addEventListener('change',e=>{state.preset=e.target.value;state.t=.5;stopMotion();rebuildInterpolation();dirty=true;});
+ $('progress').addEventListener('input',e=>{state.t=Number(e.target.value);state.playing=false;dirty=true;});
+ $('play').addEventListener('click',()=>{if(!state.playing&&state.t>=1)state.t=0;state.playing=!state.playing;previousTime=performance.now();dirty=true;});
+ $('interp-reset').addEventListener('click',()=>{state.playing=false;state.t=0;dirty=true;});
+ $('show-body-axes').addEventListener('change',e=>{state.showAxes=e.target.checked;dirty=true;});$('show-rings').addEventListener('change',e=>{state.showRings=e.target.checked;dirty=true;});
+ $('camera-reset').addEventListener('click',()=>view.reset());$('camera-front').addEventListener('click',()=>view.front());
+ function toast(text){clearTimeout(toastTimer);$('toast').textContent=text;$('toast').hidden=false;toastTimer=setTimeout(()=>{$('toast').hidden=true;},2600);}
+ $$('[data-copy]').forEach(button=>button.addEventListener('click',async()=>{
+  const text=$(button.dataset.copy).textContent;
+  try{await navigator.clipboard.writeText(text);toast('코드를 복사했습니다.');}
+  catch{const input=document.createElement('textarea');input.value=text;input.style.position='fixed';input.style.left='-10000px';document.body.appendChild(input);input.select();const ok=document.execCommand('copy');input.remove();toast(ok?'코드를 복사했습니다.':'코드를 직접 선택하여 복사해 주세요.');}
+ }));
+ async function importWithTimeout(url){let timer;try{return await Promise.race([import(url),new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error('연결 시간 초과')),6500);})]);}finally{clearTimeout(timer);}}
+ async function loadThree(){
+  if(loading||view.engine)return;loading=true;$('retry-engine').disabled=true;$('engine-status').textContent='내장 3D · Three.js 연결 중';
+  const urls=['https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js','https://unpkg.com/three@0.180.0/build/three.module.js'];
+  for(const url of urls){
+   try{
+    const T=await importWithTimeout(url);
+    const test=new T.Quaternion().setFromEuler(new T.Euler(0,Math.PI/2,0,'ZYX')).toArray();
+    if(M.distance(test,M.eulerQ(0,90,0))>1e-7)throw new Error('회전 규약 확인에 실패했습니다.');
+    view.initThree(T);THREE=T;rebuildInterpolation();$('engine-status').textContent='Three.js r'+T.REVISION+' · WebGL';$('retry-engine').textContent='Three.js 연결됨';loading=false;$('retry-engine').disabled=false;dirty=true;return;
+   }catch(error){/* A blocked CDN or unavailable WebGL must not prevent the lesson from working. */}
+  }
+  $('engine-status').textContent='내장 3D · 네트워크/WebGL 제한';loading=false;$('retry-engine').disabled=false;dirty=true;
+ }
+ $('retry-engine').addEventListener('click',loadThree);
+ document.addEventListener('visibilitychange',()=>{previousTime=performance.now();dirty=true;});
+ selectStep(0);updateUI();view.render(buildScenes());document.body.dataset.ready='true';requestAnimationFrame(frame);loadThree();
+})();
+</script>
+</body></html>

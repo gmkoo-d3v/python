@@ -1,0 +1,2503 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<title>common_yolo.py — 모델을 찾고, 재고, 내보내는 상자</title>
+<style>
+
+/* ============================================================
+   common_dino.py 인터랙티브 강의
+   단일 파일 · 외부 의존성 없음 · file:// 동작
+   ============================================================ */
+:root{
+  --paper:#FBF7EF;
+  --paper-2:#F4EDE0;
+  --paper-3:#EEE5D5;
+  --card:#FFFDF8;
+  --ink:#211D18;
+  --muted:#6E6457;
+  --line:#E4DAC8;
+  --line-strong:#D2C3A9;
+  --coral:#E4572E;
+  --coral-soft:#FBE3D9;
+  --teal:#1F7A6C;
+  --teal-soft:#DDEFEA;
+  --mustard:#E9B44C;
+  --mustard-soft:#FBF0D3;
+  --code:#191613;
+  --code-ink:#F3ECDF;
+  --code-muted:#A99E8C;
+  --radius:18px;
+  --radius-sm:12px;
+  --shadow:0 14px 34px rgba(48,38,22,.09), 0 2px 6px rgba(48,38,22,.05);
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+  --sans:"Pretendard Variable",Pretendard,-apple-system,BlinkMacSystemFont,"Segoe UI","Malgun Gothic","Apple SD Gothic Neo",sans-serif;
+}
+*,*::before,*::after{box-sizing:border-box}
+[hidden]{display:none!important}
+html{scroll-behavior:smooth}
+body{
+  margin:0;
+  color:var(--ink);
+  font-family:var(--sans);
+  font-size:16.5px;
+  line-height:1.72;
+  background-color:var(--paper);
+  background-image:radial-gradient(rgba(33,29,24,.055) 1px,transparent 1px);
+  background-size:22px 22px;
+  word-break:keep-all;
+  overflow-wrap:anywhere;
+}
+::selection{background:var(--mustard);color:var(--ink)}
+a{color:var(--teal);text-underline-offset:3px}
+a:hover{color:var(--coral)}
+code{font-family:var(--mono);font-size:.88em;background:var(--paper-2);border:1px solid var(--line);border-radius:6px;padding:.1em .35em}
+h1,h2,h3,h4{line-height:1.24;letter-spacing:-.022em;margin:0}
+p{margin:0 0 1em}
+ul,ol{margin:0 0 1em;padding-left:1.35em}
+li{margin:.28em 0}
+strong{font-weight:800}
+:focus-visible{outline:3px solid var(--coral);outline-offset:2px;border-radius:5px}
+.skip{position:fixed;left:12px;top:-60px;z-index:200;background:var(--ink);color:var(--paper);padding:10px 16px;border-radius:10px;text-decoration:none;transition:top .2s}
+.skip:focus{top:12px}
+/* ---------- top bar ---------- */
+.topbar{position:fixed;inset:0 0 auto 0;height:58px;z-index:100;background:rgba(251,247,239,.9);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
+.topbar-inner{max-width:1320px;height:100%;margin:0 auto;padding:0 22px;display:flex;align-items:center;justify-content:space-between;gap:14px}
+.brand{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--ink);font-weight:850;letter-spacing:-.02em;font-size:.95rem;min-width:0}
+.brand .logo{width:28px;height:28px;border-radius:9px;background:var(--ink);color:var(--paper);display:grid;place-items:center;font-size:14px;flex:none}
+.brand span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.topmeta{display:flex;align-items:center;gap:8px;font-size:.72rem;color:var(--muted);white-space:nowrap}
+.topmeta .chip{padding:4px 9px}
+#progress{position:absolute;left:0;bottom:-1px;height:3px;width:0;background:linear-gradient(90deg,var(--coral),var(--mustard));transition:width .08s linear}
+/* ---------- layout ---------- */
+.layout{max-width:1320px;margin:0 auto;padding:58px 24px 0;display:grid;grid-template-columns:236px minmax(0,1fr);gap:54px}
+.sidenav{position:sticky;top:82px;align-self:start;max-height:calc(100vh - 104px);overflow:auto;padding:18px 2px 30px;scrollbar-width:thin}
+.navlabel{font-size:.66rem;font-weight:850;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);padding:0 12px;margin:0 0 8px}
+.toc{display:grid;gap:2px}
+.toc a{display:flex;align-items:center;gap:9px;padding:6px 10px;border-radius:9px;color:var(--muted);text-decoration:none;font-size:.83rem;font-weight:650;line-height:1.35;transition:background .15s,color .15s}
+.toc a .num{font-size:.66rem;font-variant-numeric:tabular-nums;opacity:.55;width:1.5em;flex:none;font-weight:800}
+.toc a:hover{background:var(--paper-2);color:var(--ink)}
+.toc a.active{background:var(--ink);color:var(--paper)}
+.toc a.active .num{opacity:.75}
+.navfoot{margin-top:18px;padding:12px;border:1px dashed var(--line-strong);border-radius:12px;font-size:.72rem;color:var(--muted);line-height:1.55}
+main{max-width:900px;min-width:0;padding:26px 0 100px}
+section{scroll-margin-top:86px;margin:0 0 62px}
+.sec-head{margin:0 0 22px}
+.sec-kicker{display:flex;align-items:center;gap:8px;margin:0 0 8px;font-size:.68rem;font-weight:850;letter-spacing:.16em;text-transform:uppercase;color:var(--coral)}
+.sec-kicker::before{content:"";width:18px;height:2px;background:var(--coral);border-radius:2px}
+h2{font-size:clamp(1.55rem,3.1vw,2.1rem);font-weight:900}
+h3{font-size:1.12rem;font-weight:850;margin:0 0 10px}
+h4{font-size:.95rem;font-weight:800;margin:0 0 6px}
+.sub{color:var(--muted);font-size:.95rem;margin:8px 0 0;max-width:70ch}
+/* ---------- hero ---------- */
+.hero{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(260px,.75fr);gap:28px;align-items:stretch;margin-bottom:54px}
+.hero-copy{background:var(--card);border:1px solid var(--line);border-radius:26px;padding:34px 36px;box-shadow:var(--shadow);position:relative;overflow:hidden}
+.hero-copy::after{content:"";position:absolute;width:220px;height:220px;right:-100px;top:-110px;border-radius:50%;background:radial-gradient(circle,var(--mustard-soft),transparent 68%)}
+.eyebrow{display:inline-flex;align-items:center;gap:8px;font-size:.7rem;font-weight:850;letter-spacing:.1em;text-transform:uppercase;color:var(--teal);margin:0 0 14px}
+.eyebrow .dot{width:8px;height:8px;border-radius:50%;background:var(--coral);box-shadow:0 0 0 4px var(--coral-soft)}
+h1{font-size:clamp(2.15rem,5vw,3.4rem);font-weight:950;letter-spacing:-.045em;margin:0 0 16px}
+h1 mark{background:linear-gradient(180deg,transparent 56%,var(--mustard) 56%,var(--mustard) 92%,transparent 92%);color:inherit;padding:0 .05em}
+.lead{font-size:1.06rem;color:var(--ink);margin:0 0 10px;font-weight:650}
+.hero-desc{color:var(--muted);font-size:.93rem;margin:0 0 20px}
+.chips{display:flex;flex-wrap:wrap;gap:7px}
+.chip{display:inline-flex;align-items:center;gap:5px;padding:5px 10px;border-radius:999px;background:var(--paper-2);border:1px solid var(--line);font-size:.71rem;font-weight:750;color:var(--muted);white-space:nowrap}
+.chip.dark{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.chip.coral{background:var(--coral-soft);border-color:#F2C6B6;color:#9C3416}
+.chip.teal{background:var(--teal-soft);border-color:#BFDDD5;color:#155A4F}
+.hero-art{background:var(--ink);color:var(--paper);border-radius:26px;padding:24px 22px;position:relative;overflow:hidden;box-shadow:var(--shadow);display:flex;flex-direction:column;justify-content:center;min-height:330px}
+.hero-art::before{content:"";position:absolute;inset:0;background-image:radial-gradient(rgba(255,255,255,.09) 1px,transparent 1px);background-size:18px 18px;opacity:.7}
+.hero-art .doodle{position:absolute;opacity:.55;color:var(--mustard)}
+.flow{position:relative;z-index:1;display:grid;gap:4px}
+.flow-node{display:flex;align-items:center;gap:11px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.13);border-radius:13px;padding:9px 12px}
+.flow-node .ficon{font-size:1.1rem;width:30px;height:30px;display:grid;place-items:center;background:rgba(255,255,255,.09);border-radius:9px;flex:none}
+.flow-node b{font-size:.85rem;display:block;line-height:1.2}
+.flow-node small{display:block;font-family:var(--mono);font-size:.62rem;color:#C9BEAA;line-height:1.4}
+.flow-link{justify-self:center;color:var(--mustard);font-size:.85rem;line-height:1;padding:2px 0;opacity:.8}
+.hero-note{position:relative;z-index:1;margin:14px 0 0;font-size:.68rem;color:#BDB29E;line-height:1.5}
+/* ---------- generic cards ---------- */
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:22px 24px;box-shadow:var(--shadow)}
+.card + .card{margin-top:14px}
+.card.flat{box-shadow:none}
+.grid-2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.grid-3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.grid-4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.layer{border-radius:14px;padding:14px 16px;border:1px solid;margin:12px 0}
+.layer p:last-child{margin-bottom:0}
+.layer .tag{display:inline-flex;align-items:center;gap:6px;font-size:.64rem;font-weight:900;letter-spacing:.1em;text-transform:uppercase;margin-bottom:5px}
+.analogy{background:var(--mustard-soft);border-color:#EAD6A5}
+.analogy .tag{color:#8A6412}
+.precise{background:var(--teal-soft);border-color:#C2DFD7}
+.precise .tag{color:#155A4F}
+.gotcha{background:var(--coral-soft);border-color:#F2C6B6}
+.gotcha .tag{color:#9C3416}
+.callout{display:flex;gap:13px;padding:15px 17px;border-radius:14px;background:var(--paper-2);border:1px dashed var(--line-strong);margin:14px 0}
+.callout .ico{font-size:1.15rem;line-height:1.4;flex:none}
+.callout p:last-child{margin-bottom:0}
+.callout.warn{background:var(--coral-soft);border-color:#EAB6A3}
+.callout.ok{background:var(--teal-soft);border-color:#B8D8CE}
+.note{font-size:.8rem;color:var(--muted);line-height:1.6}
+.note strong{color:var(--ink)}
+.kicker-inline{font-size:.68rem;font-weight:900;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin:0 0 6px}
+/* ---------- table ---------- */
+.scroll-x{overflow-x:auto;border:1px solid var(--line);border-radius:14px;background:var(--card)}
+.table{width:100%;border-collapse:collapse;font-size:.86rem;min-width:520px}
+.table th,.table td{padding:10px 13px;text-align:left;vertical-align:top;border-bottom:1px solid var(--line)}
+.table th{font-size:.64rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);background:var(--paper-2);font-weight:900;white-space:nowrap}
+.table tr:last-child td{border-bottom:0}
+.table td code{white-space:nowrap}
+.table.compact{min-width:420px}
+/* ---------- code ---------- */
+.code{background:var(--code);color:var(--code-ink);border:1px solid #2A2622;border-radius:14px;padding:17px 19px;overflow:auto;font-family:var(--mono);font-size:12.6px;line-height:1.7;margin:14px 0;tab-size:4;scrollbar-width:thin}
+.code code{font:inherit;background:none;border:0;padding:0;white-space:pre;display:block;min-width:max-content}
+.tok-k{color:#F0A868}
+.tok-str{color:#A8D8B9}
+.tok-doc{color:#93A8A1;font-style:italic}
+.tok-n{color:#E9C46A}
+.tok-fn{color:#8ECAE6}
+.tok-dec{color:#D8A7E8}
+.tok-com{color:#8C8272;font-style:italic}
+.code-cap{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:16px 0 -4px;font-size:.69rem;font-weight:850;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.code-cap span:last-child{font-weight:600;letter-spacing:0;text-transform:none;color:var(--muted)}
+.codewrap{display:grid;grid-template-columns:54px minmax(0,1fr);background:var(--code);border:1px solid #2A2622;border-radius:14px;overflow:hidden;margin-top:12px}
+.gutter{padding:17px 9px 17px 0;text-align:right;color:#6E6457;border-right:1px solid #2A2622;font-family:var(--mono);font-size:12.6px;line-height:1.7;user-select:none;white-space:pre;background:#151210}
+.codewrap .code{border:0;border-radius:0;margin:0;padding:17px 19px;max-height:560px}
+/* ---------- steps ---------- */
+.steps{counter-reset:step;display:grid;gap:9px;margin:14px 0}
+.step{position:relative;padding:11px 14px 11px 46px;background:var(--paper);border:1px solid var(--line);border-radius:12px;font-size:.88rem;line-height:1.6}
+.step::before{counter-increment:step;content:counter(step);position:absolute;left:11px;top:11px;width:25px;height:25px;border-radius:50%;background:var(--ink);color:var(--paper);display:grid;place-items:center;font-size:.7rem;font-weight:900}
+.step p{margin:0}
+.step b{font-weight:850}
+/* ---------- interactive panels ---------- */
+.panel{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:20px 22px;box-shadow:var(--shadow);margin:18px 0}
+.panel-head{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;margin-bottom:12px}
+.panel-head h3{margin:0;display:flex;align-items:center;gap:8px}
+.panel-head .badge{font-size:.6rem;font-weight:900;letter-spacing:.08em;text-transform:uppercase;background:var(--mustard-soft);border:1px solid #E6D09B;color:#7A5810;padding:3px 8px;border-radius:999px;white-space:nowrap}
+.controls{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin:10px 0}
+.controls label{font-size:.78rem;font-weight:750;color:var(--muted);display:inline-flex;align-items:center;gap:7px}
+.controls label.range-label{display:grid;grid-template-columns:auto minmax(80px,1fr) 3.4em;gap:9px;align-items:center;flex:1 1 320px;max-width:430px;white-space:nowrap}
+.controls label.range-label input[type=range]{width:100%;max-width:none}
+.controls label.range-label b{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+.btn{font:inherit;font-size:.78rem;font-weight:800;border-radius:10px;padding:8px 14px;border:1px solid var(--line-strong);background:var(--card);color:var(--ink);cursor:pointer;transition:transform .12s,background .15s,border-color .15s;text-decoration:none;display:inline-flex;align-items:center;gap:6px}
+.btn:hover{transform:translateY(-1px);border-color:var(--ink)}
+.btn:active{transform:translateY(0)}
+.btn.primary{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.btn.primary:hover{background:#000}
+.btn.soft{background:var(--paper-2)}
+.btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
+input[type=range]{accent-color:var(--coral);width:100%;max-width:240px;cursor:pointer}
+input[type=text],select{font:inherit;font-size:.8rem;padding:7px 10px;border:1px solid var(--line-strong);border-radius:9px;background:var(--card);color:var(--ink);max-width:100%}
+input[type=checkbox]{accent-color:var(--teal);width:17px;height:17px}
+.switch{display:inline-flex;align-items:center;gap:8px;font-size:.78rem;font-weight:750;color:var(--ink);cursor:pointer;user-select:none}
+.readout{display:grid;grid-template-columns:repeat(auto-fit,minmax(112px,1fr));gap:8px;margin-top:12px}
+.stat{background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:8px 10px;min-width:0}
+.stat .k{display:block;font-size:.62rem;font-weight:850;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);line-height:1.3}
+.stat b{display:block;font-size:1.02rem;font-variant-numeric:tabular-nums;line-height:1.4;letter-spacing:-.02em}
+.stat.hot b{color:var(--coral)}
+.stat.cool b{color:var(--teal)}
+.formula{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:12px 14px;font-family:var(--mono);font-size:.8rem;line-height:1.8;overflow-x:auto}
+.formula .hl{color:var(--coral);font-weight:800}
+.canvas-box{position:relative;background:var(--paper);border:1px solid var(--line);border-radius:14px;overflow:hidden;margin-top:10px}
+#cosCanvas{display:block;width:100%;height:320px;touch-action:none;cursor:crosshair}
+.canvas-hint{position:absolute;left:12px;bottom:10px;font-size:.66rem;color:var(--muted);background:rgba(251,247,239,.85);border:1px solid var(--line);border-radius:8px;padding:3px 8px;pointer-events:none}
+.presets{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.presets .btn{font-size:.7rem;padding:6px 10px}
+/* ---------- normalization ---------- */
+.norm-grid{display:grid;grid-template-columns:minmax(0,1fr) 170px;gap:18px;align-items:start}
+.norm-row{display:grid;grid-template-columns:58px minmax(0,1fr) 62px;gap:10px;align-items:center;margin:7px 0;font-size:.76rem}
+.norm-row span:last-child{text-align:right;font-variant-numeric:tabular-nums;font-weight:800}
+.swatch{height:100px;border-radius:14px;border:1px solid var(--line-strong);display:grid;place-items:end center;padding:8px;font-size:.65rem;font-weight:800;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.55);background:#888}
+.norm-table{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:10px}
+.norm-table .stat b{font-size:.92rem}
+/* ---------- batch ---------- */
+.batch-visual{display:flex;flex-wrap:wrap;gap:3px;margin-top:12px;min-height:18px}
+.batch-visual i{display:block;width:14px;height:18px;border-radius:4px;background:var(--teal);opacity:.85}
+.batch-visual i:last-child{background:var(--coral)}
+.batch-visual .more{font-size:.7rem;color:var(--muted);align-self:center;margin-left:4px}
+/* ---------- eurosat ---------- */
+.split{display:grid;gap:7px;margin-top:12px}
+.split-row{display:grid;grid-template-columns:170px minmax(0,1fr) 82px;gap:10px;align-items:center}
+.split-name{font-size:.74rem;font-weight:750;line-height:1.3;min-width:0}
+.split-name em{display:block;font-style:normal;font-weight:600;font-size:.64rem;color:var(--muted)}
+.blocks{display:flex;gap:3px;height:20px}
+.block{flex:1;border-radius:4px;background:#E9E1D2;transition:background .35s ease,transform .35s ease;transform-origin:center}
+.block.pool{background:var(--coral)}
+.block.test{background:var(--teal)}
+.block.unused{background:#E9E1D2}
+.blocks.shuffling .block{transform:scaleY(.35)}
+.split-count{font-size:.66rem;color:var(--muted);text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.legend{display:flex;flex-wrap:wrap;gap:12px;margin-top:12px;font-size:.7rem;color:var(--muted)}
+.legend i{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+.legend .p{background:var(--coral)}.legend .t{background:var(--teal)}.legend .u{background:#E9E1D2;border:1px solid var(--line-strong)}
+.split-result{font-size:.78rem;font-weight:750;margin-top:10px}
+.split-result.ok{color:var(--teal)}
+.split-result.bad{color:var(--coral)}
+/* ---------- cache ---------- */
+.cache-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);gap:14px}
+.log{background:var(--code);color:var(--code-ink);border-radius:12px;padding:12px 14px;font-family:var(--mono);font-size:11.8px;line-height:1.75;min-height:122px;max-height:180px;overflow:auto;white-space:pre-wrap;margin:0}
+.log .hit{color:#A8D8B9}.log .miss{color:#F0A868}.log .warnline{color:#F2A08A}.log .dim{color:#8C8272}
+.cache-warn{display:none;margin-top:10px;padding:10px 12px;border-radius:10px;background:var(--coral-soft);border:1px solid #EAB6A3;font-size:.76rem;line-height:1.55}
+.cache-warn.show{display:block}
+/* ---------- patch grid ---------- */
+.patch-layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:18px;align-items:start}
+.patch-wrap{position:relative;aspect-ratio:1/1;max-width:420px;border-radius:12px;overflow:hidden;border:1px solid var(--line-strong);background:#5B7A4C}
+.patch-bg{position:absolute;inset:0;background:
+  radial-gradient(circle at 20% 26%,rgba(110,139,74,.95) 0 14%,transparent 15%),
+  radial-gradient(circle at 76% 64%,rgba(183,163,106,.9) 0 20%,transparent 21%),
+  radial-gradient(circle at 38% 82%,rgba(72,104,62,.9) 0 17%,transparent 18%),
+  repeating-linear-gradient(34deg,rgba(255,255,255,.11) 0 2px,transparent 2px 15px),
+  repeating-linear-gradient(-18deg,rgba(0,0,0,.08) 0 1px,transparent 1px 19px),
+  linear-gradient(135deg,#4E6B3A,#8FA36A 42%,#C2B280 72%,#5B7A4C);}
+.patch-grid{position:absolute;inset:0;display:grid;grid-template-columns:repeat(14,1fr);grid-template-rows:repeat(14,1fr)}
+.patch{border:1px solid rgba(255,255,255,.19);background:transparent;padding:0;cursor:pointer;transition:background .12s}
+.patch:hover,.patch:focus-visible{background:rgba(228,87,46,.38);outline:2px solid #fff;outline-offset:-2px}
+.patch.sel{background:rgba(31,122,108,.5);box-shadow:inset 0 0 0 2px #fff}
+.prefix-strip{display:none;flex-wrap:wrap;gap:5px;margin:10px 0 0;align-items:center}
+.prefix-strip.show{display:flex}
+.prefix-strip .tok{font-size:.64rem;font-weight:850;padding:4px 8px;border-radius:7px;background:var(--coral-soft);border:1px solid #F0C2B1;color:#9C3416;white-space:nowrap}
+.prefix-strip .tok.patchtok{background:var(--teal-soft);border-color:#BFDDD5;color:#155A4F}
+.prefix-strip .arrow{color:var(--muted);font-size:.7rem}
+.patch-readout{background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:9px 12px;font-size:.76rem;line-height:1.55;margin-top:10px;min-height:58px}
+.patch-readout b{color:var(--coral)}
+/* ---------- quiz ---------- */
+.quiz-top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
+.quiz-count{font-size:.72rem;font-weight:850;color:var(--muted);letter-spacing:.06em}
+.quiz-track{height:6px;border-radius:999px;background:var(--paper-3);overflow:hidden;flex:1;max-width:220px}
+.quiz-track i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--coral),var(--mustard));transition:width .3s}
+.quiz-q{font-size:1.02rem;font-weight:850;line-height:1.5;margin:0 0 13px}
+.quiz-opts{display:grid;gap:8px}
+.opt{font:inherit;font-size:.86rem;line-height:1.5;text-align:left;padding:11px 14px;border:1px solid var(--line-strong);border-radius:11px;background:var(--card);color:var(--ink);cursor:pointer;display:flex;gap:10px;align-items:flex-start;transition:border-color .15s,transform .12s,background .15s}
+.opt:hover:not(:disabled){border-color:var(--ink);transform:translateY(-1px)}
+.opt .ltr{font-size:.66rem;font-weight:900;width:20px;height:20px;border-radius:50%;background:var(--paper-2);border:1px solid var(--line);display:grid;place-items:center;flex:none;margin-top:1px}
+.opt.correct{background:var(--teal-soft);border-color:var(--teal)}
+.opt.correct .ltr{background:var(--teal);color:#fff;border-color:var(--teal)}
+.opt.wrong{background:var(--coral-soft);border-color:var(--coral)}
+.opt.wrong .ltr{background:var(--coral);color:#fff;border-color:var(--coral)}
+.opt:disabled{cursor:default}
+.quiz-fb{display:none;margin-top:12px;padding:12px 14px;border-radius:11px;font-size:.82rem;line-height:1.6;background:var(--paper-2);border:1px solid var(--line)}
+.quiz-fb.show{display:block}
+.quiz-fb.ok{background:var(--teal-soft);border-color:#B8D8CE}
+.quiz-fb.no{background:var(--coral-soft);border-color:#EAB6A3}
+.quiz-fb b{display:block;margin-bottom:2px}
+.quiz-actions{display:flex;justify-content:flex-end;margin-top:12px}
+.quiz-result{text-align:center;padding:12px 0}
+.quiz-result .score{font-size:3rem;font-weight:950;letter-spacing:-.05em;line-height:1;color:var(--coral)}
+.quiz-result .score small{font-size:1rem;color:var(--muted);font-weight:750}
+/* ---------- accordion ---------- */
+.acc{background:var(--card);border:1px solid var(--line);border-radius:12px;margin-bottom:7px;overflow:hidden}
+.acc summary{cursor:pointer;padding:11px 15px;font-size:.86rem;font-weight:800;list-style:none;display:flex;align-items:center;justify-content:space-between;gap:10px}
+.acc summary::-webkit-details-marker{display:none}
+.acc summary::after{content:"+";font-size:1rem;color:var(--coral);font-weight:900;flex:none}
+.acc[open] summary::after{content:"−"}
+.acc[open] summary{background:var(--paper);border-bottom:1px solid var(--line)}
+.acc .body{padding:11px 15px 13px;font-size:.82rem;color:var(--muted);line-height:1.65}
+.acc .body p:last-child{margin-bottom:0}
+.acc .body code{font-size:.84em}
+/* ---------- misc ---------- */
+.arrow-list{list-style:none;padding:0;margin:10px 0}
+.arrow-list li{position:relative;padding-left:20px;margin:6px 0;font-size:.87rem}
+.arrow-list li::before{content:"→";position:absolute;left:0;color:var(--coral);font-weight:900}
+.mini-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:9px;margin:12px 0}
+.mini{background:var(--paper);border:1px solid var(--line);border-radius:11px;padding:10px 12px;font-size:.76rem;line-height:1.5}
+.mini b{display:block;font-size:.86rem;margin-bottom:2px}
+.mini .mono{font-family:var(--mono);font-size:.68rem;color:var(--muted)}
+.quote{border-left:3px solid var(--mustard);padding:2px 0 2px 14px;color:var(--muted);font-size:.9rem;margin:12px 0}
+.tag-list{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}
+.footer{border-top:1px solid var(--line);margin-top:20px;padding:30px 24px 44px;background:var(--paper-2)}
+.footer-inner{max-width:900px;margin:0 auto;font-size:.76rem;color:var(--muted);line-height:1.7}
+.footer-inner strong{color:var(--ink)}
+.footer-links{display:flex;flex-wrap:wrap;gap:14px;margin-top:8px}
+/* ---------- responsive ---------- */
+@media (max-width:1080px){
+  .layout{grid-template-columns:minmax(0,1fr);gap:0;padding-top:58px}
+  .sidenav{position:sticky;top:58px;z-index:40;max-height:none;min-width:0;overflow:visible;background:rgba(251,247,239,.96);backdrop-filter:blur(10px);border-bottom:1px solid var(--line);padding:8px 0;margin:0 -24px;padding-left:24px;padding-right:24px}
+  .navlabel,.navfoot{display:none}
+  .toc{display:flex;gap:5px;overflow-x:auto;padding-bottom:3px;scrollbar-width:thin;max-width:100%}
+  .toc a{white-space:nowrap;padding:5px 9px;font-size:.75rem;border:1px solid var(--line)}
+  .toc a.active{border-color:var(--ink)}
+  main{max-width:none;padding-top:26px}
+}
+@media (max-width:820px){
+  .hero{grid-template-columns:1fr}
+  .hero-art{min-height:0}
+  .grid-3,.grid-4{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .patch-layout,.cache-grid,.norm-grid{grid-template-columns:1fr}
+  .swatch{height:64px}
+  .split-row{grid-template-columns:120px minmax(0,1fr) 62px;gap:8px}
+}
+@media (max-width:620px){
+  body{font-size:15.5px}
+  .layout{padding-left:16px;padding-right:16px}
+  .sidenav{margin:0 -16px;padding-left:16px;padding-right:16px}
+  .hero-copy{padding:24px 20px}
+  .hero-art{padding:18px}
+  .card,.panel{padding:17px 16px}
+  .grid-2,.grid-3,.grid-4{grid-template-columns:1fr}
+  .split-row{grid-template-columns:98px minmax(0,1fr)}
+  .split-count{display:none}
+  .code{font-size:11.6px;padding:14px}
+  .codewrap{grid-template-columns:42px minmax(0,1fr)}
+  .gutter{font-size:11.6px;padding-right:7px}
+  .codewrap .code{max-height:420px}
+  h1{font-size:2.1rem}
+  .topmeta .chip:not(.keep){display:none}
+  .step{padding-left:42px}
+}
+@media (prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+  *,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}
+}
+
+.err-chip{display:inline-flex;align-items:center;gap:4px;padding:5px 9px;border-radius:999px;font-size:.68rem;font-weight:750;border:1px solid var(--line);background:var(--paper-2);color:var(--muted)}
+.err-chip.ok{background:var(--teal-soft);border-color:#BFDDD5;color:#155A4F}
+.err-chip.dup{background:var(--mustard-soft);border-color:#E6D09B;color:#7A5810}
+.err-chip.near{background:#FBF0D3;border-color:#E6D09B;color:#7A5810}
+.err-chip.bg{background:var(--coral-soft);border-color:#F0C2B1;color:#9C3416}
+.err-chip.miss{background:var(--ink);border-color:var(--ink);color:var(--paper)}
+.lb-wrap{display:grid;grid-template-columns:minmax(240px,320px) minmax(0,1fr);gap:18px;align-items:center;margin-top:12px}
+.lb-canvas{position:relative;width:100%;aspect-ratio:1/1;background:#727272;border:1px solid var(--line-strong);border-radius:10px;overflow:hidden}
+.lb-image{position:absolute;background:
+  radial-gradient(circle at 30% 30%,#6E8B4A 0 18%,transparent 19%),
+  radial-gradient(circle at 70% 65%,#C2B280 0 22%,transparent 23%),
+  linear-gradient(135deg,#4E6B3A,#8FA36A 50%,#B7A36A);
+  border:1px solid rgba(255,255,255,.4);box-sizing:border-box;transition:all .15s}
+@media(max-width:720px){.lb-wrap{grid-template-columns:1fr} .lb-canvas{max-width:320px}}
+
+</style>
+</head>
+<body>
+<a class="skip" href="#main">본문으로 건너뛰기</a>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <a class="brand" href="#hero"><span class="logo">Y</span><span>common_yolo.py 강의</span></a>
+    <div class="topmeta">
+      <span class="chip keep">2일차 이후 · 평가/배포</span>
+      <span class="chip">약 35분</span>
+    </div>
+  </div>
+  <div id="progress" aria-hidden="true"></div>
+</header>
+
+<div class="layout">
+  <aside class="sidenav" aria-label="강의 목차">
+    <p class="navlabel">Lecture map</p>
+    <nav class="toc" id="toc">
+      <a href="#hero"><span class="num">00</span>시작</a>
+      <a href="#map"><span class="num">01</span>파일 지도</a>
+      <a href="#code"><span class="num">02</span>common_yolo</a>
+      <a href="#device"><span class="num">03</span>pick_device</a>
+      <a href="#require"><span class="num">04</span>require_lab5</a>
+      <a href="#truth"><span class="num">05</span>read_truth</a>
+      <a href="#lab7"><span class="num">06</span>lab7 AP</a>
+      <a href="#lab8"><span class="num">07</span>lab8 오류</a>
+      <a href="#lab10"><span class="num">08</span>lab10 ONNX</a>
+      <a href="#lab11"><span class="num">09</span>lab11 속도</a>
+      <a href="#lab6"><span class="num">10</span>lab6 동영상</a>
+      <a href="#fullcode"><span class="num">11</span>전체 코드</a>
+      <a href="#quiz"><span class="num">12</span>퀴즈</a>
+      <a href="#glossary"><span class="num">13</span>용어 사전</a>
+      <a href="#cheatsheet"><span class="num">14</span>치트시트</a>
+    </nav>
+    <div class="navfoot">
+      <strong>한 줄도 생략 없음.</strong><br>
+      lab5 산출물 찾기부터 AP·오류 분류·ONNX·int8까지, 숫자 뒤의 의미를 전부 다룹니다.
+    </div>
+  </aside>
+
+  <main id="main">
+    <section id="hero" class="hero" data-lecture-section="hero">
+      <div class="hero-copy">
+        <p class="eyebrow"><span class="dot"></span> YOLO 특강 · 2일차 이후 · 평가와 배포</p>
+        <h1>학습한 모델을<br><mark>찾고, 재고, 내보내는</mark> 상자</h1>
+        <p class="lead"><code>common_yolo.py</code>를 5살에게 설명하듯 — 하지만 <strong>한 줄도 빼먹지 않고</strong> 읽는 강의.</p>
+        <p class="hero-desc">lab5가 만든 <code>best.pt</code>와 YOLO 데이터셋을 찾아 주고, 라벨을 픽셀 박스로 되돌립니다. lab7·8·9·10·11이 이 상자를 쓰고, lab17·19도 이미지 경로를 위해 <code>YOLO_ROOT</code>를 가져갑니다.</p>
+        <div class="chips">
+          <span class="chip dark">42줄</span>
+          <span class="chip">함수 4개</span>
+          <span class="chip teal">BEST = best.pt</span>
+          <span class="chip">IMAGE_SIZE 416</span>
+          <span class="chip coral">lab7 · 8 · 10 · 11</span>
+        </div>
+      </div>
+      <div class="hero-art" aria-hidden="true">
+        <svg class="doodle" style="right:14px;top:14px" width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2l2.4 7.6L22 12l-7.6 2.4L12 22l-2.4-7.6L2 12l7.6-2.4z"/></svg>
+        <div class="flow">
+          <div class="flow-node"><span class="ficon">🏋️</span><div><b>lab5가 만든 것</b><small>best.pt · data.yaml</small></div></div>
+          <div class="flow-link">↓</div>
+          <div class="flow-node"><span class="ficon">🔎</span><div><b>찾기</b><small>require_lab5 · valid_images</small></div></div>
+          <div class="flow-link">↓</div>
+          <div class="flow-node"><span class="ficon">📐</span><div><b>되돌리기</b><small>read_truth → xyxy</small></div></div>
+          <div class="flow-link">↓</div>
+          <div class="flow-node"><span class="ficon">📊</span><div><b>재고 내보내기</b><small>AP · 오류 · ONNX · int8</small></div></div>
+        </div>
+        <p class="hero-note">모델을 새로 만드는 상자가 아니라, 이미 만든 모델을 “쓰는” 상자입니다.</p>
+      </div>
+    </section>
+
+    <section id="map" data-lecture-section="map">
+      <div class="sec-head">
+        <p class="sec-kicker">01 · 파일 지도</p>
+        <h2>lab5 다음의 모든 실습이 여기서 시작</h2>
+        <p class="sub"><code>common_yolo.py</code>는 ultralytics를 import하지 않습니다. 경로·장치·라벨만 다루는 얇은 층이에요.</p>
+      </div>
+
+      <div class="scroll-x">
+        <table class="table">
+          <thead><tr><th>실습</th><th>가져다 쓰는 것</th><th>하는 일</th></tr></thead>
+          <tbody>
+            <tr><td><code>lab7_eval.py</code></td><td><code>BEST</code>, <code>IMAGE_SIZE</code>, <code>YOLO_ROOT</code>, <code>pick_device</code>, <code>read_truth</code>, <code>require_lab5</code>, <code>valid_images</code></td><td>IoU 기준별 AP, F1 최고 conf, pycocotools 재평가</td></tr>
+            <tr><td><code>lab8_errors.py</code></td><td><code>BEST</code>, <code>IMAGE_SIZE</code>, <code>pick_device</code>, <code>read_truth</code>, <code>require_lab5</code>, <code>valid_images</code></td><td>맞음·중복·위치 어긋남·배경 오탐·놓침 분류</td></tr>
+            <tr><td><code>lab9_test_split.py</code></td><td><code>HERE</code>, <code>IMAGE_SIZE</code>, <code>pick_device</code></td><td>3-way split 재학습 (자세한 건 common 강의)</td></tr>
+            <tr><td><code>lab10_onnx.py</code></td><td><code>BEST</code>, <code>IMAGE_SIZE</code>, <code>pick_device</code>, <code>require_lab5</code>, <code>valid_images</code></td><td>ONNX export + onnxruntime로 직접 디코딩</td></tr>
+            <tr><td><code>lab11_speed.py</code></td><td><code>BEST</code>, <code>HERE</code>, <code>YOLO_ROOT</code>, <code>require_lab5</code></td><td>320/416/640 속도·정확도, int8 양자화</td></tr>
+            <tr><td><code>lab17</code> · <code>lab19</code></td><td><code>YOLO_ROOT</code>만</td><td>검증 이미지 경로를 DINO 실습에서 재사용</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="layer precise">
+        <span class="tag">🔬 정확히는 — 의존 관계</span>
+        <p><code>lab5</code> → <code>data/PennFudan_yolo/</code> + <code>runs/person/weights/best.pt</code> → lab6~lab11. <code>common_yolo.require_lab5()</code>가 이 두 가지를 확인하고, 없으면 <strong>친절한 SystemExit</strong>로 “lab5를 먼저 돌리세요”라고 알려 줍니다. lab12~16은 여기에 더해 합성 영상·검출 캐시를 씁니다.</p>
+      </div>
+
+      <div class="layer analogy">
+        <span class="tag">🍭 5살 비유</span>
+        <p>lab5가 <strong>도서관에 책을 꽂아 두면</strong>, 이 상자는 “그 책이 어느 칸에 있는지” 알려 주는 사서예요. 책 내용을 새로 쓰지는 않습니다. 찾고, 펼치고, 읽기 좋게 바꿔 줄 뿐.</p>
+      </div>
+    </section>
+
+    <section id="code" data-lecture-section="code">
+      <div class="sec-head">
+        <p class="sec-kicker">02 · common_yolo.py</p>
+        <h2>42줄 전체를 한 번에</h2>
+        <p class="sub">상수 4개, 함수 4개. 모든 줄이 lab7~11의 공통 언어입니다.</p>
+      </div>
+
+      <div class="code-cap"><span>common_yolo.py · 1–42행</span><span>원문 그대로</span></div>
+      <pre class="code"><code>"""2일차 실습 공통 부분: lab5가 만든 데이터와 best.pt를 찾고, YOLO 라벨을 픽셀 박스로 읽습니다."""
+import os
+import warnings
+from pathlib import Path
+
+os.environ.setdefault("YOLO_VERBOSE", "False")   # ultralytics import 전에 정해야 적용된다
+warnings.filterwarnings("ignore", message=".*does not have a deterministic implementation.*")
+
+import torch
+from PIL import Image
+
+HERE = Path(__file__).resolve().parent
+YOLO_ROOT = HERE / "data" / "PennFudan_yolo"
+BEST = HERE / "runs" / "person" / "weights" / "best.pt"
+IMAGE_SIZE = 416
+
+
+def pick_device() -> int | str:
+    """cuda는 번호로, 그 밖에는 이름으로 넘긴다(ultralytics 규칙)."""
+    return 0 if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu"
+
+
+def require_lab5() -> None:
+    """lab5를 먼저 돌려야 데이터와 best.pt가 생긴다."""
+    if not BEST.exists() or not (YOLO_ROOT / "data.yaml").exists():
+        raise SystemExit(f"lab5_yolo11.py를 먼저 돌리세요. 없음: {BEST}")
+
+
+def valid_images() -> list[Path]:
+    return sorted((YOLO_ROOT / "valid" / "images").glob("*.png"))
+
+
+def read_truth(image: Path) -> list[list[float]]:
+    """YOLO 라벨(중심, 크기, 0~1)을 xyxy 픽셀 박스로 되돌린다."""
+    with Image.open(image) as im:
+        width, height = im.size
+    label = image.parent.parent / "labels" / f"{image.stem}.txt"
+    boxes = []
+    for line in label.read_text().strip().splitlines():
+        cx, cy, w, h = (float(v) for v in line.split()[1:])
+        boxes.append([(cx - w / 2) * width, (cy - h / 2) * height, (cx + w / 2) * width, (cy + h / 2) * height])
+    return boxes</code></pre>
+
+      <div class="grid-3" style="margin-top:14px">
+        <div class="mini"><b><code>HERE</code></b><span class="mono">Path</span>이 파일이 있는 폴더. cwd와 무관.</div>
+        <div class="mini"><b><code>YOLO_ROOT</code></b><span class="mono">data/PennFudan_yolo</span>lab5가 만든 YOLO 데이터셋.</div>
+        <div class="mini"><b><code>BEST</code></b><span class="mono">runs/person/weights/best.pt</span>lab5가 고른 최고 체크포인트.</div>
+        <div class="mini"><b><code>IMAGE_SIZE = 416</code></b><span class="mono">평가 입력</span>lab5 학습 크기와 동일.</div>
+        <div class="mini"><b><code>YOLO_VERBOSE</code></b><span class="mono">환경변수</span>import 전에 False로. 로그 소음 줄이기.</div>
+        <div class="mini"><b>경고 필터</b><span class="mono">MPS 경고</span>“deterministic implementation”만 끔.</div>
+      </div>
+
+      <div class="layer gotcha">
+        <span class="tag">⚠️ 함정</span>
+        <ul class="arrow-list" style="margin-bottom:0">
+          <li><code>os.environ.setdefault(...)</code>는 <strong>이미 설정된 값을 덮지 않습니다</strong>. 사용자가 <code>YOLO_VERBOSE=True</code>로 두면 그대로 True.</li>
+          <li>경고 필터는 <code>message=</code> 정규식으로 <strong>그 경고만</strong> 끕니다. 모든 경고를 끄는 게 아니에요.</li>
+          <li><code>HERE</code>는 <code>common_yolo.py</code> 기준. lab9처럼 다른 폴더에서 import해도 같은 곳을 가리킵니다.</li>
+          <li><code>BEST</code>는 파일 “존재”만 확인합니다. 0바이트거나 깨진 체크포인트는 통과합니다.</li>
+          <li><code>IMAGE_SIZE</code>는 416 고정. lab11은 <code>lab10.IMAGE_SIZE</code>를 잠시 바꿔 여러 크기를 잽니다.</li>
+        </ul>
+      </div>
+    </section>
+
+    <section id="device" data-lecture-section="device">
+      <div class="sec-head">
+        <p class="sec-kicker">03 · pick_device()</p>
+        <h2>ultralytics는 CUDA를 “번호”로 받는다</h2>
+        <p class="sub">PyTorch에서는 <code>torch.device("cuda")</code>였지만, ultralytics API는 <code>device=0</code> 같은 번호를 기대합니다.</p>
+      </div>
+
+      <div class="code-cap"><span>common_yolo.py · 18–20행</span><span>원문 그대로</span></div>
+      <pre class="code"><code>def pick_device() -> int | str:
+    """cuda는 번호로, 그 밖에는 이름으로 넘긴다(ultralytics 규칙)."""
+    return 0 if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu"</code></pre>
+
+      <div class="layer precise">
+        <span class="tag">🔬 정확히는</span>
+        <p>반환형이 <code>int | str</code>입니다. CUDA가 있으면 정수 <code>0</code>(첫 번째 GPU), 없으면 문자열 <code>"mps"</code> 또는 <code>"cpu"</code>. ultralytics는 이 둘을 모두 받아들입니다. CUDA가 여러 장이면 <code>1</code>, <code>2</code>로 고를 수 있지만 여기선 0번만.</p>
+      </div>
+
+      <div class="panel" id="devicePanel">
+        <div class="panel-head"><h3>🎛️ 장치 선택 시뮬레이터</h3><span class="badge">직접 눌러보기</span></div>
+        <div class="controls">
+          <label><input type="checkbox" id="hasCuda" checked> CUDA 있음</label>
+          <label><input type="checkbox" id="hasMps"> MPS 있음</label>
+        </div>
+        <div class="formula" style="margin-top:10px">반환값 → <span class="hl" id="deviceOut">0</span></div>
+        <p class="note" id="deviceWhy" style="margin:8px 0 0">CUDA가 있으니 정수 0을 반환합니다. MPS는 검사하지 않아요.</p>
+      </div>
+
+      <div class="layer analogy">
+        <span class="tag">🍭 5살 비유</span>
+        <p>“첫 번째 엘리베이터”는 <strong>0번</strong>이라고 부르는 약속이에요. 엘리베이터가 없으면 “에스컬레이터(mps)”, 그것도 없으면 “계단(cpu)”이라고 이름으로 알려 줍니다.</p>
+      </div>
+    </section>
+
+    <section id="require" data-lecture-section="require">
+      <div class="sec-head">
+        <p class="sec-kicker">04 · require_lab5() · valid_images()</p>
+        <h2>“숙제 안 했으면 들어오지 마”</h2>
+        <p class="sub">평가 실습은 lab5의 산출물이 없으면 시작할 수 없습니다. 먼저 확인하고, 검증 이미지 목록을 정렬해 줍니다.</p>
+      </div>
+
+      <div class="code-cap"><span>common_yolo.py · 23–30행</span><span>원문 그대로</span></div>
+      <pre class="code"><code>def require_lab5() -> None:
+    """lab5를 먼저 돌려야 데이터와 best.pt가 생긴다."""
+    if not BEST.exists() or not (YOLO_ROOT / "data.yaml").exists():
+        raise SystemExit(f"lab5_yolo11.py를 먼저 돌리세요. 없음: {BEST}")
+
+
+def valid_images() -> list[Path]:
+    return sorted((YOLO_ROOT / "valid" / "images").glob("*.png"))</code></pre>
+
+      <div class="steps">
+        <div class="step"><p><b>두 가지 확인</b>: <code>best.pt</code>와 <code>data.yaml</code>. 하나라도 없으면 <code>SystemExit</code>.</p></div>
+        <div class="step"><p><b>왜 SystemExit?</b> 일반 <code>Exception</code>이 아니라 “프로그램을 여기서 끝내라”는 신호. 초보자에게 스택 트레이스 대신 한 줄 안내를 보여 주려는 선택.</p></div>
+        <div class="step"><p><b>검증 이미지</b>: <code>valid/images/*.png</code>를 이름순 정렬. lab5가 만든 34장.</p></div>
+        <div class="step"><p><b>왜 정렬?</b> 이미지 순서가 실행마다 달라지면 “몇 번째 사진”이 흔들립니다. 재현성과 디버깅을 위해 고정.</p></div>
+      </div>
+
+      <div class="layer gotcha">
+        <span class="tag">⚠️ 함정</span>
+        <p><code>SystemExit</code>는 <code>except Exception</code>으로 잡히지 않습니다(BaseException 계열). 노트북에서 실행할 때는 커널이 멈출 수 있으니, <code>require_lab5()</code>를 try로 감싸려면 <code>SystemExit</code>까지 잡아야 합니다.</p>
+      </div>
+    </section>
+
+    <section id="truth" data-lecture-section="truth">
+      <div class="sec-head">
+        <p class="sec-kicker">05 · read_truth()</p>
+        <h2>YOLO 라벨 → 픽셀 xyxy</h2>
+        <p class="sub">평가하려면 정답 박스가 픽셀 좌표로 필요합니다. 라벨 파일의 0~1 값을 이미지 크기로 곱해 되돌립니다.</p>
+      </div>
+
+      <div class="code-cap"><span>common_yolo.py · 33–42행</span><span>원문 그대로</span></div>
+      <pre class="code"><code>def read_truth(image: Path) -> list[list[float]]:
+    """YOLO 라벨(중심, 크기, 0~1)을 xyxy 픽셀 박스로 되돌린다."""
+    with Image.open(image) as im:
+        width, height = im.size
+    label = image.parent.parent / "labels" / f"{image.stem}.txt"
+    boxes = []
+    for line in label.read_text().strip().splitlines():
+        cx, cy, w, h = (float(v) for v in line.split()[1:])
+        boxes.append([(cx - w / 2) * width, (cy - h / 2) * height, (cx + w / 2) * width, (cy + h / 2) * height])
+    return boxes</code></pre>
+
+      <div class="steps">
+        <div class="step"><p><b>이미지 크기</b>: <code>Image.open(image).size</code> → <strong>(width, height)</strong>. 라벨 정규화를 풀려면 원본 크기가 필요.</p></div>
+        <div class="step"><p><b>라벨 경로</b>: <code>image.parent.parent / "labels" / stem.txt</code>. 이미지가 <code>valid/images/x.png</code>라면 라벨은 <code>valid/labels/x.txt</code>.</p></div>
+        <div class="step"><p><b>줄마다</b>: <code>strip().splitlines()</code>. 빈 줄 제거. 한 줄이 사람 한 명.</p></div>
+        <div class="step"><p><b>클래스 건너뛰기</b>: <code>line.split()[1:]</code>로 <code>0</code>(person)을 뺀 나머지 4개만.</p></div>
+        <div class="step"><p><b>중심·크기 → xyxy</b>: <code>(cx ± w/2) * width</code>, <code>(cy ± h/2) * height</code>.</p></div>
+        <div class="step"><p><b>반환</b>: <code>list[list[float]]</code>. lab7은 COCO bbox로, lab8은 <code>torch.tensor</code>로 바꿔 씁니다.</p></div>
+      </div>
+
+      <div class="layer precise">
+        <span class="tag">🔬 정확히는</span>
+        <p>YOLO 라벨의 <code>w</code>, <code>h</code>는 “박스 너비/이미지 너비”, “박스 높이/이미지 높이”입니다. 그래서 되돌릴 때 각각 <code>width</code>, <code>height</code>를 곱합니다. 클래스 번호는 평가에서 모두 person(1)로 취급됩니다.</p>
+      </div>
+
+      <div class="callout">
+        <span class="ico">🧮</span>
+        <div><p><strong>예시</strong>: 이미지 640×360, 라벨 <code>0 0.5 0.5 0.25 0.5</code> → 중심 (320, 180), 크기 (160, 180) → xyxy <code>[240, 90, 400, 270]</code>. common 강의의 변환기와 같은 식이에요(방향만 반대).</p></div>
+      </div>
+
+      <div class="layer gotcha">
+        <span class="tag">⚠️ 함정</span>
+        <ul class="arrow-list" style="margin-bottom:0">
+          <li>라벨 파일이 없으면 <code>read_text</code>에서 <code>FileNotFoundError</code>. lab5 데이터셋이 온전해야 합니다.</li>
+          <li>라벨이 빈 파일이면 <code>boxes = []</code>. 평가 코드가 빈 정답을 처리할 수 있어야 합니다.</li>
+          <li>이미지 크기를 <strong>리사이즈 후</strong> 크기로 착각하면 박스가 어긋납니다. 여기선 원본 크기를 씁니다.</li>
+          <li>클래스가 person 하나라는 전제. 다중 클래스면 <code>[1:]</code>만으로는 부족합니다.</li>
+        </ul>
+      </div>
+    </section>
+
+    <section id="lab7" data-lecture-section="lab7">
+      <div class="sec-head">
+        <p class="sec-kicker">06 · lab7_eval.py</p>
+        <h2>숫자 하나 뒤에 숨은 것들</h2>
+        <p class="sub">mAP50 하나만 보면 놓치는 것들이 있습니다. IoU 기준별 AP, F1이 가장 좋은 conf, 그리고 같은 모델을 pycocotools로 다시 잰 값.</p>
+      </div>
+
+      <div class="code-cap"><span>lab7_eval.py · 13–26행</span><span>원문 그대로</span></div>
+      <pre class="code"><code>EVAL_CONF = 0.001   # AP를 재려면 점수가 낮은 예측까지 모두 있어야 한다
+
+
+def ultralytics_view(model: YOLO, device: int | str) -> None:
+    """ultralytics의 val이 내는 숫자를 한 겹씩 펼친다."""
+    box = model.val(data=str(YOLO_ROOT / "data.yaml"), imgsz=IMAGE_SIZE, plots=False, device=device, verbose=False).box
+    ious = np.linspace(0.5, 0.95, 10)
+    print("IoU 기준별 AP:", "  ".join(f"{t:.2f}:{ap:.3f}" for t, ap in zip(ious, box.all_ap[0])))
+    print(f"mAP50 {box.map50:.3f} = 첫 칸 / mAP50-95 {box.map:.3f} = 열 칸의 평균 / mAP75 {box.map75:.3f}")
+    best = int(box.f1_curve[0].argmax())
+    print(f"F1이 가장 높은 conf {box.px[best]:.3f}: 정밀도 {box.p_curve[0][best]:.3f}, 재현율 {box.r_curve[0][best]:.3f}, F1 {box.f1_curve[0][best]:.3f}")
+    for conf in (0.25, 0.5, 0.9):
+        k = int(np.searchsorted(box.px, conf))
+        print(f"  conf {conf}: 정밀도 {box.p_curve[0][k]:.3f}, 재현율 {box.r_curve[0][k]:.3f}, F1 {box.f1_curve[0][k]:.3f}")</code></pre>
+
+      <div class="steps">
+        <div class="step"><p><b>모델 평가</b>: <code>model.val(...).box</code>는 박스 지표 묶음. 여기에 AP 배열·PR 곡선이 들어 있습니다.</p></div>
+        <div class="step"><p><b>IoU 10단계</b>: 0.50, 0.55, …, 0.95. <code>box.all_ap[0]</code>가 각 기준의 AP.</p></div>
+        <div class="step"><p><b>mAP50</b> = 첫 칸(0.50). <b>mAP50-95</b> = 10칸 평균. <b>mAP75</b> = 0.75 칸.</p></div>
+        <div class="step"><p><b>F1 최고점</b>: <code>f1_curve.argmax()</code>로 conf를 고르고, 그 지점의 P/R/F1을 출력. “언제가 균형점인가”를 보는 것.</p></div>
+        <div class="step"><p><b>고정 conf들</b>: 0.25/0.5/0.9에서 <code>searchsorted</code>로 곡선의 위치를 찾아 P/R/F1 출력.</p></div>
+      </div>
+
+      <div class="panel" id="prPanel">
+        <div class="panel-head"><h3>🎚️ conf와 Precision/Recall/F1</h3><span class="badge">합성 예시</span></div>
+        <p class="note" style="margin-top:0">점수가 다른 검출 60개(정답 30, 오답 30)를 가정합니다. conf를 올리면 확실한 것만 남아 <strong>정밀도는 오르고 재현율은 내려가는</strong> 모습을 볼 수 있어요. 실제 수치는 lab7 출력을 보세요.</p>
+        <div class="controls">
+          <label class="range-label">conf <input type="range" id="confSlider" min="0.05" max="0.95" step="0.01" value="0.25"><b id="confVal">0.25</b></label>
+        </div>
+        <div class="readout">
+          <div class="stat"><span class="k">선택된 검출</span><b id="confKept">-</b></div>
+          <div class="stat"><span class="k">Precision</span><b id="confP">-</b></div>
+          <div class="stat"><span class="k">Recall</span><b id="confR">-</b></div>
+          <div class="stat hot"><span class="k">F1</span><b id="confF">-</b></div>
+        </div>
+        <div class="canvas-box" style="margin-top:12px">
+          <canvas id="prCanvas" style="display:block;width:100%;height:260px" aria-label="conf에 따른 precision, recall, F1 곡선"></canvas>
+        </div>
+      </div>
+
+      <h3 style="margin-top:22px">같은 모델을 pycocotools로</h3>
+      <div class="code-cap"><span>lab7_eval.py · 29–50행</span><span>원문 그대로</span></div>
+      <pre class="code"><code>def coco_view(model: YOLO, device: int | str) -> None:
+    """같은 모델을 pycocotools(COCO 공식 평가 코드)로 다시 잰다."""
+    images, annotations, detections = [], [], []
+    for image_id, path in enumerate(valid_images(), start=1):
+        result = model.predict(str(path), imgsz=IMAGE_SIZE, conf=EVAL_CONF, device=device, verbose=False)[0]
+        height, width = result.orig_shape
+        images.append({"id": image_id, "file_name": path.name, "width": width, "height": height})
+        for x1, y1, x2, y2 in read_truth(path):
+            annotations.append({"id": len(annotations) + 1, "image_id": image_id, "category_id": 1,
+                                "bbox": [x1, y1, x2 - x1, y2 - y1], "area": (x2 - x1) * (y2 - y1), "iscrowd": 0})
+        for (x1, y1, x2, y2), score in zip(result.boxes.xyxy.tolist(), result.boxes.conf.tolist()):
+            detections.append({"image_id": image_id, "category_id": 1, "bbox": [x1, y1, x2 - x1, y2 - y1], "score": score})
+    with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False) as f:
+        json.dump({"images": images, "annotations": annotations, "categories": [{"id": 1, "name": "person"}]}, f)
+    truth = COCO(f.name)
+    evaluator = COCOeval(truth, truth.loadRes(detections), "bbox")
+    evaluator.evaluate()
+    evaluator.accumulate()
+    evaluator.summarize()
+    print(f"pycocotools  AP50 {evaluator.stats[1]:.3f} / AP50-95 {evaluator.stats[0]:.3f} / 예측 {len(detections)}개, 정답 {len(annotations)}명")
+    sizes = sorted((a["bbox"][3] for a in annotations))
+    print(f"정답 박스 높이(px): 가장 작은 {sizes[0]:.0f}, 가운데 {sizes[len(sizes) // 2]:.0f}, 가장 큰 {sizes[-1]:.0f}")</code></pre>
+
+      <div class="steps">
+        <div class="step"><p><b>낮은 conf로 전부 수집</b>: <code>EVAL_CONF=0.001</code>. AP는 “점수 순으로 늘어놓은 전체 목록”이 필요합니다. 높은 conf만 남기면 곡선이 잘려요.</p></div>
+        <div class="step"><p><b>COCO 형식</b>: 정답은 <code>bbox=[x, y, w, h]</code>, <code>area</code>, <code>iscrowd=0</code>. 이미지 크기는 <code>result.orig_shape</code>에서 (height, width) 순서.</p></div>
+        <div class="step"><p><b>임시 JSON</b>: <code>NamedTemporaryFile(delete=False)</code>로 COCO가 읽을 파일을 만듭니다. Windows에서 COCO가 다시 열 수 있도록 delete=False.</p></div>
+        <div class="step"><p><b>평가 3단</b>: <code>evaluate()</code> → <code>accumulate()</code> → <code>summarize()</code>. 공식 COCO 절차.</p></div>
+        <div class="step"><p><b>비교</b>: <code>stats[1]</code>=AP50, <code>stats[0]</code>=AP50-95. ultralytics와 값이 비슷한지 확인.</p></div>
+        <div class="step"><p><b>크기 분포</b>: 정답 박스 높이의 최소/중앙/최대. 작은 사람이 많은지 감을 잡음.</p></div>
+      </div>
+
+      <div class="layer precise">
+        <span class="tag">🔬 정확히는 — AP와 mAP</span>
+        <p><strong>AP</strong>는 precision-recall 곡선 아래 면적입니다. “점수를 낮춰 가며 더 많이 찾을수록, 정밀도가 얼마나 버티는가”를 하나의 숫자로 만든 것. <strong>mAP</strong>는 클래스별 AP의 평균(여기선 person 1개라 AP=mAP). IoU 기준을 올리면 “같은 사람”으로 인정하는 조건이 엄격해져 AP가 내려갑니다.</p>
+      </div>
+
+      <div class="layer gotcha">
+        <span class="tag">⚠️ 함정</span>
+        <ul class="arrow-list" style="margin-bottom:0">
+          <li><code>box.px</code>는 곡선의 conf 배열, <code>p_curve[0]</code>는 person 클래스. 클래스가 여러 개면 인덱스를 맞춰야 합니다.</li>
+          <li><code>searchsorted(box.px, conf)</code>는 “가장 가까운 오른쪽” 위치를 찾습니다. 정확한 conf 지점이 아닐 수 있어요.</li>
+          <li>pycocotools는 <code>bbox</code>를 xywh로 받습니다. xyxy를 그대로 넣으면 엉뚱한 박스가 됩니다.</li>
+          <li>임시 JSON을 지우지 않습니다(<code>delete=False</code>). OS 임시 폴더에 쌓입니다.</li>
+          <li>ultralytics와 pycocotools의 값이 <strong>완전히 같지 않을 수 있습니다</strong>. 매칭·보간·면적 계산의 세부 규칙이 다르기 때문. “도구마다 다르다”가 이 실습의 포인트.</li>
+        </ul>
+      </div>
+
+      <div class="layer analogy">
+        <span class="tag">🍭 5살 비유</span>
+        <p>“몇 개 맞혔어?”만 물으면 놓친 걸 알 수 없어요. <strong>확신의 문턱</strong>을 조금씩 낮춰 가며 “맞힌 것 / 잘못 든 것”을 세어 그래프로 그리는 거예요. 그 그래프 아래 넓이가 AP입니다.</p>
+      </div>
+    </section>
+
+    <section id="lab8" data-lecture-section="lab8">
+      <div class="sec-head">
+        <p class="sec-kicker">07 · lab8_errors.py</p>
+        <h2>틀린 것을 종류별로 세기</h2>
+        <p class="sub">맞음, 중복, 위치 어긋남, 배경 오탐, 놓침. 점수 순으로 정답과 짝지어 가며 오류를 분류합니다. 놓친 사람은 크기별로도 셉니다.</p>
+      </div>
+
+      <div class="code-cap"><span>lab8_errors.py · 11–39행</span><span>원문 그대로</span></div>
+      <pre class="code"><code>MATCH_IOU = 0.5     # 이 이상 겹치면 맞음
+NEAR_IOU = 0.1      # 맞음은 아니어도 이 이상 겹치면 '위치 어긋남', 아래면 '배경 오탐'
+CONFS = (0.25, 0.5, 0.646)   # 0.646은 lab7에서 F1이 가장 높던 conf
+SMALL, MEDIUM = 32 * 32, 96 * 96   # COCO의 크기 구분(넓이, 픽셀²)
+
+
+def size_name(box: list[float]) -> str:
+    area = (box[2] - box[0]) * (box[3] - box[1])
+    return "작음" if area < SMALL else "중간" if area < MEDIUM else "큼"
+
+
+def classify(pred: torch.Tensor, truth: torch.Tensor) -> tuple[Counter, list[int]]:
+    """점수 순으로 정답과 짝짓는다. 한 정답에는 예측 하나만. 남은 예측은 오류 종류로, 남은 정답은 놓침으로."""
+    kinds: Counter = Counter()
+    matched = [False] * len(truth)
+    ious = box_iou(pred, truth) if len(pred) and len(truth) else torch.zeros(len(pred), len(truth))
+    for i in range(len(pred)):   # pred는 이미 점수 내림차순
+        best = int(ious[i].argmax()) if len(truth) else -1
+        best_iou = float(ious[i, best]) if len(truth) else 0.0
+        if best_iou >= MATCH_IOU and not matched[best]:
+            matched[best] = True
+            kinds["맞음"] += 1
+        elif best_iou >= MATCH_IOU:
+            kinds["중복"] += 1          # 이미 짝지어진 정답에 또 낸 박스: NMS가 못 지운 것
+        elif best_iou >= NEAR_IOU:
+            kinds["위치 어긋남"] += 1   # 사람 근처지만 박스가 덜 맞음
+        else:
+            kinds["배경 오탐"] += 1     # 정답 사람과 거의 안 겹침(라벨 없는 사람일 수도)
+    return kinds, [k for k, m in enumerate(matched) if not m]</code></pre>
+
+      <div class="steps">
+        <div class="step"><p><b>IoU 표</b>: <code>box_iou(pred, truth)</code> → (예측 수, 정답 수). 예측은 ultralytics가 점수 내림차순으로 줍니다.</p></div>
+        <div class="step"><p><b>가장 겹치는 정답</b>: <code>argmax()</code>. 정답이 없으면 -1, IoU 0.</p></div>
+        <div class="step"><p><b>맞음</b>: IoU ≥ 0.5이고 그 정답이 아직 짝이 없을 때. 정답에 <code>matched</code> 표시.</p></div>
+        <div class="step"><p><b>중복</b>: IoU ≥ 0.5인데 정답이 이미 짝지어짐. NMS가 못 지운 박스.</p></div>
+        <div class="step"><p><b>위치 어긋남</b>: 0.1 ≤ IoU &lt; 0.5. 사람 근처지만 박스가 덜 맞음.</p></div>
+        <div class="step"><p><b>배경 오탐</b>: IoU &lt; 0.1. 라벨 없는 사람일 수도 있음(데이터의 한계).</p></div>
+        <div class="step"><p><b>놓침</b>: 끝까지 <code>matched=False</code>인 정답 인덱스. 크기별로 셈.</p></div>
+      </div>
+
+      <div class="panel" id="errorPanel">
+        <div class="panel-head"><h3>🧪 오류 분류기</h3><span class="badge">lab8과 같은 규칙</span></div>
+        <p class="note" style="margin-top:0">정답 A~E에 대한 예측 6개의 IoU를 고정해 두고, 문턱을 움직여 보세요. A에는 예측이 두 개 붙어 있어 하나는 <strong>중복</strong>이 됩니다.</p>
+        <div class="controls">
+          <label class="range-label">MATCH_IOU <input type="range" id="matchIou" min="0.3" max="0.9" step="0.05" value="0.5"><b id="matchIouVal">0.50</b></label>
+          <label class="range-label">NEAR_IOU <input type="range" id="nearIou" min="0" max="0.4" step="0.05" value="0.1"><b id="nearIouVal">0.10</b></label>
+        </div>
+        <div class="readout" id="errorStats">
+          <div class="stat"><span class="k">맞음</span><b id="eMatch">-</b></div>
+          <div class="stat"><span class="k">중복</span><b id="eDup">-</b></div>
+          <div class="stat"><span class="k">위치 어긋남</span><b id="eNear">-</b></div>
+          <div class="stat"><span class="k">배경 오탐</span><b id="eBg">-</b></div>
+          <div class="stat"><span class="k">놓침</span><b id="eMiss">-</b></div>
+        </div>
+        <div class="tag-list" id="errorList" aria-live="polite"></div>
+      </div>
+
+      <h3 style="margin-top:22px">메인 루프</h3>
+      <div class="code-cap"><span>lab8_errors.py · 42–63행</span><span>원문 그대로</span></div>
+      <pre class="code"><code>def main() -> int:
+    require_lab5()
+    device = pick_device()
+    model = YOLO(str(BEST))
+    images = valid_images()
+    truth_by_image = {p: read_truth(p) for p in images}
+    all_truth = [b for boxes in truth_by_image.values() for b in boxes]
+    print("정답 크기:", dict(Counter(size_name(b) for b in all_truth)), "합계", len(all_truth))
+    for conf in CONFS:
+        total, missed_sizes, worst = Counter(), Counter(), []
+        for path in images:
+            result = model.predict(str(path), imgsz=IMAGE_SIZE, conf=conf, device=device, verbose=False)[0]
+            truth = torch.tensor(truth_by_image[path]).reshape(-1, 4)
+            kinds, missed = classify(result.boxes.xyxy.cpu(), truth)
+            total += kinds
+            missed_sizes.update(size_name(truth_by_image[path][k]) for k in missed)
+            errors = len(missed) + sum(v for k, v in kinds.items() if k != "맞음")
+            worst.append((errors, path.name, len(missed), len(result.boxes), len(truth)))
+        n_missed = sum(missed_sizes.values())
+        print(f"conf {conf}: {dict(total)}, 놓침 {n_missed} {dict(missed_sizes)}")
+        top = sorted(worst, reverse=True)[:3]
+        print("   오류가 많은 사진:", ", ".join(f"{name}(오류 {e}, 놓침 {m}, 탐지 {d}/정답 {t})" for e, name, m, d, t in top))
+    return 0</code></pre>
+
+      <div class="steps">
+        <div class="step"><p><b>정답 미리 읽기</b>: 34장의 라벨을 dict로 캐시. 매 conf마다 다시 읽지 않음.</p></div>
+        <div class="step"><p><b>크기 분포</b>: 전체 정답을 COCO 기준(32², 96²)으로 작음/중간/큼.</p></div>
+        <div class="step"><p><b>conf 3종</b>: 0.25, 0.5, lab7에서 F1 최고였던 0.646.</p></div>
+        <div class="step"><p><b>이미지마다</b>: 예측 → <code>classify</code> → 누적. <code>truth</code>는 (N,4), 없으면 reshape(-1,4)로 (0,4).</p></div>
+        <div class="step"><p><b>놓침 크기</b>: 놓친 정답 인덱스로 크기 이름을 셈. “작은 사람을 많이 놓치는가?”</p></div>
+        <div class="step"><p><b>worst 3</b>: 오류 수 = 놓침 + (맞음 제외 오류). 많은 사진 3장을 출력.</p></div>
+      </div>
+
+      <div class="layer gotcha">
+        <span class="tag">⚠️ 함정</span>
+        <ul class="arrow-list" style="margin-bottom:0">
+          <li><code>classify</code>는 <strong>예측 순서</strong>에 의존합니다. ultralytics가 점수 내림차순으로 주는 것을 전제로 “먼저 온 예측이 맞음”이 됩니다.</li>
+          <li>“배경 오탐”에 라벨 없는 사람이 섞일 수 있습니다. Penn-Fudan 라벨이 모든 사람을 표시했다고 보장할 수 없어요.</li>
+          <li><code>errors</code>는 놓침 + 오류 종류 합. 중복·위치·배경을 모두 1개로 셉니다.</li>
+          <li><code>0.646</code>은 <strong>이 데이터·이 모델</strong>에서 나온 값. 다른 모델에 그대로 쓰면 의미가 없습니다.</li>
+          <li>IoU가 정확히 0.5이면 “맞음”입니다(<code>&gt;=</code>). 경계값을 확인하세요.</li>
+        </ul>
+      </div>
+
+      <div class="layer analogy">
+        <span class="tag">🍭 5살 비유</span>
+        <p>시험지를 채점할 때 “틀림” 하나로 뭉뚱그리지 않고, <strong>답을 안 씀(놓침)</strong>, <strong>같은 답을 두 번 씀(중복)</strong>, <strong>답이 살짝 어긋남(위치)</strong>, <strong>엉뚱한 답(배경)</strong>으로 나눠 세는 거예요. 그래야 뭘 고쳐야 할지 보입니다.</p>
+      </div>
+    </section>
+
+    <section id="lab10" data-lecture-section="lab10">
+      <div class="sec-head">
+        <p class="sec-kicker">08 · lab10_onnx.py</p>
+        <h2>ultralytics 없이 ONNX 출력 풀기</h2>
+        <p class="sub">best.pt를 ONNX로 내보내고, onnxruntime으로 숫자만 받아 letterbox·디코딩·NMS를 직접 합니다. 출력 (1, 5, 3549)의 의미를 해부합니다.</p>
+      </div>
+
+      <div class="code-cap"><span>lab10_onnx.py · 18–34행</span><span>원문 그대로</span></div>
+      <pre class="code"><code>CONF = 0.5
+NMS_IOU = 0.7      # ultralytics 기본값과 같게
+PAD_VALUE = 114    # ultralytics가 빈 곳을 채우는 회색
+
+
+def letterbox(path: Path) -> tuple[np.ndarray, float, tuple[int, int]]:
+    """긴 변을 416에 맞춰 줄이고, 남는 곳을 가운데 정렬로 회색으로 채운다(ultralytics와 같은 cv2 방식)."""
+    bgr = cv2.imread(str(path))
+    height, width = bgr.shape[:2]
+    scale = IMAGE_SIZE / max(width, height)
+    new_w, new_h = round(width * scale), round(height * scale)
+    left, top = round((IMAGE_SIZE - new_w) / 2 - 0.1), round((IMAGE_SIZE - new_h) / 2 - 0.1)
+    canvas = np.full((IMAGE_SIZE, IMAGE_SIZE, 3), PAD_VALUE, dtype=np.uint8)
+    canvas[top:top + new_h, left:left + new_w] = cv2.resize(bgr, (new_w, new_h), interpolation=cv2.INTER_LINEAR)
+    rgb = canvas[..., ::-1]   # 모델은 RGB를 받는다
+    array = np.ascontiguousarray(rgb.transpose(2, 0, 1)[None], dtype=np.float32) / 255.0   # (1, 3, 416, 416), 0~1
+    return array, scale, (left, top)</code></pre>
+
+      <div class="steps">
+        <div class="step"><p><b>BGR로 읽기</b>: OpenCV 기본. <code>height, width</code> 순서.</p></div>
+        <div class="step"><p><b>긴 변 기준 축소</b>: <code>scale = 416 / max(w,h)</code>. 가로세로 비율 유지.</p></div>
+        <div class="step"><p><b>가운데 정렬</b>: 남는 공간의 절반씩. <code>-0.1</code>은 반올림 보정(ultralytics와 맞추기).</p></div>
+        <div class="step"><p><b>회색 캔버스</b>: 114로 채우고, 축소한 이미지를 붙임.</p></div>
+        <div class="step"><p><b>RGB로</b>: <code>canvas[..., ::-1]</code>. 모델은 RGB를 기대.</p></div>
+        <div class="step"><p><b>텐서 모양</b>: HWC → CHW → 배치 추가 → <code>(1,3,416,416)</code>, <code>/255</code>.</p></div>
+      </div>
+
+      <div class="panel" id="letterboxPanel">
+        <div class="panel-head"><h3>🖼️ letterbox 시각화</h3><span class="badge">416 × 416</span></div>
+        <p class="note" style="margin-top:0">원본 비율을 바꿔 보세요. 긴 변이 416에 맞춰지고, 남는 곳은 회색(114)으로 채워집니다. 가로/세로 비율은 절대 찌그러지지 않아요.</p>
+        <div class="controls">
+          <label class="range-label">원본 너비 <input type="range" id="lbW" min="160" max="1280" step="20" value="640"><b id="lbWv">640</b></label>
+          <label class="range-label">원본 높이 <input type="range" id="lbH" min="120" max="960" step="20" value="480"><b id="lbHv">480</b></label>
+        </div>
+        <div class="lb-wrap">
+          <div class="lb-canvas" id="lbCanvas">
+            <div class="lb-image" id="lbImage"></div>
+          </div>
+          <div class="formula" id="lbFormula" style="font-size:.72rem"></div>
+        </div>
+      </div>
+
+      <h3 style="margin-top:22px">출력 디코딩</h3>
+      <div class="code-cap"><span>lab10_onnx.py · 37–46행</span><span>원문 그대로</span></div>
+      <pre class="code"><code>def decode(output: np.ndarray, scale: float, pad: tuple[float, float]) -> tuple[torch.Tensor, torch.Tensor]:
+    """(1, 5, N) → 점수로 거르고, 중심·크기를 xyxy로, 패딩과 크기 조절을 되돌리고, NMS."""
+    pred = torch.from_numpy(output[0]).T          # (N, 5): cx, cy, w, h, 사람 점수
+    pred = pred[pred[:, 4] >= CONF]
+    cx, cy, w, h = pred[:, 0], pred[:, 1], pred[:, 2], pred[:, 3]
+    boxes = torch.stack([cx - w / 2, cy - h / 2, cx + w / 2, cy + h / 2], dim=1)
+    boxes[:, [0, 2]] = (boxes[:, [0, 2]] - pad[0]) / scale
+    boxes[:, [1, 3]] = (boxes[:, [1, 3]] - pad[1]) / scale
+    keep = nms(boxes, pred[:, 4], NMS_IOU)
+    return boxes[keep], pred[keep, 4]</code></pre>
+
+      <div class="layer precise">
+        <span class="tag">🔬 정확히는 — 3549와 5</span>
+        <p>YOLO11은 앵커가 없고 objectness도 따로 없습니다. 416 입력에서 출력 격자는 52×52 + 26×26 + 13×13 = 2,704 + 676 + 169 = <strong>3,549</strong>칸. 칸마다 <strong>cx, cy, w, h, person 점수</strong> 5개 → 출력 <code>(1, 5, 3549)</code>. <code>output[0].T</code>로 <code>(3549, 5)</code>로 바꿔 다룹니다.</p>
+      </div>
+
+      <div class="steps">
+        <div class="step"><p><b>전치</b>: <code>(5, 3549)</code> → <code>(3549, 5)</code>. 한 행이 한 후보.</p></div>
+        <div class="step"><p><b>점수 거르기</b>: <code>pred[:,4] &gt;= 0.5</code>.</p></div>
+        <div class="step"><p><b>중심·크기 → xyxy</b>: <code>(cx±w/2, cy±h/2)</code>.</p></div>
+        <div class="step"><p><b>패딩·축소 되돌리기</b>: x는 <code>(x-left)/scale</code>, y는 <code>(y-top)/scale</code>.</p></div>
+        <div class="step"><p><b>NMS</b>: IoU 0.7로 겹치는 박스 제거. <code>keep</code> 인덱스로 박스와 점수 반환.</p></div>
+      </div>
+
+      <div class="layer gotcha">
+        <span class="tag">⚠️ 함정</span>
+        <ul class="arrow-list" style="margin-bottom:0">
+          <li><code>NMS_IOU=0.7</code>은 ultralytics 기본값과 맞춘 것. 바꾸면 박스 수가 달라집니다.</li>
+          <li>letterbox의 <code>-0.1</code>과 <code>round</code>는 미세한 픽셀 차이를 맞추기 위한 장치. 직접 구현하면 1픽셀 어긋나기 쉽습니다.</li>
+          <li>ONNX는 float32, best.pt는 float16이라 파일 크기가 약 2배. 정확도 비교 시 이 점을 기억.</li>
+          <li>onnxruntime은 <code>CPUExecutionProvider</code>만 사용. GPU provider를 쓰려면 별도 설정.</li>
+          <li>출력 모양은 입력 크기·모델 버전에 따라 달라집니다. 3549는 416 YOLO11s 기준.</li>
+        </ul>
+      </div>
+
+      <div class="layer analogy">
+        <span class="tag">🍭 5살 비유</span>
+        <p>이미지를 <strong>정사각 액자</strong>에 넣느라 양옆을 회색 종이로 채웠어요. 모델이 “사람은 여기”라고 알려 주면, 회색 종이만큼 빼고 원래 사진 좌표로 되돌리는 거죠.</p>
+      </div>
+    </section>
+
+    <section id="lab11" data-lecture-section="lab11">
+      <div class="sec-head">
+        <p class="sec-kicker">09 · lab11_speed.py</p>
+        <h2>빠르게 만들고, 무엇을 잃었는지 재기</h2>
+        <p class="sub">320/416/640 입력 크기와 int8 양자화를 CPU에서 비교합니다. “빠르다”만 보지 않고 mAP 손실을 함께 잽니다.</p>
+      </div>
+
+      <div class="code-cap"><span>lab11_speed.py · 19–23행</span><span>원문 그대로</span></div>
+      <pre class="code"><code>SIZES = (320, 416, 640)
+CALIB_IMAGES = 32          # 양자화 범위를 정하는 데 쓸 학습 사진 수(검증 사진은 쓰지 않는다)
+REPEAT = 30
+OUT = HERE / "runs" / "speed"
+QUANTIZE_ALL = os.environ.get("QUANTIZE_ALL") == "1"</code></pre>
+
+      <div class="grid-3" style="margin-top:12px">
+        <div class="mini"><b>320</b><span class="mono">가장 빠름</span>작은 사람을 놓치기 쉬움.</div>
+        <div class="mini"><b>416</b><span class="mono">학습 크기</span>lab5와 같은 기준.</div>
+        <div class="mini"><b>640</b><span class="mono">가장 느림</span>큰 해상도, 작은 물체에 유리.</div>
+        <div class="mini"><b>int8</b><span class="mono">양자화</span>4바이트 → 1바이트. CPU에서 빠름.</div>
+        <div class="mini"><b>Calibration 32</b><span class="mono">train만</span>검증 사진은 범위 결정에 쓰지 않음.</div>
+        <div class="mini"><b>QUANTIZE_ALL</b><span class="mono">환경변수</span>1이면 전부 int8. 이 모델에선 mAP 0.</div>
+      </div>
+
+      <div class="steps">
+        <div class="step"><p><b>export(size)</b>: <code>YOLO(BEST).export(format="onnx", imgsz=size, simplify=True)</code> 후 <code>runs/speed/best_&lt;size&gt;.onnx</code>로 이동.</p></div>
+        <div class="step"><p><b>latency</b>: <code>lab10_onnx.IMAGE_SIZE = size</code>로 잠시 바꿔 같은 letterbox를 재사용. 3번 예열 후 30번 평균.</p></div>
+        <div class="step"><p><b>accuracy</b>: ONNX를 ultralytics로 <code>val</code>. mAP50, mAP50-95.</p></div>
+        <div class="step"><p><b>Calibration</b>: train 이미지 32장을 하나씩 내주는 <code>CalibrationDataReader</code>. int8 범위 결정용.</p></div>
+        <div class="step"><p><b>quantize_static</b>: QDQ 형식, activation QUInt8, weight QInt8, per_channel. <code>op_types_to_quantize=["Conv"]</code>.</p></div>
+        <div class="step"><p><b>왜 Conv만?</b>: 전부 양자화하면 좌표(0~416)와 점수(0~1)를 한 텐서로 잇는 출력에서 스케일이 깨져 mAP가 0이 됐습니다. 합성곱만 눌러 실용적인 타협.</p></div>
+      </div>
+
+      <div class="layer precise">
+        <span class="tag">🔬 정확히는 — 양자화</span>
+        <p>float32 가중치를 int8로 줄이면 모델이 4분의 1로 작아지고 CPU 연산이 빨라질 수 있습니다. 대신 표현 범위가 줄어 정확도가 떨어질 수 있어요. <code>quantize_static</code>은 실제 입력 몇 개를 보고 각 층의 범위(scale/zero-point)를 정합니다. 그래서 <strong>검증 이미지를 calibration에 쓰면 안 됩니다</strong> — 성능을 재는 데이터를 미리 본 셈이니까요.</p>
+      </div>
+
+      <div class="scroll-x" style="margin-top:14px">
+        <table class="table">
+          <thead><tr><th>설정</th><th>속도</th><th>정확도</th><th>파일 크기</th></tr></thead>
+          <tbody>
+            <tr><td>imgsz 320</td><td>가장 빠름</td><td>작은 사람에 불리</td><td>작음</td></tr>
+            <tr><td>imgsz 416</td><td>중간</td><td>기준</td><td>중간</td></tr>
+            <tr><td>imgsz 640</td><td>가장 느림</td><td>작은 사람에 유리</td><td>큼</td></tr>
+            <tr><td>int8 (Conv만)</td><td>빨라짐</td><td>약간 손실</td><td>가장 작음</td></tr>
+            <tr><td>int8 (전부)</td><td>빠름</td><td>이 모델에선 mAP 0</td><td>가장 작음</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="note">표는 방향을 설명한 것이고, 실제 숫자는 기계마다 다릅니다. lab11 출력의 <strong>비율</strong>로 읽으세요.</p>
+
+      <div class="layer gotcha">
+        <span class="tag">⚠️ 함정</span>
+        <ul class="arrow-list" style="margin-bottom:0">
+          <li><code>lab10_onnx.IMAGE_SIZE</code>를 전역으로 바꿨다가 416으로 되돌립니다. 중간에 예외가 나면 416으로 복구되지 않을 수 있어요.</li>
+          <li><code>export</code>는 파일을 현재 폴더에 만들고 <code>shutil.move</code>로 옮깁니다. 같은 이름이 있으면 덮어씁니다.</li>
+          <li>latency는 CPU만 잽니다. GPU에서는 순위가 달라질 수 있어요.</li>
+          <li>int8은 <code>QUANTIZE_ALL=1</code>로 전부 양자화할 수 있지만, 이 모델에서는 mAP가 0이 됩니다. 출력 텐서의 좌표/점수 스케일 문제로 짐작합니다.</li>
+          <li>calibration에 train을 쓰는 이유: 검증/시험 데이터를 양자화 범위 결정에 쓰면 성능 평가가 오염됩니다.</li>
+        </ul>
+      </div>
+
+      <div class="layer analogy">
+        <span class="tag">🍭 5살 비유</span>
+        <p>그림을 <strong>작게 인쇄</strong>하면 빠르게 많이 만들 수 있지만 작은 글씨를 잃어요. 색을 <strong>8비트로 줄이면</strong> 파일이 가벼워지지만 색이 뭉개질 수 있고요. “얼마나 잃었는지”를 mAP로 재는 거예요.</p>
+      </div>
+    </section>
+
+    <section id="lab6" data-lecture-section="lab6">
+      <div class="sec-head">
+        <p class="sec-kicker">10 · 이웃 실습 lab6</p>
+        <h2>동영상에서는 크기가 더 이상해진다</h2>
+        <p class="sub">lab6은 common_yolo를 import하지 않지만, 같은 best.pt와 데이터를 씁니다. 추론 크기 416 vs 1280, stream=True의 의미를 짚고 갑니다.</p>
+      </div>
+
+      <div class="grid-2">
+        <div class="card flat">
+          <h4>핵심 상수</h4>
+          <ul class="arrow-list">
+            <li><code>VIDEO_SIZE=(640,480)</code>, 20프레임, 5fps</li>
+            <li><code>CONF=0.4</code>, <code>SIZES=(416,1280)</code></li>
+            <li>검증 사진을 이어 붙여 <code>runs/demo.mp4</code> 생성</li>
+            <li><code>stream=True</code>로 프레임 결과를 하나씩</li>
+          </ul>
+        </div>
+        <div class="card flat">
+          <h4>왜 두 크기?</h4>
+          <p class="note">416은 학습 크기 그대로. 1280은 노트북처럼 크게 키운 경우. 커지면 작은 사람을 더 찾을 수 있지만 느려지고, 학습 때 본 크기와 달라져 결과가 흔들릴 수 있습니다. 첫 프레임은 준비 시간이 섞이므로 한 번 미리 돌려 버립니다.</p>
+        </div>
+      </div>
+
+      <div class="layer gotcha">
+        <span class="tag">⚠️ 함정</span>
+        <p>영상 프레임은 원본 사진과 가로세로 비율이 다릅니다(640×480으로 리사이즈). 그래서 박스 좌표도 영상 기준. “학습 때 사진 비율”과 “추론 때 영상 비율”이 다르면 성능이 떨어질 수 있어요.</p>
+      </div>
+    </section>
+
+    <section id="fullcode" data-lecture-section="fullcode">
+      <div class="sec-head">
+        <p class="sec-kicker">11 · 전체 코드</p>
+        <h2>원문 그대로</h2>
+        <p class="sub">common_yolo.py는 줄 번호와 함께, lab7·8·10·11은 접이식으로.</p>
+      </div>
+
+      <details class="card flat" style="padding:0;overflow:hidden" open>
+        <summary style="cursor:pointer;padding:16px 20px;font-weight:850;display:flex;align-items:center;justify-content:space-between;gap:10px;list-style:none">
+          <span>📄 common_yolo.py 전체 보기 (42줄)</span>
+          <span style="display:flex;gap:8px;align-items:center">
+            <button class="btn" type="button" id="copyCode" style="font-size:.7rem;padding:5px 10px">복사</button>
+            <span style="color:var(--coral);font-weight:900">+</span>
+          </span>
+        </summary>
+        <div style="padding:0 14px 14px">
+          <div class="codewrap">
+            <pre class="gutter" id="codeGutter" aria-hidden="true"></pre>
+            <pre class="code" style="max-height:500px"><code id="fullCodeSource">"""2일차 실습 공통 부분: lab5가 만든 데이터와 best.pt를 찾고, YOLO 라벨을 픽셀 박스로 읽습니다."""
+import os
+import warnings
+from pathlib import Path
+
+os.environ.setdefault("YOLO_VERBOSE", "False")   # ultralytics import 전에 정해야 적용된다
+warnings.filterwarnings("ignore", message=".*does not have a deterministic implementation.*")
+
+import torch
+from PIL import Image
+
+HERE = Path(__file__).resolve().parent
+YOLO_ROOT = HERE / "data" / "PennFudan_yolo"
+BEST = HERE / "runs" / "person" / "weights" / "best.pt"
+IMAGE_SIZE = 416
+
+
+def pick_device() -> int | str:
+    """cuda는 번호로, 그 밖에는 이름으로 넘긴다(ultralytics 규칙)."""
+    return 0 if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu"
+
+
+def require_lab5() -> None:
+    """lab5를 먼저 돌려야 데이터와 best.pt가 생긴다."""
+    if not BEST.exists() or not (YOLO_ROOT / "data.yaml").exists():
+        raise SystemExit(f"lab5_yolo11.py를 먼저 돌리세요. 없음: {BEST}")
+
+
+def valid_images() -> list[Path]:
+    return sorted((YOLO_ROOT / "valid" / "images").glob("*.png"))
+
+
+def read_truth(image: Path) -> list[list[float]]:
+    """YOLO 라벨(중심, 크기, 0~1)을 xyxy 픽셀 박스로 되돌린다."""
+    with Image.open(image) as im:
+        width, height = im.size
+    label = image.parent.parent / "labels" / f"{image.stem}.txt"
+    boxes = []
+    for line in label.read_text().strip().splitlines():
+        cx, cy, w, h = (float(v) for v in line.split()[1:])
+        boxes.append([(cx - w / 2) * width, (cy - h / 2) * height, (cx + w / 2) * width, (cy + h / 2) * height])
+    return boxes</code></pre>
+          </div>
+          <p class="note" style="margin:10px 0 0">줄 번호는 원문 기준. 빈 줄도 그대로.</p>
+        </div>
+      </details>
+
+      <details class="card flat" style="padding:0;overflow:hidden;margin-top:12px">
+        <summary style="cursor:pointer;padding:15px 20px;font-weight:850;list-style:none">📄 lab7_eval.py 전체 보기 (65줄) <span style="color:var(--coral)">+</span></summary>
+        <div style="padding:0 14px 14px"><pre class="code"><code>"""6차시 실습: 숫자 하나 뒤에 있는 것 — IoU 기준별 AP, F1이 가장 좋은 conf, 도구마다 다른 mAP."""
+import json
+import sys
+import tempfile
+
+import numpy as np
+from pycocotools.coco import COCO
+from pycocotools.cocoeval import COCOeval
+from ultralytics import YOLO
+
+from common_yolo import BEST, IMAGE_SIZE, YOLO_ROOT, pick_device, read_truth, require_lab5, valid_images
+
+EVAL_CONF = 0.001   # AP를 재려면 점수가 낮은 예측까지 모두 있어야 한다
+
+
+def ultralytics_view(model: YOLO, device: int | str) -> None:
+    """ultralytics의 val이 내는 숫자를 한 겹씩 펼친다."""
+    box = model.val(data=str(YOLO_ROOT / "data.yaml"), imgsz=IMAGE_SIZE, plots=False, device=device, verbose=False).box
+    ious = np.linspace(0.5, 0.95, 10)
+    print("IoU 기준별 AP:", "  ".join(f"{t:.2f}:{ap:.3f}" for t, ap in zip(ious, box.all_ap[0])))
+    print(f"mAP50 {box.map50:.3f} = 첫 칸 / mAP50-95 {box.map:.3f} = 열 칸의 평균 / mAP75 {box.map75:.3f}")
+    best = int(box.f1_curve[0].argmax())
+    print(f"F1이 가장 높은 conf {box.px[best]:.3f}: 정밀도 {box.p_curve[0][best]:.3f}, 재현율 {box.r_curve[0][best]:.3f}, F1 {box.f1_curve[0][best]:.3f}")
+    for conf in (0.25, 0.5, 0.9):
+        k = int(np.searchsorted(box.px, conf))
+        print(f"  conf {conf}: 정밀도 {box.p_curve[0][k]:.3f}, 재현율 {box.r_curve[0][k]:.3f}, F1 {box.f1_curve[0][k]:.3f}")
+
+
+def coco_view(model: YOLO, device: int | str) -> None:
+    """같은 모델을 pycocotools(COCO 공식 평가 코드)로 다시 잰다."""
+    images, annotations, detections = [], [], []
+    for image_id, path in enumerate(valid_images(), start=1):
+        result = model.predict(str(path), imgsz=IMAGE_SIZE, conf=EVAL_CONF, device=device, verbose=False)[0]
+        height, width = result.orig_shape
+        images.append({"id": image_id, "file_name": path.name, "width": width, "height": height})
+        for x1, y1, x2, y2 in read_truth(path):
+            annotations.append({"id": len(annotations) + 1, "image_id": image_id, "category_id": 1,
+                                "bbox": [x1, y1, x2 - x1, y2 - y1], "area": (x2 - x1) * (y2 - y1), "iscrowd": 0})
+        for (x1, y1, x2, y2), score in zip(result.boxes.xyxy.tolist(), result.boxes.conf.tolist()):
+            detections.append({"image_id": image_id, "category_id": 1, "bbox": [x1, y1, x2 - x1, y2 - y1], "score": score})
+    with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False) as f:
+        json.dump({"images": images, "annotations": annotations, "categories": [{"id": 1, "name": "person"}]}, f)
+    truth = COCO(f.name)
+    evaluator = COCOeval(truth, truth.loadRes(detections), "bbox")
+    evaluator.evaluate()
+    evaluator.accumulate()
+    evaluator.summarize()
+    print(f"pycocotools  AP50 {evaluator.stats[1]:.3f} / AP50-95 {evaluator.stats[0]:.3f} / 예측 {len(detections)}개, 정답 {len(annotations)}명")
+    sizes = sorted((a["bbox"][3] for a in annotations))
+    print(f"정답 박스 높이(px): 가장 작은 {sizes[0]:.0f}, 가운데 {sizes[len(sizes) // 2]:.0f}, 가장 큰 {sizes[-1]:.0f}")
+
+
+def main() -> int:
+    require_lab5()
+    device = pick_device()
+    model = YOLO(str(BEST))
+    print("== ultralytics val ==")
+    ultralytics_view(model, device)
+    print("== pycocotools ==")
+    coco_view(model, device)
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())</code></pre></div>
+      </details>
+
+      <details class="card flat" style="padding:0;overflow:hidden;margin-top:12px">
+        <summary style="cursor:pointer;padding:15px 20px;font-weight:850;list-style:none">📄 lab8_errors.py 전체 보기 (68줄) <span style="color:var(--coral)">+</span></summary>
+        <div style="padding:0 14px 14px"><pre class="code"><code>"""7차시 실습: 틀린 것을 종류별로 센다 — 위치 어긋남, 중복, 배경 오탐, 놓침(크기별)."""
+import sys
+from collections import Counter
+
+import torch
+from torchvision.ops import box_iou
+from ultralytics import YOLO
+
+from common_yolo import BEST, IMAGE_SIZE, pick_device, read_truth, require_lab5, valid_images
+
+MATCH_IOU = 0.5     # 이 이상 겹치면 맞음
+NEAR_IOU = 0.1      # 맞음은 아니어도 이 이상 겹치면 '위치 어긋남', 아래면 '배경 오탐'
+CONFS = (0.25, 0.5, 0.646)   # 0.646은 lab7에서 F1이 가장 높던 conf
+SMALL, MEDIUM = 32 * 32, 96 * 96   # COCO의 크기 구분(넓이, 픽셀²)
+
+
+def size_name(box: list[float]) -> str:
+    area = (box[2] - box[0]) * (box[3] - box[1])
+    return "작음" if area < SMALL else "중간" if area < MEDIUM else "큼"
+
+
+def classify(pred: torch.Tensor, truth: torch.Tensor) -> tuple[Counter, list[int]]:
+    """점수 순으로 정답과 짝짓는다. 한 정답에는 예측 하나만. 남은 예측은 오류 종류로, 남은 정답은 놓침으로."""
+    kinds: Counter = Counter()
+    matched = [False] * len(truth)
+    ious = box_iou(pred, truth) if len(pred) and len(truth) else torch.zeros(len(pred), len(truth))
+    for i in range(len(pred)):   # pred는 이미 점수 내림차순
+        best = int(ious[i].argmax()) if len(truth) else -1
+        best_iou = float(ious[i, best]) if len(truth) else 0.0
+        if best_iou >= MATCH_IOU and not matched[best]:
+            matched[best] = True
+            kinds["맞음"] += 1
+        elif best_iou >= MATCH_IOU:
+            kinds["중복"] += 1          # 이미 짝지어진 정답에 또 낸 박스: NMS가 못 지운 것
+        elif best_iou >= NEAR_IOU:
+            kinds["위치 어긋남"] += 1   # 사람 근처지만 박스가 덜 맞음
+        else:
+            kinds["배경 오탐"] += 1     # 정답 사람과 거의 안 겹침(라벨 없는 사람일 수도)
+    return kinds, [k for k, m in enumerate(matched) if not m]
+
+
+def main() -> int:
+    require_lab5()
+    device = pick_device()
+    model = YOLO(str(BEST))
+    images = valid_images()
+    truth_by_image = {p: read_truth(p) for p in images}
+    all_truth = [b for boxes in truth_by_image.values() for b in boxes]
+    print("정답 크기:", dict(Counter(size_name(b) for b in all_truth)), "합계", len(all_truth))
+    for conf in CONFS:
+        total, missed_sizes, worst = Counter(), Counter(), []
+        for path in images:
+            result = model.predict(str(path), imgsz=IMAGE_SIZE, conf=conf, device=device, verbose=False)[0]
+            truth = torch.tensor(truth_by_image[path]).reshape(-1, 4)
+            kinds, missed = classify(result.boxes.xyxy.cpu(), truth)
+            total += kinds
+            missed_sizes.update(size_name(truth_by_image[path][k]) for k in missed)
+            errors = len(missed) + sum(v for k, v in kinds.items() if k != "맞음")
+            worst.append((errors, path.name, len(missed), len(result.boxes), len(truth)))
+        n_missed = sum(missed_sizes.values())
+        print(f"conf {conf}: {dict(total)}, 놓침 {n_missed} {dict(missed_sizes)}")
+        top = sorted(worst, reverse=True)[:3]
+        print("   오류가 많은 사진:", ", ".join(f"{name}(오류 {e}, 놓침 {m}, 탐지 {d}/정답 {t})" for e, name, m, d, t in top))
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())</code></pre></div>
+      </details>
+
+      <details class="card flat" style="padding:0;overflow:hidden;margin-top:12px">
+        <summary style="cursor:pointer;padding:15px 20px;font-weight:850;list-style:none">📄 lab10_onnx.py 전체 보기 (90줄) <span style="color:var(--coral)">+</span></summary>
+        <div style="padding:0 14px 14px"><pre class="code"><code>"""9차시 실습: best.pt를 ONNX로 내보내고, ultralytics 없이 onnxruntime만으로 박스를 낸다.
+
+출력 (1, 5, 3549)을 손으로 풀어 본다: 3549 = 52² + 26² + 13² 칸, 5 = 박스 4 + 사람 점수 1(앵커 없음, objectness 없음).
+"""
+import sys
+import time
+from pathlib import Path
+
+import cv2
+import numpy as np
+import onnxruntime as ort
+import torch
+from torchvision.ops import box_iou, nms
+from ultralytics import YOLO
+
+from common_yolo import BEST, IMAGE_SIZE, pick_device, require_lab5, valid_images
+
+CONF = 0.5
+NMS_IOU = 0.7      # ultralytics 기본값과 같게
+PAD_VALUE = 114    # ultralytics가 빈 곳을 채우는 회색
+
+
+def letterbox(path: Path) -> tuple[np.ndarray, float, tuple[int, int]]:
+    """긴 변을 416에 맞춰 줄이고, 남는 곳을 가운데 정렬로 회색으로 채운다(ultralytics와 같은 cv2 방식)."""
+    bgr = cv2.imread(str(path))
+    height, width = bgr.shape[:2]
+    scale = IMAGE_SIZE / max(width, height)
+    new_w, new_h = round(width * scale), round(height * scale)
+    left, top = round((IMAGE_SIZE - new_w) / 2 - 0.1), round((IMAGE_SIZE - new_h) / 2 - 0.1)
+    canvas = np.full((IMAGE_SIZE, IMAGE_SIZE, 3), PAD_VALUE, dtype=np.uint8)
+    canvas[top:top + new_h, left:left + new_w] = cv2.resize(bgr, (new_w, new_h), interpolation=cv2.INTER_LINEAR)
+    rgb = canvas[..., ::-1]   # 모델은 RGB를 받는다
+    array = np.ascontiguousarray(rgb.transpose(2, 0, 1)[None], dtype=np.float32) / 255.0   # (1, 3, 416, 416), 0~1
+    return array, scale, (left, top)
+
+
+def decode(output: np.ndarray, scale: float, pad: tuple[float, float]) -> tuple[torch.Tensor, torch.Tensor]:
+    """(1, 5, N) → 점수로 거르고, 중심·크기를 xyxy로, 패딩과 크기 조절을 되돌리고, NMS."""
+    pred = torch.from_numpy(output[0]).T          # (N, 5): cx, cy, w, h, 사람 점수
+    pred = pred[pred[:, 4] >= CONF]
+    cx, cy, w, h = pred[:, 0], pred[:, 1], pred[:, 2], pred[:, 3]
+    boxes = torch.stack([cx - w / 2, cy - h / 2, cx + w / 2, cy + h / 2], dim=1)
+    boxes[:, [0, 2]] = (boxes[:, [0, 2]] - pad[0]) / scale
+    boxes[:, [1, 3]] = (boxes[:, [1, 3]] - pad[1]) / scale
+    keep = nms(boxes, pred[:, 4], NMS_IOU)
+    return boxes[keep], pred[keep, 4]
+
+
+def main() -> int:
+    require_lab5()
+    onnx_path = Path(YOLO(str(BEST)).export(format="onnx", imgsz=IMAGE_SIZE, dynamic=False, simplify=True, verbose=False))
+    # best.pt는 가중치를 float16으로, ONNX는 float32로 저장해서 크기가 두 배쯤 된다
+    print(f"파일 크기: best.pt {BEST.stat().st_size / 2**20:.1f}MiB → {onnx_path.name} {onnx_path.stat().st_size / 2**20:.1f}MiB")
+    session = ort.InferenceSession(str(onnx_path), providers=["CPUExecutionProvider"])
+    inp, out = session.get_inputs()[0], session.get_outputs()[0]
+    print(f"입력 {inp.name} {inp.shape} / 출력 {out.name} {out.shape}")
+
+    reference = YOLO(str(onnx_path), task="detect")   # 같은 ONNX를 ultralytics가 돌린 결과와 견준다
+    pt_model = YOLO(str(BEST))
+    total_mine = total_ref = total_pt = 0
+    shifts, unmatched = [], 0
+    for path in valid_images():
+        array, scale, pad = letterbox(path)
+        boxes, _ = decode(session.run(None, {inp.name: array})[0], scale, pad)
+        ref = reference.predict(str(path), imgsz=IMAGE_SIZE, conf=CONF, iou=NMS_IOU, device="cpu", verbose=False)[0].boxes.xyxy.cpu()
+        pt = pt_model.predict(str(path), imgsz=IMAGE_SIZE, conf=CONF, iou=NMS_IOU, device=pick_device(), verbose=False)[0].boxes
+        total_mine, total_ref, total_pt = total_mine + len(boxes), total_ref + len(ref), total_pt + len(pt)
+        if len(boxes) and len(ref):
+            # 내 박스마다 가장 많이 겹치는 ultralytics 박스를 찾아 꼭짓점 차이(픽셀)를 잰다
+            best_iou, nearest = box_iou(boxes, ref).max(dim=1)
+            same = best_iou >= 0.9
+            shifts += (boxes[same] - ref[nearest[same]]).abs().amax(dim=1).tolist()
+            unmatched += int((~same).sum())
+        else:
+            unmatched += len(boxes)
+    print(f"검증 34장, conf {CONF}: 직접 푼 ONNX {total_mine}개 / ultralytics의 ONNX {total_ref}개 / ultralytics의 best.pt {total_pt}개")
+    print(f"짝지은 박스 {len(shifts)}개의 꼭짓점 차이: 가장 큰 {max(shifts):.3f}px, 평균 {np.mean(shifts):.4f}px / 짝 없는 박스 {unmatched}개")
+
+    array, _, _ = letterbox(valid_images()[0])
+    for _ in range(3):
+        session.run(None, {inp.name: array})   # 처음 몇 번은 준비 시간이 섞인다
+    start = time.perf_counter()
+    for _ in range(50):
+        session.run(None, {inp.name: array})
+    print(f"onnxruntime CPU 추론만: {(time.perf_counter() - start) / 50 * 1000:.1f}ms/장 (기본 설정)")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())</code></pre></div>
+      </details>
+
+      <details class="card flat" style="padding:0;overflow:hidden;margin-top:12px">
+        <summary style="cursor:pointer;padding:15px 20px;font-weight:850;list-style:none">📄 lab11_speed.py 전체 보기 (90줄) <span style="color:var(--coral)">+</span></summary>
+        <div style="padding:0 14px 14px"><pre class="code"><code>"""10차시 실습: 빠르게 만들고, 무엇을 잃었는지 잰다 — 입력 크기와 int8 양자화.
+
+모두 CPU에서 onnxruntime으로 잰다(현장의 작은 컴퓨터를 흉내). 숫자는 기계마다 다르니 비율로 읽는다.
+"""
+import os
+import shutil
+import sys
+import time
+from pathlib import Path
+
+import numpy as np
+import onnxruntime as ort
+from onnxruntime.quantization import CalibrationDataReader, QuantFormat, QuantType, quantize_static
+from ultralytics import YOLO
+
+from common_yolo import BEST, HERE, YOLO_ROOT, require_lab5
+from lab10_onnx import letterbox
+
+SIZES = (320, 416, 640)
+CALIB_IMAGES = 32          # 양자화 범위를 정하는 데 쓸 학습 사진 수(검증 사진은 쓰지 않는다)
+REPEAT = 30
+OUT = HERE / "runs" / "speed"
+QUANTIZE_ALL = os.environ.get("QUANTIZE_ALL") == "1"
+
+
+def export(size: int) -> Path:
+    path = Path(YOLO(str(BEST)).export(format="onnx", imgsz=size, simplify=True, verbose=False))
+    target = OUT / f"best_{size}.onnx"
+    shutil.move(path, target)
+    return target
+
+
+def latency_ms(onnx_path: Path, size: int) -> float:
+    import lab10_onnx
+    lab10_onnx.IMAGE_SIZE = size   # 같은 전처리를 크기만 바꿔 쓴다
+    session = ort.InferenceSession(str(onnx_path), providers=["CPUExecutionProvider"])
+    name = session.get_inputs()[0].name
+    array, _, _ = letterbox(sorted((YOLO_ROOT / "valid" / "images").glob("*.png"))[0])
+    for _ in range(3):
+        session.run(None, {name: array})
+    start = time.perf_counter()
+    for _ in range(REPEAT):
+        session.run(None, {name: array})
+    lab10_onnx.IMAGE_SIZE = 416
+    return (time.perf_counter() - start) / REPEAT * 1000
+
+
+def accuracy(onnx_path: Path, size: int) -> tuple[float, float]:
+    box = YOLO(str(onnx_path), task="detect").val(data=str(YOLO_ROOT / "data.yaml"), imgsz=size, device="cpu", plots=False, verbose=False).box
+    return box.map50, box.map
+
+
+class Calibration(CalibrationDataReader):
+    """int8 범위를 정할 때 쓸 입력을 하나씩 내준다."""
+
+    def __init__(self, input_name: str) -> None:
+        paths = sorted((YOLO_ROOT / "train" / "images").glob("*.png"))[:CALIB_IMAGES]
+        self.items = iter([{input_name: letterbox(p)[0]} for p in paths])
+
+    def get_next(self) -> dict | None:
+        return next(self.items, None)
+
+
+def main() -> int:
+    require_lab5()
+    OUT.mkdir(parents=True, exist_ok=True)
+    print(f"{'모델':22s}{'크기(MiB)':>10s}{'CPU ms/장':>11s}{'mAP50':>8s}{'mAP50-95':>10s}")
+    rows = {}
+    for size in SIZES:
+        path = export(size)
+        rows[size] = (path, latency_ms(path, size), *accuracy(path, size))
+        print(f"{'float32 imgsz ' + str(size):22s}{path.stat().st_size / 2**20:10.1f}{rows[size][1]:11.1f}{rows[size][2]:8.3f}{rows[size][3]:10.3f}")
+
+    fp32 = rows[416][0]
+    int8 = OUT / "best_416_int8.onnx"
+    name = ort.InferenceSession(str(fp32), providers=["CPUExecutionProvider"]).get_inputs()[0].name
+    quantize_static(str(fp32), str(int8), Calibration(name), quant_format=QuantFormat.QDQ,
+                    activation_type=QuantType.QUInt8, weight_type=QuantType.QInt8, per_channel=True,
+                    # 합성곱만 int8로. 전부 누르면(QUANTIZE_ALL=1) 이 모델에서는 mAP가 0이 됐다.
+                    # 출력 끝에서 좌표(0~416)와 점수(0~1)를 한 텐서로 잇기 때문으로 짐작한다(따로 가르지는 않았다)
+                    op_types_to_quantize=None if QUANTIZE_ALL else ["Conv"])
+    ms = latency_ms(int8, 416)
+    m50, m = accuracy(int8, 416)
+    label = "int8 전부 416" if QUANTIZE_ALL else "int8 합성곱만 416"
+    print(f"{label:22s}{int8.stat().st_size / 2**20:10.1f}{ms:11.1f}{m50:8.3f}{m:10.3f}")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())</code></pre></div>
+      </details>
+    </section>
+
+    <section id="quiz" data-lecture-section="quiz">
+      <div class="sec-head">
+        <p class="sec-kicker">12 · 퀴즈</p>
+        <h2>평가·오류·ONNX·속도</h2>
+        <p class="sub">14문제. 숫자의 의미를 묻습니다.</p>
+      </div>
+      <div class="panel" id="quizPanel">
+        <div class="quiz-top">
+          <span class="quiz-count" id="quizCount">1 / 14</span>
+          <div class="quiz-track" aria-hidden="true"><i id="quizBar"></i></div>
+          <span class="quiz-count" id="quizScore">0점</span>
+        </div>
+        <div id="quizBody">
+          <p class="quiz-q" id="quizQ">문제를 불러오는 중…</p>
+          <div class="quiz-opts" id="quizOpts"></div>
+          <div class="quiz-fb" id="quizFb" aria-live="polite"></div>
+          <div class="quiz-actions"><button class="btn primary" type="button" id="quizNext" hidden>다음 문제 →</button></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="glossary" data-lecture-section="glossary">
+      <div class="sec-head">
+        <p class="sec-kicker">13 · 용어 사전</p>
+        <h2>막히면 여기로</h2>
+      </div>
+      <details class="acc"><summary>best.pt</summary><div class="body"><p>ultralytics 학습이 검증 지표 기준으로 고른 최고 체크포인트. 경로는 <code>runs/person/weights/best.pt</code>.</p></div></details>
+      <details class="acc"><summary>data.yaml</summary><div class="body"><p>데이터셋 설정. <code>path</code>, <code>train</code>, <code>val</code>, <code>nc</code>, <code>names</code>. require_lab5가 존재를 확인합니다.</p></div></details>
+      <details class="acc"><summary>SystemExit</summary><div class="body"><p>프로그램 종료를 알리는 예외(BaseException 계열). <code>except Exception</code>으로는 잡히지 않습니다.</p></div></details>
+      <details class="acc"><summary>AP / mAP</summary><div class="body"><p>AP는 precision-recall 곡선 아래 면적. mAP는 클래스 평균. mAP50은 IoU 0.5, mAP50-95는 IoU 0.5~0.95 평균.</p></div></details>
+      <details class="acc"><summary>Precision / Recall / F1</summary><div class="body"><p>정밀도 = 맞힌 것 / 낸 것. 재현율 = 맞힌 것 / 정답. F1 = 2PR/(P+R). conf를 올리면 정밀도↑, 재현율↓ 경향.</p></div></details>
+      <details class="acc"><summary>IoU</summary><div class="body"><p>두 박스의 교집합 넓이 / 합집합 넓이. 1에 가까울수록 겹침. 맞음 판정 기준으로 0.5를 자주 씁니다.</p></div></details>
+      <details class="acc"><summary>NMS</summary><div class="body"><p>Non-Maximum Suppression. 같은 물체에 겹친 박스 중 점수 높은 것만 남기고 나머지를 지웁니다. lab10은 IoU 0.7.</p></div></details>
+      <details class="acc"><summary>pycocotools</summary><div class="body"><p>COCO 공식 평가 코드. bbox는 <code>[x, y, w, h]</code> 형식입니다. <code>COCOeval</code>로 AP를 계산.</p></div></details>
+      <details class="acc"><summary>letterbox</summary><div class="body"><p>비율을 유지하며 긴 변을 목표 크기에 맞추고, 남는 곳을 회색(114)으로 채우는 전처리. 좌표를 되돌릴 때 pad와 scale을 씁니다.</p></div></details>
+      <details class="acc"><summary>ONNX / onnxruntime</summary><div class="body"><p>ONNX는 모델 교환 형식, onnxruntime은 그것을 실행하는 엔진. ultralytics 없이 출력 텐서를 직접 디코딩할 수 있습니다.</p></div></details>
+      <details class="acc"><summary>int8 양자화</summary><div class="body"><p>float32 가중치·활성값을 8비트 정수로 줄이는 것. 작아지고 빨라지지만 정확도 손실이 있을 수 있습니다.</p></div></details>
+      <details class="acc"><summary>calibration</summary><div class="body"><p>양자화 범위를 정하기 위해 대표 입력을 넣어 보는 과정. 검증/시험 데이터를 쓰면 평가가 오염됩니다.</p></div></details>
+      <details class="acc"><summary>stream=True</summary><div class="body"><p>ultralytics가 프레임 결과를 하나씩 내주는 모드. 긴 영상에서 메모리를 아낍니다.</p></div></details>
+    </section>
+
+    <section id="cheatsheet" data-lecture-section="cheatsheet">
+      <div class="sec-head">
+        <p class="sec-kicker">14 · 치트시트</p>
+        <h2>한 장 요약</h2>
+      </div>
+      <div class="scroll-x">
+        <table class="table">
+          <thead><tr><th>하고 싶은 것</th><th>한 줄</th></tr></thead>
+          <tbody>
+            <tr><td>lab5 산출물 확인</td><td><code>require_lab5()</code></td></tr>
+            <tr><td>검증 이미지 목록</td><td><code>valid_images()</code></td></tr>
+            <tr><td>정답 박스</td><td><code>read_truth(path)</code> → xyxy 픽셀</td></tr>
+            <tr><td>장치</td><td><code>pick_device()</code> → 0 / "mps" / "cpu"</td></tr>
+            <tr><td>AP 자세히</td><td>lab7: <code>box.all_ap[0]</code>, <code>f1_curve</code></td></tr>
+            <tr><td>오류 분류</td><td>lab8: <code>classify(pred, truth)</code></td></tr>
+            <tr><td>ONNX</td><td>lab10: <code>letterbox</code> → <code>session.run</code> → <code>decode</code></td></tr>
+            <tr><td>속도/양자화</td><td>lab11: <code>SIZES=(320,416,640)</code>, int8 Conv만</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="scroll-x" style="margin-top:14px">
+        <table class="table">
+          <thead><tr><th>함정</th><th>기억할 말</th></tr></thead>
+          <tbody>
+            <tr><td>CUDA 장치</td><td>PyTorch는 "cuda", ultralytics는 <code>0</code>.</td></tr>
+            <tr><td>AP용 conf</td><td>0.001처럼 낮게. 높은 conf만 쓰면 곡선이 잘림.</td></tr>
+            <tr><td>COCO bbox</td><td>xywh. xyxy 그대로 넣지 말 것.</td></tr>
+            <tr><td>오류 분류</td><td>예측이 점수 내림차순이라는 전제.</td></tr>
+            <tr><td>ONNX 출력</td><td>(1,5,3549) = 52²+26²+13² 칸 × 5값.</td></tr>
+            <tr><td>letterbox</td><td>pad 114, RGB, /255, pad·scale 되돌리기.</td></tr>
+            <tr><td>양자화 calibration</td><td>train만. valid/test 금지.</td></tr>
+            <tr><td>int8 전부</td><td>이 모델에선 mAP 0. Conv만 권장.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="card flat" style="margin-top:18px;background:var(--teal-soft);border-color:#BFDDD5">
+        <h4>마지막 한 문장</h4>
+        <p style="margin:0"><strong>“common_yolo는 lab5의 산출물을 찾아 주고, 정답 라벨을 픽셀 박스로 되돌리는 얇은 공용 층이다. 그 위에서 lab7은 점수를 뜯고, lab8은 오류를 분류하고, lab10은 ONNX를 직접 풀고, lab11은 속도와 정확도의 맞바꿈을 잰다.”</strong></p>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<footer class="footer">
+  <div class="footer-inner">
+    <p><strong>common_yolo.py — 평가·배포 공용 상자.</strong> YOLO 특강 2일차 이후 공통 모듈 해설. 원문: src/lab/yolo_labs/common_yolo.py.</p>
+    <p>이 페이지는 학습용 비공식 해설입니다. lab7~lab11은 ultralytics(AGPL-3.0)를 사용합니다. Penn-Fudan 데이터는 원 배포처 조건을 따릅니다.</p>
+    <div class="footer-links">
+      <a href="#hero">맨 위로</a>
+      <a href="#fullcode">전체 코드</a>
+      <a href="#quiz">퀴즈 다시 풀기</a>
+    </div>
+  </div>
+</footer>
+
+<script>
+window.QUIZ_QUESTIONS = [
+  { q: 'require_lab5()가 확인하는 두 가지는?', o: ['best.pt와 data.yaml', 'yolo11s.pt와 PennFudanPed.zip', 'ONNX 파일과 int8 파일', 'runs 폴더와 data 폴더'], a: 0, why: 'BEST.exists()와 (YOLO_ROOT / "data.yaml").exists()를 확인합니다. 없으면 SystemExit.' },
+  { q: 'BEST가 가리키는 경로는?', o: ['runs/person/weights/last.pt', 'runs/person/weights/best.pt', 'data/PennFudan_yolo/best.pt', 'runs/speed/best_416.onnx'], a: 1, why: 'lab5가 project=runs, name=person으로 저장한 최고 체크포인트입니다.' },
+  { q: 'common_yolo의 pick_device()가 CUDA일 때 반환하는 값은?', o: ['문자열 "cuda"', 'torch.device("cuda")', '정수 0', '불리언 True'], a: 2, why: 'ultralytics 규칙으로 CUDA는 GPU 번호(0)를 받습니다. MPS/CPU만 문자열.' },
+  { q: 'read_truth()가 라벨 파일을 찾는 규칙은?', o: ['이미지와 같은 폴더의 .txt', 'image.parent.parent/labels/stem.txt', 'data.yaml에 적힌 경로', '고정된 labels/ 폴더'], a: 1, why: 'valid/images/x.png → valid/labels/x.txt. 같은 stem을 씁니다.' },
+  { q: 'lab7이 EVAL_CONF=0.001처럼 낮은 conf를 쓰는 이유는?', o: ['속도를 높이려고', 'AP는 점수 낮은 예측까지 모두 필요하기 때문', '작은 사람만 보려고', 'NMS를 끄려고'], a: 1, why: 'precision-recall 곡선을 끝까지 그리려면 전체 후보가 필요합니다.' },
+  { q: 'mAP50-95는?', o: ['IoU 0.5 한 지점의 AP', 'IoU 0.5~0.95를 10단계로 평균', '클래스 95개의 평균', 'conf 0.95에서의 AP'], a: 1, why: 'IoU 0.50, 0.55, …, 0.95에서 잰 AP 10개의 평균입니다.' },
+  { q: 'lab7이 F1 최고점을 찾는 이유는?', o: ['정밀도만 보려고', '정밀도와 재현율의 균형 conf를 찾으려고', '속도를 재려고', 'NMS 임계값을 정하려고'], a: 1, why: 'f1_curve에서 argmax로 균형점을 찾습니다.' },
+  { q: 'lab8에서 MATCH_IOU와 NEAR_IOU 기본값은?', o: ['0.5 / 0.1', '0.9 / 0.5', '0.1 / 0.5', '0.75 / 0.25'], a: 0, why: 'MATCH_IOU=0.5, NEAR_IOU=0.1입니다.' },
+  { q: '예측이 정답과 IoU 0.6으로 겹치는데 그 정답이 이미 다른 예측과 짝지어졌다면?', o: ['맞음', '중복', '위치 어긋남', '배경 오탐'], a: 1, why: 'IoU는 충분하지만 정답이 이미 matched라서 중복입니다. NMS가 못 지운 박스죠.' },
+  { q: 'lab8이 놓침을 크기별로 세는 이유는?', o: ['속도 측정을 위해', '작은 사람을 특히 놓치는지 보려고', 'NMS를 위해', '클래스 균형을 위해'], a: 1, why: '작음/중간/큼으로 나눠 어떤 크기에서 약한지 파악합니다.' },
+  { q: 'lab10의 출력 (1, 5, 3549)에서 3549는?', o: ['이미지 수', '52² + 26² + 13² 격자 칸 수', '클래스 수', '파라미터 수'], a: 1, why: '2704 + 676 + 169 = 3549. 416 입력 YOLO11의 세 스케일 격자입니다.' },
+  { q: 'lab10의 letterbox에서 빈 곳을 채우는 값은?', o: ['0 (검정)', '114 (회색)', '255 (흰색)', '128 (중간 회색)'], a: 1, why: 'PAD_VALUE=114. ultralytics와 같은 회색입니다.' },
+  { q: 'lab11에서 양자화 calibration에 쓰면 안 되는 데이터는?', o: ['train 이미지', 'valid/test 이미지', '아무 이미지나 가능', '빈 이미지'], a: 1, why: '평가에 쓸 데이터를 미리 보면 성능 평가가 오염됩니다. train 32장만 씁니다.' },
+  { q: 'lab11이 기본적으로 Conv만 int8로 양자화하는 이유는?', o: ['속도가 더 빨라서', '전부 양자화하면 이 모델에서 mAP가 0이 됐기 때문', 'GPU가 없어서', 'ONNX가 지원하지 않아서'], a: 1, why: '출력에서 좌표(0~416)와 점수(0~1)를 한 텐서로 잇는 구조 때문에 스케일이 깨진 것으로 짐작합니다.' }
+];
+
+</script>
+<script>
+
+(function () {
+  'use strict';
+
+  var $ = function (s, r) { return (r || document).querySelector(s); };
+  var $$ = function (s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); };
+
+  /* ---------------- Python syntax highlighter (display only) ---------------- */
+  function esc(s) {
+    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+  function enc(n) {
+    var s = '';
+    do { s += String.fromCharCode(97 + (n % 26)); n = Math.floor(n / 26); } while (n > 0);
+    return s;
+  }
+  function dec(s) {
+    var n = 0;
+    for (var i = s.length - 1; i >= 0; i--) n = n * 26 + (s.charCodeAt(i) - 97);
+    return n;
+  }
+  var KEYWORDS = 'def|return|if|else|elif|for|while|in|not|and|or|is|import|from|as|with|lambda|None|True|False|try|except|raise|yield|pass|break|continue';
+
+  function highlightBlock(raw) {
+    var inDoc = false;
+    return raw.replace(/\r\n/g, '\n').split('\n').map(function (line) {
+      var t = line.trim();
+      if (inDoc) {
+        if (t.slice(-3) === '"""' || t.slice(-3) === "'''") inDoc = false;
+        return '<span class="tok-doc">' + esc(line) + '</span>';
+      }
+      if (t.slice(0, 3) === '"""' || t.slice(0, 3) === "'''") {
+        var q = t.slice(0, 3);
+        if (!(t.length > 3 && t.slice(-3) === q)) inDoc = true;
+        return '<span class="tok-doc">' + esc(line) + '</span>';
+      }
+      var cut = -1, quote = null;
+      for (var i = 0; i < line.length; i++) {
+        var ch = line[i];
+        if (quote) {
+          if (ch === '\\') { i++; continue; }
+          if (ch === quote) quote = null;
+        } else if (ch === '"' || ch === "'") {
+          quote = ch;
+        } else if (ch === '#') {
+          cut = i; break;
+        }
+      }
+      var code = cut >= 0 ? line.slice(0, cut) : line;
+      var comment = cut >= 0 ? line.slice(cut) : '';
+      var strings = [];
+      code = esc(code);
+      code = code.replace(/"[^"]*"|'[^']*'/g, function (m) {
+        strings.push(m);
+        return '\u0003' + enc(strings.length - 1) + '\u0003';
+      });
+      code = code.replace(/^(\s*)(@[\w.]+)/, function (m, a, b) { return a + '<span class="tok-dec">' + b + '</span>'; });
+      code = code.replace(new RegExp('\\b(' + KEYWORDS + ')\\b', 'g'), '<span class="tok-k">$1</span>');
+      code = code.replace(/(<span class="tok-k">def<\/span>\s+)([A-Za-z_]\w*)/g, '$1<span class="tok-fn">$2</span>');
+      code = code.replace(/\b(\d+(?:\.\d+)?)\b/g, '<span class="tok-n">$1</span>');
+      code = code.replace(/\u0003([a-z]+)\u0003/g, function (m, idx) {
+        return '<span class="tok-str">' + strings[dec(idx)] + '</span>';
+      });
+      if (comment) comment = '<span class="tok-com">' + esc(comment) + '</span>';
+      return code + comment;
+    }).join('\n');
+  }
+
+  $$('pre.code code').forEach(function (el) {
+    var raw = el.textContent.replace(/\r\n/g, '\n');
+    el.dataset.raw = raw;
+    el.innerHTML = highlightBlock(raw);
+  });
+
+  /* ---------------- full code: gutter + copy ---------------- */
+  var fullCode = $('#fullCodeSource');
+  if (fullCode) {
+    var raw = fullCode.dataset.raw || fullCode.textContent;
+    var lines = raw.split('\n');
+    var gutter = $('#codeGutter');
+    if (gutter) {
+      gutter.textContent = lines.map(function (_, i) { return String(i + 1); }).join('\n');
+    }
+    var copyBtn = $('#copyCode');
+    if (copyBtn) {
+      copyBtn.addEventListener('click', function (e) {
+        e.preventDefault(); e.stopPropagation();
+        var done = function () {
+          copyBtn.textContent = '복사됨 ✓';
+          setTimeout(function () { copyBtn.textContent = '복사'; }, 1500);
+        };
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(raw).then(done, function () { fallbackCopy(raw, done); });
+        } else {
+          fallbackCopy(raw, done);
+        }
+      });
+    }
+  }
+  function fallbackCopy(text, done) {
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand('copy'); done(); } catch (err) { /* ignore */ }
+    document.body.removeChild(ta);
+  }
+
+  /* ---------------- progress + active TOC ---------------- */
+  var progress = $('#progress');
+  var sections = $$('[data-lecture-section]');
+  var tocLinks = $$('#toc a');
+  var ticking = false;
+  function updateScroll() {
+    ticking = false;
+    var max = document.documentElement.scrollHeight - window.innerHeight;
+    if (progress) progress.style.width = (max > 0 ? Math.min(100, Math.max(0, window.scrollY / max * 100)) : 0) + '%';
+    var current = sections[0];
+    for (var i = 0; i < sections.length; i++) {
+      if (sections[i].getBoundingClientRect().top <= 130) current = sections[i];
+    }
+    if (current) {
+      tocLinks.forEach(function (a) {
+        a.classList.toggle('active', a.getAttribute('href') === '#' + current.id);
+      });
+    }
+  }
+  function onScroll() {
+    if (!ticking) { ticking = true; window.requestAnimationFrame(updateScroll); }
+  }
+  window.addEventListener('scroll', onScroll, { passive: true });
+  window.addEventListener('resize', onScroll);
+  updateScroll();
+
+  /* ---------------- device picker ---------------- */
+  var hasCuda = $('#hasCuda'), hasMps = $('#hasMps');
+  if (hasCuda && hasMps) {
+    var deviceOut = $('#deviceOut'), deviceWhy = $('#deviceWhy');
+    var updateDevice = function () {
+      var d = hasCuda.checked ? 'cuda' : (hasMps.checked ? 'mps' : 'cpu');
+      deviceOut.textContent = 'torch.device("' + d + '")';
+      if (hasCuda.checked) {
+        deviceWhy.textContent = hasMps.checked
+          ? 'CUDA가 먼저라서 첫 번째 if에서 바로 반환합니다. MPS 체크박스가 켜져 있어도 무시돼요.'
+          : 'CUDA가 있으니 첫 번째 if에서 바로 반환합니다. MPS는 검사하지 않아요.';
+      } else if (hasMps.checked) {
+        deviceWhy.textContent = 'CUDA가 없으니 MPS를 검사하고, 있으니 "mps"를 반환합니다.';
+      } else {
+        deviceWhy.textContent = '둘 다 없으니 CPU로 떨어집니다. 느리지만 어디서든 돌아가요.';
+      }
+    };
+    hasCuda.addEventListener('change', updateDevice);
+    hasMps.addEventListener('change', updateDevice);
+    updateDevice();
+  }
+
+  /* ---------------- pretrained conceptual viz ---------------- */
+  var viz = $('#pretrainedViz');
+  if (viz) {
+    var structured = [16, 22, 30, 26, 38, 34, 46, 42, 54, 50, 60, 56, 68, 64, 74, 70, 80, 76, 84, 80, 88, 84, 92, 88];
+    var noisy = [42, 18, 74, 28, 56, 88, 34, 66, 22, 80, 48, 30, 70, 52, 90, 26, 62, 38, 76, 44, 58, 84, 32, 68];
+    var bars = [];
+    for (var bi = 0; bi < 24; bi++) {
+      var bar = document.createElement('i');
+      bar.style.width = '12px';
+      bar.style.height = structured[bi] + 'px';
+      bar.style.background = 'var(--teal)';
+      bar.style.opacity = '0.8';
+      viz.appendChild(bar);
+      bars.push(bar);
+    }
+    var btnP = $('#btnPretrained'), btnR = $('#btnRandom'), cap = $('#pretrainedCaption');
+    var setMode = function (pretrained) {
+      bars.forEach(function (bar, i) {
+        var h = pretrained ? structured[i] : noisy[i];
+        bar.style.height = h + 'px';
+        bar.style.background = pretrained ? 'var(--teal)' : 'var(--coral)';
+      });
+      btnP.classList.toggle('primary', pretrained);
+      btnR.classList.toggle('primary', !pretrained);
+      btnP.setAttribute('aria-pressed', String(pretrained));
+      btnR.setAttribute('aria-pressed', String(!pretrained));
+      cap.textContent = pretrained
+        ? '학습된 특징은 사진의 구조를 따라 규칙적으로 변합니다. (개념을 위한 그림이지 실제 수치가 아니에요.)'
+        : '무작위 가중치는 같은 구조라도 규칙성이 없습니다. “학습이 얼마나 큰 차이를 만드는가”의 기준선이에요.';
+    };
+    btnP.addEventListener('click', function () { setMode(true); });
+    btnR.addEventListener('click', function () { setMode(false); });
+  }
+
+  /* ---------------- normalization calculator ---------------- */
+  var normX = $('#normX');
+  if (normX) {
+    var channels = [
+      { name: 'R', mean: 0.485, std: 0.229 },
+      { name: 'G', mean: 0.456, std: 0.224 },
+      { name: 'B', mean: 0.406, std: 0.225 }
+    ];
+    var chSel = $('#normChannel');
+    var meanSlider = $('#normMean'), stdSlider = $('#normStd');
+    var xVal = $('#normXVal'), meanVal = $('#normMeanVal'), stdVal = $('#normStdVal');
+    var nfX = $('#nfX'), nfM = $('#nfM'), nfS = $('#nfS'), nfOut = $('#nfOut');
+    var swatch = $('#normSwatch');
+    var outs = [$('#normR'), $('#normG'), $('#normB')];
+
+    var fmt = function (v) { return (v >= 0 ? '+' : '') + v.toFixed(3); };
+    var calcNorm = function () {
+      var x = Number(normX.value);
+      var ch = Number(chSel.value);
+      channels[ch].mean = Number(meanSlider.value);
+      channels[ch].std = Number(stdSlider.value);
+      xVal.textContent = String(x);
+      meanVal.textContent = channels[ch].mean.toFixed(3);
+      stdVal.textContent = channels[ch].std.toFixed(3);
+      var xn = x / 255;
+      nfX.textContent = xn.toFixed(3);
+      nfM.textContent = channels[ch].mean.toFixed(3);
+      nfS.textContent = channels[ch].std.toFixed(3);
+      nfOut.textContent = fmt((xn - channels[ch].mean) / channels[ch].std);
+      channels.forEach(function (c, i) {
+        if (outs[i]) outs[i].textContent = fmt((xn - c.mean) / c.std);
+      });
+      swatch.style.background = 'rgb(' + x + ',' + x + ',' + x + ')';
+      swatch.textContent = 'x = ' + x;
+      swatch.style.color = x > 150 ? '#211D18' : '#fff';
+      swatch.style.textShadow = x > 150 ? 'none' : '0 1px 3px rgba(0,0,0,.55)';
+    };
+    var syncChannel = function () {
+      var ch = Number(chSel.value);
+      meanSlider.value = channels[ch].mean;
+      stdSlider.value = channels[ch].std;
+      calcNorm();
+    };
+    normX.addEventListener('input', calcNorm);
+    meanSlider.addEventListener('input', calcNorm);
+    stdSlider.addEventListener('input', calcNorm);
+    chSel.addEventListener('change', syncChannel);
+    syncChannel();
+  }
+
+  /* ---------------- cosine playground ---------------- */
+  var cv = $('#cosCanvas');
+  if (cv) {
+    var ctx = cv.getContext('2d');
+    var box = cv.parentElement;
+    var state = { a: { x: 1.12, y: 0.52 }, b: { x: 0.38, y: 1.02 }, norm: false, drag: null };
+    var W = 600, H = 320, DPR = 1;
+    var cosDot = $('#cosDot'), cosNa = $('#cosNa'), cosNb = $('#cosNb'), cosCos = $('#cosCos'), cosAngle = $('#cosAngle'), cosNote = $('#cosNote'), cosNorm = $('#cosNorm');
+
+    var unit = function (v) {
+      var n = Math.hypot(v.x, v.y) || 1;
+      return { x: v.x / n, y: v.y / n };
+    };
+    var shown = function (v) { return state.norm ? unit(v) : v; };
+    var scaleFor = function () { return Math.min(W, H) * 0.3; };
+    var cx = function () { return W / 2; };
+    var cy = function () { return H / 2; };
+    var toScreen = function (v) { var s = scaleFor(); return { x: cx() + v.x * s, y: cy() - v.y * s }; };
+    var toData = function (p) { var s = scaleFor(); return { x: (p.x - cx()) / s, y: (cy() - p.y) / s }; };
+    var clampVec = function (v) {
+      var n = Math.hypot(v.x, v.y);
+      var max = 1.55, min = 0.22;
+      if (n < 1e-6) return { x: min, y: 0 };
+      if (n > max) { v.x = v.x / n * max; v.y = v.y / n * max; }
+      if (n < min) { v.x = v.x / n * min; v.y = v.y / n * min; }
+      if (state.norm) return unit(v);
+      return v;
+    };
+    var normUnit = function (v) { var n = Math.hypot(v.x, v.y) || 1; return { x: v.x / n, y: v.y / n }; };
+
+    function draw() {
+      ctx.clearRect(0, 0, W, H);
+      var s = scaleFor(), x0 = cx(), y0 = cy();
+      ctx.save();
+      ctx.strokeStyle = 'rgba(33,29,24,.08)';
+      ctx.lineWidth = 1;
+      for (var g = -1.5; g <= 1.5; g += 0.5) {
+        ctx.beginPath(); ctx.moveTo(x0 + g * s, 0); ctx.lineTo(x0 + g * s, H); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(0, y0 + g * s); ctx.lineTo(W, y0 + g * s); ctx.stroke();
+      }
+      ctx.strokeStyle = 'rgba(33,29,24,.28)';
+      ctx.beginPath(); ctx.moveTo(0, y0); ctx.lineTo(W, y0); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(x0, 0); ctx.lineTo(x0, H); ctx.stroke();
+      ctx.setLineDash([5, 5]);
+      ctx.strokeStyle = 'rgba(31,122,108,.45)';
+      ctx.beginPath(); ctx.arc(x0, y0, s, 0, Math.PI * 2); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = 'rgba(33,29,24,.5)';
+      ctx.font = '600 11px ui-monospace, monospace';
+      ctx.fillText('1', x0 + s + 5, y0 - 6);
+      ctx.fillText('−1', x0 - s - 22, y0 - 6);
+      ctx.restore();
+
+      var a = shown(state.a), b = shown(state.b);
+      var pa = toScreen(a), pb = toScreen(b);
+      var drawVec = function (p, color, label) {
+        ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = 3.2;
+        ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(p.x, p.y); ctx.stroke();
+        var ang = Math.atan2(p.y - y0, p.x - x0);
+        ctx.beginPath();
+        ctx.moveTo(p.x, p.y);
+        ctx.lineTo(p.x - 12 * Math.cos(ang - 0.42), p.y - 12 * Math.sin(ang - 0.42));
+        ctx.lineTo(p.x - 12 * Math.cos(ang + 0.42), p.y - 12 * Math.sin(ang + 0.42));
+        ctx.closePath(); ctx.fill();
+        ctx.beginPath(); ctx.arc(p.x, p.y, 6, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#FFFDF8'; ctx.beginPath(); ctx.arc(p.x, p.y, 2.4, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = color;
+        ctx.font = '800 13px "Pretendard Variable", Pretendard, sans-serif';
+        ctx.fillText(label, p.x + 9, p.y - 9);
+      };
+      drawVec(pa, '#E4572E', 'a');
+      drawVec(pb, '#1F7A6C', 'b');
+
+      var a1 = Math.atan2(pa.y - y0, pa.x - x0);
+      var a2 = Math.atan2(pb.y - y0, pb.x - x0);
+      var delta = a2 - a1;
+      while (delta > Math.PI) delta -= Math.PI * 2;
+      while (delta < -Math.PI) delta += Math.PI * 2;
+      if (Math.abs(delta) > 0.04) {
+        ctx.strokeStyle = 'rgba(233,180,76,.9)'; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(x0, y0, 48, a1, a1 + delta, delta < 0); ctx.stroke();
+        ctx.fillStyle = '#8A6412';
+        ctx.font = '700 11px ui-monospace, monospace';
+        var mid = a1 + delta / 2;
+        ctx.fillText('θ', x0 + Math.cos(mid) * 60 - 4, y0 + Math.sin(mid) * 60 + 4);
+      }
+    }
+
+    function readout() {
+      var a = shown(state.a), b = shown(state.b);
+      var dot = a.x * b.x + a.y * b.y;
+      var na = Math.hypot(a.x, a.y), nb = Math.hypot(b.x, b.y);
+      var cos = dot / ((na * nb) || 1);
+      var angle = Math.acos(Math.max(-1, Math.min(1, cos))) * 180 / Math.PI;
+      cosDot.textContent = dot.toFixed(3);
+      cosNa.textContent = na.toFixed(3);
+      cosNb.textContent = nb.toFixed(3);
+      cosCos.textContent = cos.toFixed(3);
+      cosAngle.textContent = angle.toFixed(1) + '°';
+      cosNote.textContent = state.norm
+        ? '길이를 1로 맞췄으니 내적과 코사인이 같습니다. 두 숫자가 같은지 보세요.'
+        : '정규화가 꺼져 있으면 내적과 코사인은 다릅니다. 길이가 다르기 때문이에요.';
+    }
+
+    function refresh() { draw(); readout(); }
+
+    function resize() {
+      var rect = box.getBoundingClientRect();
+      DPR = Math.min(window.devicePixelRatio || 1, 2);
+      W = Math.max(280, Math.round(box.clientWidth || rect.width));
+      H = 320;
+      cv.width = W * DPR; cv.height = H * DPR;
+      cv.style.width = W + 'px'; cv.style.height = H + 'px';
+      ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+      refresh();
+    }
+
+    var localPos = function (e) {
+      var r = cv.getBoundingClientRect();
+      return { x: e.clientX - r.left, y: e.clientY - r.top };
+    };
+    cv.addEventListener('pointerdown', function (e) {
+      var p = localPos(e);
+      var pa = toScreen(shown(state.a)), pb = toScreen(shown(state.b));
+      var da = Math.hypot(p.x - pa.x, p.y - pa.y);
+      var db = Math.hypot(p.x - pb.x, p.y - pb.y);
+      if (Math.min(da, db) < 34) {
+        state.drag = da <= db ? 'a' : 'b';
+        cv.setPointerCapture(e.pointerId);
+        cv.style.cursor = 'grabbing';
+        e.preventDefault();
+      }
+    });
+    cv.addEventListener('pointermove', function (e) {
+      if (!state.drag) return;
+      var v = toData(localPos(e));
+      state[state.drag] = clampVec(v);
+      refresh();
+    });
+    var endDrag = function (e) {
+      if (!state.drag) return;
+      state.drag = null;
+      cv.style.cursor = 'crosshair';
+      try { cv.releasePointerCapture(e.pointerId); } catch (err) { /* ignore */ }
+    };
+    cv.addEventListener('pointerup', endDrag);
+    cv.addEventListener('pointercancel', endDrag);
+
+    cv.addEventListener('keydown', function (e) {
+      if (e.key.indexOf('Arrow') !== 0) return;
+      e.preventDefault();
+      var v = e.shiftKey ? state.b : state.a;
+      var step = e.altKey ? 0.02 : 0.1;
+      if (e.key === 'ArrowLeft') v.x -= step;
+      if (e.key === 'ArrowRight') v.x += step;
+      if (e.key === 'ArrowUp') v.y += step;
+      if (e.key === 'ArrowDown') v.y -= step;
+      state[e.shiftKey ? 'b' : 'a'] = clampVec(v);
+      refresh();
+    });
+
+    if (cosNorm) {
+      cosNorm.addEventListener('change', function () {
+        state.norm = cosNorm.checked;
+        if (state.norm) { state.a = normUnit(state.a); state.b = normUnit(state.b); }
+        refresh();
+      });
+    }
+
+    var presets = {
+      same: { a: { x: 1.15, y: 0.42 }, b: { x: 1.05, y: 0.38 } },
+      right: { a: { x: 1.12, y: 0 }, b: { x: 0, y: 1.12 } },
+      opposite: { a: { x: 1.1, y: 0.32 }, b: { x: -1.1, y: -0.32 } },
+      reset: { a: { x: 1.12, y: 0.52 }, b: { x: 0.38, y: 1.02 } }
+    };
+    $$('[data-preset]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var p = presets[btn.getAttribute('data-preset')];
+        if (!p) return;
+        state.a = { x: p.a.x, y: p.a.y };
+        state.b = { x: p.b.x, y: p.b.y };
+        if (state.norm) { state.a = normUnit(state.a); state.b = normUnit(state.b); }
+        refresh();
+      });
+    });
+
+    if (window.ResizeObserver) {
+      new ResizeObserver(resize).observe(box);
+    } else {
+      window.addEventListener('resize', resize);
+    }
+    resize();
+  }
+
+  /* ---------------- batch calculator ---------------- */
+  var batchTotal = $('#batchTotal');
+  if (batchTotal) {
+    var batchSize = $('#batchSize');
+    var btVal = $('#batchTotalVal'), bsVal = $('#batchSizeVal');
+    var callsOut = $('#batchCalls'), lastOut = $('#batchLast'), maxOut = $('#batchMax');
+    var visual = $('#batchVisual');
+    var updateBatch = function () {
+      var n = Number(batchTotal.value), b = Number(batchSize.value);
+      var calls = Math.max(1, Math.ceil(n / b));
+      var last = n - (calls - 1) * b;
+      btVal.textContent = String(n);
+      bsVal.textContent = String(b);
+      callsOut.textContent = String(calls);
+      lastOut.textContent = last + '장';
+      maxOut.textContent = b + '장';
+      visual.innerHTML = '';
+      var show = Math.min(calls, 48);
+      for (var i = 0; i < show; i++) {
+        var bar = document.createElement('i');
+        if (i === show - 1) bar.style.background = 'var(--coral)';
+        if (i === show - 1 && show === 1) bar.style.width = '18px';
+        visual.appendChild(bar);
+      }
+      if (calls > 48) {
+        var more = document.createElement('span');
+        more.className = 'more';
+        more.textContent = '… +' + (calls - 48) + '번';
+        visual.appendChild(more);
+      }
+    };
+    batchTotal.addEventListener('input', updateBatch);
+    batchSize.addEventListener('input', updateBatch);
+    updateBatch();
+  }
+
+  /* ---------------- euroSAT split simulator ---------------- */
+  var splitRows = $('#splitRows');
+  if (splitRows) {
+    var classes = [
+      ['AnnualCrop', '연간 작물'], ['Forest', '숲'], ['HerbaceousVegetation', '초본 식생'],
+      ['Highway', '고속도로'], ['Industrial', '산업 지역'], ['Pasture', '목초지'],
+      ['PermanentCrop', '영구 작물'], ['Residential', '주거 지역'], ['River', '강'], ['SeaLake', '바다·호수']
+    ];
+    var rowRefs = [];
+    classes.forEach(function (c, ci) {
+      var row = document.createElement('div');
+      row.className = 'split-row';
+      var name = document.createElement('div');
+      name.className = 'split-name';
+      name.innerHTML = esc(c[0]) + '<em>' + esc(c[1]) + ' · class ' + ci + '</em>';
+      var blocks = document.createElement('div');
+      blocks.className = 'blocks';
+      for (var i = 0; i < 15; i++) {
+        var b = document.createElement('span');
+        b.className = 'block';
+        b.title = '사진 10장 묶음';
+        blocks.appendChild(b);
+      }
+      var count = document.createElement('div');
+      count.className = 'split-count';
+      count.textContent = '50 + 100';
+      row.appendChild(name); row.appendChild(blocks); row.appendChild(count);
+      splitRows.appendChild(row);
+      rowRefs.push({ row: row, blocks: blocks });
+    });
+
+    var applySplit = function (animate) {
+      rowRefs.forEach(function (ref, ri) {
+        ref.blocks.classList.toggle('shuffling', !!animate);
+        var bs = Array.prototype.slice.call(ref.blocks.children);
+        bs.forEach(function (b, i) {
+          b.className = 'block';
+          b.style.transitionDelay = animate ? (ri * 25 + i * 9) + 'ms' : '0ms';
+        });
+      });
+      setTimeout(function () {
+        rowRefs.forEach(function (ref) {
+          ref.blocks.classList.remove('shuffling');
+          var bs = Array.prototype.slice.call(ref.blocks.children);
+          bs.forEach(function (b, i) {
+            b.classList.add(i < 5 ? 'pool' : (i < 15 ? 'test' : 'unused'));
+          });
+        });
+      }, animate ? 340 : 0);
+    };
+    applySplit(false);
+
+    var splitResult = $('#splitResult');
+    $('#shuffleSplit').addEventListener('click', function () {
+      applySplit(true);
+      splitResult.className = 'split-result';
+      splitResult.textContent = '다시 섞었어요. pool 500장 / test 1,000장.';
+    });
+    $('#checkOverlap').addEventListener('click', function () {
+      var pool = new Set(), test = new Set();
+      var seed = 7;
+      var rnd = function () {
+        seed |= 0; seed = seed + 0x6D2B79F5 | 0;
+        var t = Math.imul(seed ^ seed >>> 15, 1 | seed);
+        t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+        return ((t ^ t >>> 14) >>> 0) / 4294967296;
+      };
+      for (var c = 0; c < 10; c++) {
+        var idx = [];
+        for (var i = 0; i < 3000; i++) idx.push(i);
+        for (var j = idx.length - 1; j > 0; j--) {
+          var k = Math.floor(rnd() * (j + 1));
+          var tmp = idx[j]; idx[j] = idx[k]; idx[k] = tmp;
+        }
+        idx.slice(0, 50).forEach(function (v) { pool.add(c + ':' + v); });
+        idx.slice(50, 150).forEach(function (v) { test.add(c + ':' + v); });
+      }
+      var overlap = 0;
+      test.forEach(function (key) { if (pool.has(key)) overlap++; });
+      splitResult.className = 'split-result ' + (overlap === 0 ? 'ok' : 'bad');
+      splitResult.textContent = overlap === 0
+        ? '겹친 사진: 0장 — pool과 test가 완전히 분리됐어요. (시드 7 시뮬레이션)'
+        : '겹친 사진: ' + overlap + '장 — 나눔 로직을 확인하세요!';
+    });
+  }
+
+  /* ---------------- cache simulator ---------------- */
+  var cacheName = $('#cacheName');
+  if (cacheName) {
+    var cacheModel = $('#cacheModel');
+    var cacheLog = $('#cacheLog');
+    var cacheWarn = $('#cacheWarn');
+    var cacheRun = $('#cacheRun');
+    var cacheReset = $('#cacheReset');
+    var cache = new Map();
+    var busy = false;
+    var cacheLines = [{ text: '[대기] 실행을 눌러 주세요.', cls: 'dim' }];
+
+    var renderLog = function () {
+      cacheLog.innerHTML = cacheLines.map(function (l) {
+        return '<span class="' + l.cls + '">' + esc(l.text) + '</span>';
+      }).join('\n');
+      cacheLog.scrollTop = cacheLog.scrollHeight;
+    };
+    var pushLog = function (text, cls) {
+      if (cacheLines.length === 1 && cacheLines[0].text.indexOf('[대기]') === 0) cacheLines.shift();
+      cacheLines.push({ text: text, cls: cls || '' });
+      if (cacheLines.length > 7) cacheLines.shift();
+      renderLog();
+    };
+
+    cacheRun.addEventListener('click', function () {
+      if (busy) return;
+      var name = cacheName.value.trim() || 'eurosat';
+      var model = cacheModel.value;
+      if (cache.has(name)) {
+        var prev = cache.get(name);
+        pushLog('[HIT] runs/dino/' + name + '.npy 를 불러왔어요.', 'hit');
+        if (prev !== model) {
+          cacheWarn.classList.add('show');
+          cacheWarn.innerHTML = '⚠️ <strong>오래된 캐시!</strong> 이 이름은 <code>' + esc(prev) + '</code>로 저장됐는데 지금은 <code>' + esc(model) + '</code>을(를) 선택했어요. 코드는 이름만 보고 불러오므로 <strong>옛 특징</strong>이 나옵니다. 이름을 바꾸거나 <code>.npy</code>를 지우세요.';
+        } else {
+          cacheWarn.classList.remove('show');
+          cacheWarn.textContent = '';
+        }
+        return;
+      }
+      busy = true; cacheRun.disabled = true;
+      cacheWarn.classList.remove('show'); cacheWarn.textContent = '';
+      pushLog('[MISS] ' + name + ' 계산 시작… (' + model + ')', 'miss');
+      setTimeout(function () {
+        cache.set(name, model);
+        pushLog('[SAVE] runs/dino/' + name + '.npy 저장 완료', 'hit');
+        busy = false; cacheRun.disabled = false;
+      }, 1100);
+    });
+
+    cacheReset.addEventListener('click', function () {
+      cache.clear();
+      cacheLines = [];
+      pushLog('[RESET] 캐시를 비웠어요. 다음 실행은 다시 계산합니다.', 'dim');
+      cacheWarn.classList.remove('show');
+      cacheWarn.textContent = '';
+    });
+    renderLog();
+  }
+
+  /* ---------------- patch grid ---------------- */
+  var patchGrid = $('#patchGrid');
+  if (patchGrid) {
+    var patchReadout = $('#patchReadout');
+    var prefixToggle = $('#prefixToggle');
+    var prefixStrip = $('#prefixStrip');
+    for (var r = 0; r < 14; r++) {
+      for (var c = 0; c < 14; c++) {
+        var b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'patch';
+        b.setAttribute('data-r', String(r));
+        b.setAttribute('data-c', String(c));
+        b.setAttribute('aria-label', '패치 행 ' + (r + 1) + ', 열 ' + (c + 1));
+        b.title = 'row ' + r + ', col ' + c;
+        patchGrid.appendChild(b);
+      }
+    }
+    var showPatch = function (el, selected) {
+      var rr = Number(el.getAttribute('data-r'));
+      var cc = Number(el.getAttribute('data-c'));
+      var flat = rr * 14 + cc;
+      patchReadout.innerHTML = '패치 <b>row ' + rr + ', col ' + cc + '</b> · flat index ' + flat +
+        '<br>이 칸의 특징: <b>384개 숫자</b>' + (selected ? ' · 선택됨' : '');
+      if (selected) {
+        $$('.patch.sel', patchGrid).forEach(function (x) { x.classList.remove('sel'); x.setAttribute('aria-pressed', 'false'); });
+        el.classList.add('sel');
+        el.setAttribute('aria-pressed', 'true');
+      }
+    };
+    patchGrid.addEventListener('pointerover', function (e) {
+      var t = e.target.closest('.patch');
+      if (t) showPatch(t, false);
+    });
+    patchGrid.addEventListener('focusin', function (e) {
+      var t = e.target.closest('.patch');
+      if (t) showPatch(t, false);
+    });
+    patchGrid.addEventListener('click', function (e) {
+      var t = e.target.closest('.patch');
+      if (t) showPatch(t, true);
+    });
+    if (prefixToggle) {
+      prefixToggle.addEventListener('change', function () {
+        prefixStrip.classList.toggle('show', prefixToggle.checked);
+        if (prefixToggle.checked) {
+          patchReadout.innerHTML = '앞쪽 <b>5개 토큰</b>(CLS 1 + 레지스터 4)을 잘라냅니다. 실제 개수는 <b>model.num_prefix_tokens</b>.';
+        } else {
+          patchReadout.innerHTML = '칸을 골라 보세요. 각 칸은 <b>384개 숫자</b>를 가집니다.';
+        }
+      });
+    }
+  }
+
+  /* ---------------- quiz ---------------- */
+  var questions = window.QUIZ_QUESTIONS || [];
+  var quizBody = $('#quizBody');
+  if (quizBody && questions.length) {
+    var qi = 0, score = 0, answered = false;
+    var quizQ = $('#quizQ'), quizOpts = $('#quizOpts'), quizFb = $('#quizFb'), quizNext = $('#quizNext');
+    var quizCount = $('#quizCount'), quizScore = $('#quizScore'), quizBar = $('#quizBar');
+
+    var renderQuestion = function () {
+      answered = false;
+      var q = questions[qi];
+      quizQ.textContent = q.q;
+      quizOpts.innerHTML = '';
+      quizFb.className = 'quiz-fb';
+      quizFb.innerHTML = '';
+      quizNext.hidden = true;
+      quizNext.textContent = qi === questions.length - 1 ? '결과 보기 →' : '다음 문제 →';
+      quizCount.textContent = (qi + 1) + ' / ' + questions.length;
+      quizScore.textContent = score + '점';
+      quizBar.style.width = ((qi) / questions.length * 100) + '%';
+      q.o.forEach(function (text, i) {
+        var b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'opt';
+        b.innerHTML = '<span class="ltr">' + 'ABCD'[i] + '</span><span>' + esc(text) + '</span>';
+        b.addEventListener('click', function () { choose(i, b); });
+        quizOpts.appendChild(b);
+      });
+    };
+
+    var choose = function (i, btn) {
+      if (answered) return;
+      answered = true;
+      var q = questions[qi];
+      var opts = $$('.opt', quizOpts);
+      opts.forEach(function (b, idx) {
+        b.disabled = true;
+        if (idx === q.a) b.classList.add('correct');
+        if (idx === i && i !== q.a) b.classList.add('wrong');
+      });
+      var ok = i === q.a;
+      if (ok) score++;
+      quizScore.textContent = score + '점';
+      quizFb.className = 'quiz-fb show ' + (ok ? 'ok' : 'no');
+      quizFb.innerHTML = '<b>' + (ok ? '정답! 🎉' : '아쉬워요. 정답은 ' + 'ABCD'[q.a] + '.') + '</b>' + esc(q.why);
+      quizNext.hidden = false;
+    };
+
+    var handleNext = function () {
+      if (!answered) return;
+      if (qi < questions.length - 1) {
+        qi++;
+        renderQuestion();
+      } else {
+        quizBar.style.width = '100%';
+        quizCount.textContent = questions.length + ' / ' + questions.length;
+        var pct = Math.round(score / questions.length * 100);
+        var msg = pct >= 90 ? '완벽에 가까워요. 이 파일의 주인이네요!' : pct >= 70 ? '좋아요. 함정 몇 개만 다시 보면 됩니다.' : pct >= 50 ? '절반은 잡았어요. 캐시와 패치 부분을 복습해 보세요.' : '괜찮아요. 위로 올라가 천천히 다시 읽으면 금방 이해됩니다.';
+        quizBody.innerHTML = '<div class="quiz-result"><div class="score">' + score + '<small> / ' + questions.length + '</small></div><p style="margin:10px 0 4px;font-weight:800">' + msg + '</p><p class="note">정답률 ' + pct + '%</p><button class="btn primary" type="button" id="quizRestart">다시 풀기</button></div>';
+        $('#quizRestart').addEventListener('click', function () {
+          qi = 0; score = 0;
+          quizBody.innerHTML = '<p class="quiz-q" id="quizQ"></p><div class="quiz-opts" id="quizOpts"></div><div class="quiz-fb" id="quizFb" aria-live="polite"></div><div class="quiz-actions"><button class="btn primary" type="button" id="quizNext" hidden>다음 문제 →</button></div>';
+          quizQ = $('#quizQ'); quizOpts = $('#quizOpts'); quizFb = $('#quizFb'); quizNext = $('#quizNext');
+          quizNext.addEventListener('click', handleNext);
+          renderQuestion();
+        });
+      }
+    };
+    quizNext.addEventListener('click', handleNext);
+
+    renderQuestion();
+  }
+})();
+
+</script>
+<script>
+(function () {
+  'use strict';
+
+  /* ---------- conf / precision-recall-F1 synthetic curves ---------- */
+  var conf = document.getElementById('confSlider');
+  if (conf) {
+    var N_POS = 30, N_NEG = 30;
+    var pos = [], neg = [];
+    for (var i = 0; i < N_POS; i++) pos.push(0.50 + 0.49 * i / (N_POS - 1));
+    for (var j = 0; j < N_NEG; j++) neg.push(0.03 + 0.77 * j / (N_NEG - 1));
+    var canvas = document.getElementById('prCanvas');
+    var ctx = canvas.getContext('2d');
+    var W = 600, H = 260, DPR = 1;
+
+    function metrics(t) {
+      var tp = pos.filter(function (s) { return s >= t; }).length;
+      var fp = neg.filter(function (s) { return s >= t; }).length;
+      var kept = tp + fp;
+      var p = kept ? tp / kept : 0;
+      var r = tp / N_POS;
+      var f = (p + r) ? 2 * p * r / (p + r) : 0;
+      return { tp: tp, fp: fp, kept: kept, p: p, r: r, f: f };
+    }
+    function resize() {
+      var rect = canvas.parentElement.getBoundingClientRect();
+      DPR = Math.min(window.devicePixelRatio || 1, 2);
+      W = Math.max(280, Math.round(rect.width));
+      H = 260;
+      canvas.width = W * DPR; canvas.height = H * DPR;
+      canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
+      ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+      draw();
+    }
+    function draw() {
+      var t = Number(conf.value);
+      var m = metrics(t);
+      document.getElementById('confVal').textContent = t.toFixed(2);
+      document.getElementById('confKept').textContent = m.kept + '개';
+      document.getElementById('confP').textContent = m.p.toFixed(3);
+      document.getElementById('confR').textContent = m.r.toFixed(3);
+      document.getElementById('confF').textContent = m.f.toFixed(3);
+
+      ctx.clearRect(0, 0, W, H);
+      var padL = 40, padR = 14, padT = 14, padB = 30;
+      var pw = W - padL - padR, ph = H - padT - padB;
+      var x = function (v) { return padL + v * pw; };
+      var y = function (v) { return padT + (1 - v) * ph; };
+      ctx.strokeStyle = 'rgba(33,29,24,.12)'; ctx.lineWidth = 1;
+      for (var g = 0; g <= 1; g += 0.25) {
+        ctx.beginPath(); ctx.moveTo(padL, y(g)); ctx.lineTo(W - padR, y(g)); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(x(g), padT); ctx.lineTo(x(g), H - padB); ctx.stroke();
+      }
+      ctx.fillStyle = 'rgba(33,29,24,.55)';
+      ctx.font = '10px ui-monospace, monospace';
+      ctx.fillText('1.0', 12, y(1) + 3);
+      ctx.fillText('0.0', 12, y(0) + 3);
+      ctx.fillText('0', padL - 2, H - 10);
+      ctx.fillText('conf 1', W - padR - 30, H - 10);
+
+      var lines = [
+        { key: 'p', color: '#1F7A6C', label: 'Precision' },
+        { key: 'r', color: '#E4572E', label: 'Recall' },
+        { key: 'f', color: '#B8860B', label: 'F1' }
+      ];
+      lines.forEach(function (line) {
+        ctx.strokeStyle = line.color; ctx.lineWidth = 2.2; ctx.beginPath();
+        var first = true;
+        for (var v = 0.01; v <= 0.995; v += 0.01) {
+          var mm = metrics(v);
+          var px = x(v), py = y(mm[line.key]);
+          if (first) { ctx.moveTo(px, py); first = false; } else { ctx.lineTo(px, py); }
+        }
+        ctx.stroke();
+      });
+      ctx.strokeStyle = 'rgba(33,29,24,.5)'; ctx.setLineDash([4, 4]);
+      ctx.beginPath(); ctx.moveTo(x(t), padT); ctx.lineTo(x(t), H - padB); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.font = '700 10px "Pretendard Variable", Pretendard, sans-serif';
+      lines.forEach(function (line, idx) {
+        ctx.fillStyle = line.color;
+        ctx.fillRect(W - 95, padT + 6 + idx * 15, 8, 8);
+        ctx.fillText(line.label, W - 83, padT + 14 + idx * 15);
+      });
+    }
+    conf.addEventListener('input', draw);
+    if (window.ResizeObserver) new ResizeObserver(resize).observe(canvas.parentElement);
+    else window.addEventListener('resize', resize);
+    resize();
+  }
+
+  /* ---------- lab8 error classifier ---------- */
+  var match = document.getElementById('matchIou');
+  if (match) {
+    var near = document.getElementById('nearIou');
+    var entries = [
+      { iou: 0.92, truth: 'A' }, { iou: 0.86, truth: 'A' },
+      { iou: 0.64, truth: 'B' }, { iou: 0.33, truth: 'C' },
+      { iou: 0.12, truth: 'D' }, { iou: 0.02, truth: 'E' }
+    ];
+    function classifyDemo() {
+      var m = Number(match.value);
+      var n = Math.min(Number(near.value), m - 0.05);
+      if (n < 0) n = 0;
+      document.getElementById('matchIouVal').textContent = m.toFixed(2);
+      document.getElementById('nearIouVal').textContent = n.toFixed(2);
+      var counts = { '맞음': 0, '중복': 0, '위치 어긋남': 0, '배경 오탐': 0 };
+      var matched = new Set();
+      var chips = [];
+      entries.forEach(function (e) {
+        var kind;
+        if (e.iou >= m) {
+          if (!matched.has(e.truth)) { matched.add(e.truth); kind = '맞음'; }
+          else kind = '중복';
+        } else if (e.iou >= n) {
+          kind = '위치 어긋남';
+        } else {
+          kind = '배경 오탐';
+        }
+        counts[kind]++;
+        chips.push({ kind: kind, text: e.truth + ' · IoU ' + e.iou.toFixed(2) });
+      });
+      var missed = 5 - matched.size;
+      document.getElementById('eMatch').textContent = counts['맞음'];
+      document.getElementById('eDup').textContent = counts['중복'];
+      document.getElementById('eNear').textContent = counts['위치 어긋남'];
+      document.getElementById('eBg').textContent = counts['배경 오탐'];
+      document.getElementById('eMiss').textContent = missed;
+      var host = document.getElementById('errorList');
+      host.innerHTML = '';
+      chips.forEach(function (c) {
+        var s = document.createElement('span');
+        s.className = 'err-chip ' + (c.kind === '맞음' ? 'ok' : c.kind === '중복' ? 'dup' : c.kind === '위치 어긋남' ? 'near' : 'bg');
+        s.textContent = c.kind + ' · ' + c.text;
+        host.appendChild(s);
+      });
+      if (missed > 0) {
+        var mchip = document.createElement('span');
+        mchip.className = 'err-chip miss';
+        mchip.textContent = '놓침 ' + missed + '명';
+        host.appendChild(mchip);
+      }
+    }
+    match.addEventListener('input', classifyDemo);
+    near.addEventListener('input', classifyDemo);
+    classifyDemo();
+  }
+
+  /* ---------- letterbox visualizer ---------- */
+  var lbW = document.getElementById('lbW');
+  if (lbW) {
+    var lbH = document.getElementById('lbH');
+    var lbImage = document.getElementById('lbImage');
+    var lbFormula = document.getElementById('lbFormula');
+    function updateLb() {
+      var w = Number(lbW.value), h = Number(lbH.value), S = 416;
+      var scale = S / Math.max(w, h);
+      var nw = Math.round(w * scale), nh = Math.round(h * scale);
+      var left = Math.round((S - nw) / 2 - 0.1);
+      var top = Math.round((S - nh) / 2 - 0.1);
+      document.getElementById('lbWv').textContent = String(w);
+      document.getElementById('lbHv').textContent = String(h);
+      lbImage.style.width = (nw / S * 100) + '%';
+      lbImage.style.height = (nh / S * 100) + '%';
+      lbImage.style.left = (left / S * 100) + '%';
+      lbImage.style.top = (top / S * 100) + '%';
+      lbFormula.textContent = 'scale = 416/' + Math.max(w, h) + ' = ' + scale.toFixed(4) +
+        '  ·  new = ' + nw + '×' + nh + '  ·  pad(left,top) = (' + left + ', ' + top + ')';
+    }
+    lbW.addEventListener('input', updateLb);
+    lbH.addEventListener('input', updateLb);
+    updateLb();
+  }
+})();
+
+</script>
+</body>
+</html>

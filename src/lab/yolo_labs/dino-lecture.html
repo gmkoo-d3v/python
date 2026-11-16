@@ -1,0 +1,2240 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<title>common_dino.py — 사진을 숫자로 바꾸는 요술 상자</title>
+<style>
+/* ============================================================
+   common_dino.py 인터랙티브 강의
+   단일 파일 · 외부 의존성 없음 · file:// 동작
+   ============================================================ */
+:root{
+  --paper:#FBF7EF;
+  --paper-2:#F4EDE0;
+  --paper-3:#EEE5D5;
+  --card:#FFFDF8;
+  --ink:#211D18;
+  --muted:#6E6457;
+  --line:#E4DAC8;
+  --line-strong:#D2C3A9;
+  --coral:#E4572E;
+  --coral-soft:#FBE3D9;
+  --teal:#1F7A6C;
+  --teal-soft:#DDEFEA;
+  --mustard:#E9B44C;
+  --mustard-soft:#FBF0D3;
+  --code:#191613;
+  --code-ink:#F3ECDF;
+  --code-muted:#A99E8C;
+  --radius:18px;
+  --radius-sm:12px;
+  --shadow:0 14px 34px rgba(48,38,22,.09), 0 2px 6px rgba(48,38,22,.05);
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+  --sans:"Pretendard Variable",Pretendard,-apple-system,BlinkMacSystemFont,"Segoe UI","Malgun Gothic","Apple SD Gothic Neo",sans-serif;
+}
+*,*::before,*::after{box-sizing:border-box}
+[hidden]{display:none!important}
+html{scroll-behavior:smooth}
+body{
+  margin:0;
+  color:var(--ink);
+  font-family:var(--sans);
+  font-size:16.5px;
+  line-height:1.72;
+  background-color:var(--paper);
+  background-image:radial-gradient(rgba(33,29,24,.055) 1px,transparent 1px);
+  background-size:22px 22px;
+  word-break:keep-all;
+  overflow-wrap:anywhere;
+}
+::selection{background:var(--mustard);color:var(--ink)}
+a{color:var(--teal);text-underline-offset:3px}
+a:hover{color:var(--coral)}
+code{font-family:var(--mono);font-size:.88em;background:var(--paper-2);border:1px solid var(--line);border-radius:6px;padding:.1em .35em}
+h1,h2,h3,h4{line-height:1.24;letter-spacing:-.022em;margin:0}
+p{margin:0 0 1em}
+ul,ol{margin:0 0 1em;padding-left:1.35em}
+li{margin:.28em 0}
+strong{font-weight:800}
+:focus-visible{outline:3px solid var(--coral);outline-offset:2px;border-radius:5px}
+.skip{position:fixed;left:12px;top:-60px;z-index:200;background:var(--ink);color:var(--paper);padding:10px 16px;border-radius:10px;text-decoration:none;transition:top .2s}
+.skip:focus{top:12px}
+/* ---------- top bar ---------- */
+.topbar{position:fixed;inset:0 0 auto 0;height:58px;z-index:100;background:rgba(251,247,239,.9);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
+.topbar-inner{max-width:1320px;height:100%;margin:0 auto;padding:0 22px;display:flex;align-items:center;justify-content:space-between;gap:14px}
+.brand{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--ink);font-weight:850;letter-spacing:-.02em;font-size:.95rem;min-width:0}
+.brand .logo{width:28px;height:28px;border-radius:9px;background:var(--ink);color:var(--paper);display:grid;place-items:center;font-size:14px;flex:none}
+.brand span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.topmeta{display:flex;align-items:center;gap:8px;font-size:.72rem;color:var(--muted);white-space:nowrap}
+.topmeta .chip{padding:4px 9px}
+#progress{position:absolute;left:0;bottom:-1px;height:3px;width:0;background:linear-gradient(90deg,var(--coral),var(--mustard));transition:width .08s linear}
+/* ---------- layout ---------- */
+.layout{max-width:1320px;margin:0 auto;padding:58px 24px 0;display:grid;grid-template-columns:236px minmax(0,1fr);gap:54px}
+.sidenav{position:sticky;top:82px;align-self:start;max-height:calc(100vh - 104px);overflow:auto;padding:18px 2px 30px;scrollbar-width:thin}
+.navlabel{font-size:.66rem;font-weight:850;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);padding:0 12px;margin:0 0 8px}
+.toc{display:grid;gap:2px}
+.toc a{display:flex;align-items:center;gap:9px;padding:6px 10px;border-radius:9px;color:var(--muted);text-decoration:none;font-size:.83rem;font-weight:650;line-height:1.35;transition:background .15s,color .15s}
+.toc a .num{font-size:.66rem;font-variant-numeric:tabular-nums;opacity:.55;width:1.5em;flex:none;font-weight:800}
+.toc a:hover{background:var(--paper-2);color:var(--ink)}
+.toc a.active{background:var(--ink);color:var(--paper)}
+.toc a.active .num{opacity:.75}
+.navfoot{margin-top:18px;padding:12px;border:1px dashed var(--line-strong);border-radius:12px;font-size:.72rem;color:var(--muted);line-height:1.55}
+main{max-width:900px;min-width:0;padding:26px 0 100px}
+section{scroll-margin-top:86px;margin:0 0 62px}
+.sec-head{margin:0 0 22px}
+.sec-kicker{display:flex;align-items:center;gap:8px;margin:0 0 8px;font-size:.68rem;font-weight:850;letter-spacing:.16em;text-transform:uppercase;color:var(--coral)}
+.sec-kicker::before{content:"";width:18px;height:2px;background:var(--coral);border-radius:2px}
+h2{font-size:clamp(1.55rem,3.1vw,2.1rem);font-weight:900}
+h3{font-size:1.12rem;font-weight:850;margin:0 0 10px}
+h4{font-size:.95rem;font-weight:800;margin:0 0 6px}
+.sub{color:var(--muted);font-size:.95rem;margin:8px 0 0;max-width:70ch}
+/* ---------- hero ---------- */
+.hero{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(260px,.75fr);gap:28px;align-items:stretch;margin-bottom:54px}
+.hero-copy{background:var(--card);border:1px solid var(--line);border-radius:26px;padding:34px 36px;box-shadow:var(--shadow);position:relative;overflow:hidden}
+.hero-copy::after{content:"";position:absolute;width:220px;height:220px;right:-100px;top:-110px;border-radius:50%;background:radial-gradient(circle,var(--mustard-soft),transparent 68%)}
+.eyebrow{display:inline-flex;align-items:center;gap:8px;font-size:.7rem;font-weight:850;letter-spacing:.1em;text-transform:uppercase;color:var(--teal);margin:0 0 14px}
+.eyebrow .dot{width:8px;height:8px;border-radius:50%;background:var(--coral);box-shadow:0 0 0 4px var(--coral-soft)}
+h1{font-size:clamp(2.15rem,5vw,3.4rem);font-weight:950;letter-spacing:-.045em;margin:0 0 16px}
+h1 mark{background:linear-gradient(180deg,transparent 56%,var(--mustard) 56%,var(--mustard) 92%,transparent 92%);color:inherit;padding:0 .05em}
+.lead{font-size:1.06rem;color:var(--ink);margin:0 0 10px;font-weight:650}
+.hero-desc{color:var(--muted);font-size:.93rem;margin:0 0 20px}
+.chips{display:flex;flex-wrap:wrap;gap:7px}
+.chip{display:inline-flex;align-items:center;gap:5px;padding:5px 10px;border-radius:999px;background:var(--paper-2);border:1px solid var(--line);font-size:.71rem;font-weight:750;color:var(--muted);white-space:nowrap}
+.chip.dark{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.chip.coral{background:var(--coral-soft);border-color:#F2C6B6;color:#9C3416}
+.chip.teal{background:var(--teal-soft);border-color:#BFDDD5;color:#155A4F}
+.hero-art{background:var(--ink);color:var(--paper);border-radius:26px;padding:24px 22px;position:relative;overflow:hidden;box-shadow:var(--shadow);display:flex;flex-direction:column;justify-content:center;min-height:330px}
+.hero-art::before{content:"";position:absolute;inset:0;background-image:radial-gradient(rgba(255,255,255,.09) 1px,transparent 1px);background-size:18px 18px;opacity:.7}
+.hero-art .doodle{position:absolute;opacity:.55;color:var(--mustard)}
+.flow{position:relative;z-index:1;display:grid;gap:4px}
+.flow-node{display:flex;align-items:center;gap:11px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.13);border-radius:13px;padding:9px 12px}
+.flow-node .ficon{font-size:1.1rem;width:30px;height:30px;display:grid;place-items:center;background:rgba(255,255,255,.09);border-radius:9px;flex:none}
+.flow-node b{font-size:.85rem;display:block;line-height:1.2}
+.flow-node small{display:block;font-family:var(--mono);font-size:.62rem;color:#C9BEAA;line-height:1.4}
+.flow-link{justify-self:center;color:var(--mustard);font-size:.85rem;line-height:1;padding:2px 0;opacity:.8}
+.hero-note{position:relative;z-index:1;margin:14px 0 0;font-size:.68rem;color:#BDB29E;line-height:1.5}
+/* ---------- generic cards ---------- */
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:22px 24px;box-shadow:var(--shadow)}
+.card + .card{margin-top:14px}
+.card.flat{box-shadow:none}
+.grid-2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.grid-3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.grid-4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.layer{border-radius:14px;padding:14px 16px;border:1px solid;margin:12px 0}
+.layer p:last-child{margin-bottom:0}
+.layer .tag{display:inline-flex;align-items:center;gap:6px;font-size:.64rem;font-weight:900;letter-spacing:.1em;text-transform:uppercase;margin-bottom:5px}
+.analogy{background:var(--mustard-soft);border-color:#EAD6A5}
+.analogy .tag{color:#8A6412}
+.precise{background:var(--teal-soft);border-color:#C2DFD7}
+.precise .tag{color:#155A4F}
+.gotcha{background:var(--coral-soft);border-color:#F2C6B6}
+.gotcha .tag{color:#9C3416}
+.callout{display:flex;gap:13px;padding:15px 17px;border-radius:14px;background:var(--paper-2);border:1px dashed var(--line-strong);margin:14px 0}
+.callout .ico{font-size:1.15rem;line-height:1.4;flex:none}
+.callout p:last-child{margin-bottom:0}
+.callout.warn{background:var(--coral-soft);border-color:#EAB6A3}
+.callout.ok{background:var(--teal-soft);border-color:#B8D8CE}
+.note{font-size:.8rem;color:var(--muted);line-height:1.6}
+.note strong{color:var(--ink)}
+.kicker-inline{font-size:.68rem;font-weight:900;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin:0 0 6px}
+/* ---------- table ---------- */
+.scroll-x{overflow-x:auto;border:1px solid var(--line);border-radius:14px;background:var(--card)}
+.table{width:100%;border-collapse:collapse;font-size:.86rem;min-width:520px}
+.table th,.table td{padding:10px 13px;text-align:left;vertical-align:top;border-bottom:1px solid var(--line)}
+.table th{font-size:.64rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);background:var(--paper-2);font-weight:900;white-space:nowrap}
+.table tr:last-child td{border-bottom:0}
+.table td code{white-space:nowrap}
+.table.compact{min-width:420px}
+/* ---------- code ---------- */
+.code{background:var(--code);color:var(--code-ink);border:1px solid #2A2622;border-radius:14px;padding:17px 19px;overflow:auto;font-family:var(--mono);font-size:12.6px;line-height:1.7;margin:14px 0;tab-size:4;scrollbar-width:thin}
+.code code{font:inherit;background:none;border:0;padding:0;white-space:pre;display:block;min-width:max-content}
+.tok-k{color:#F0A868}
+.tok-str{color:#A8D8B9}
+.tok-doc{color:#93A8A1;font-style:italic}
+.tok-n{color:#E9C46A}
+.tok-fn{color:#8ECAE6}
+.tok-dec{color:#D8A7E8}
+.tok-com{color:#8C8272;font-style:italic}
+.code-cap{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:16px 0 -4px;font-size:.69rem;font-weight:850;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.code-cap span:last-child{font-weight:600;letter-spacing:0;text-transform:none;color:var(--muted)}
+.codewrap{display:grid;grid-template-columns:54px minmax(0,1fr);background:var(--code);border:1px solid #2A2622;border-radius:14px;overflow:hidden;margin-top:12px}
+.gutter{padding:17px 9px 17px 0;text-align:right;color:#6E6457;border-right:1px solid #2A2622;font-family:var(--mono);font-size:12.6px;line-height:1.7;user-select:none;white-space:pre;background:#151210}
+.codewrap .code{border:0;border-radius:0;margin:0;padding:17px 19px;max-height:560px}
+/* ---------- steps ---------- */
+.steps{counter-reset:step;display:grid;gap:9px;margin:14px 0}
+.step{position:relative;padding:11px 14px 11px 46px;background:var(--paper);border:1px solid var(--line);border-radius:12px;font-size:.88rem;line-height:1.6}
+.step::before{counter-increment:step;content:counter(step);position:absolute;left:11px;top:11px;width:25px;height:25px;border-radius:50%;background:var(--ink);color:var(--paper);display:grid;place-items:center;font-size:.7rem;font-weight:900}
+.step p{margin:0}
+.step b{font-weight:850}
+/* ---------- interactive panels ---------- */
+.panel{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:20px 22px;box-shadow:var(--shadow);margin:18px 0}
+.panel-head{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;margin-bottom:12px}
+.panel-head h3{margin:0;display:flex;align-items:center;gap:8px}
+.panel-head .badge{font-size:.6rem;font-weight:900;letter-spacing:.08em;text-transform:uppercase;background:var(--mustard-soft);border:1px solid #E6D09B;color:#7A5810;padding:3px 8px;border-radius:999px;white-space:nowrap}
+.controls{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin:10px 0}
+.controls label{font-size:.78rem;font-weight:750;color:var(--muted);display:inline-flex;align-items:center;gap:7px}
+.controls label.range-label{display:grid;grid-template-columns:auto minmax(80px,1fr) 3.4em;gap:9px;align-items:center;flex:1 1 320px;max-width:430px;white-space:nowrap}
+.controls label.range-label input[type=range]{width:100%;max-width:none}
+.controls label.range-label b{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+.btn{font:inherit;font-size:.78rem;font-weight:800;border-radius:10px;padding:8px 14px;border:1px solid var(--line-strong);background:var(--card);color:var(--ink);cursor:pointer;transition:transform .12s,background .15s,border-color .15s;text-decoration:none;display:inline-flex;align-items:center;gap:6px}
+.btn:hover{transform:translateY(-1px);border-color:var(--ink)}
+.btn:active{transform:translateY(0)}
+.btn.primary{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.btn.primary:hover{background:#000}
+.btn.soft{background:var(--paper-2)}
+.btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
+input[type=range]{accent-color:var(--coral);width:100%;max-width:240px;cursor:pointer}
+input[type=text],select{font:inherit;font-size:.8rem;padding:7px 10px;border:1px solid var(--line-strong);border-radius:9px;background:var(--card);color:var(--ink);max-width:100%}
+input[type=checkbox]{accent-color:var(--teal);width:17px;height:17px}
+.switch{display:inline-flex;align-items:center;gap:8px;font-size:.78rem;font-weight:750;color:var(--ink);cursor:pointer;user-select:none}
+.readout{display:grid;grid-template-columns:repeat(auto-fit,minmax(112px,1fr));gap:8px;margin-top:12px}
+.stat{background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:8px 10px;min-width:0}
+.stat .k{display:block;font-size:.62rem;font-weight:850;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);line-height:1.3}
+.stat b{display:block;font-size:1.02rem;font-variant-numeric:tabular-nums;line-height:1.4;letter-spacing:-.02em}
+.stat.hot b{color:var(--coral)}
+.stat.cool b{color:var(--teal)}
+.formula{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:12px 14px;font-family:var(--mono);font-size:.8rem;line-height:1.8;overflow-x:auto}
+.formula .hl{color:var(--coral);font-weight:800}
+.canvas-box{position:relative;background:var(--paper);border:1px solid var(--line);border-radius:14px;overflow:hidden;margin-top:10px}
+#cosCanvas{display:block;width:100%;height:320px;touch-action:none;cursor:crosshair}
+.canvas-hint{position:absolute;left:12px;bottom:10px;font-size:.66rem;color:var(--muted);background:rgba(251,247,239,.85);border:1px solid var(--line);border-radius:8px;padding:3px 8px;pointer-events:none}
+.presets{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.presets .btn{font-size:.7rem;padding:6px 10px}
+/* ---------- normalization ---------- */
+.norm-grid{display:grid;grid-template-columns:minmax(0,1fr) 170px;gap:18px;align-items:start}
+.norm-row{display:grid;grid-template-columns:58px minmax(0,1fr) 62px;gap:10px;align-items:center;margin:7px 0;font-size:.76rem}
+.norm-row span:last-child{text-align:right;font-variant-numeric:tabular-nums;font-weight:800}
+.swatch{height:100px;border-radius:14px;border:1px solid var(--line-strong);display:grid;place-items:end center;padding:8px;font-size:.65rem;font-weight:800;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.55);background:#888}
+.norm-table{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:10px}
+.norm-table .stat b{font-size:.92rem}
+/* ---------- batch ---------- */
+.batch-visual{display:flex;flex-wrap:wrap;gap:3px;margin-top:12px;min-height:18px}
+.batch-visual i{display:block;width:14px;height:18px;border-radius:4px;background:var(--teal);opacity:.85}
+.batch-visual i:last-child{background:var(--coral)}
+.batch-visual .more{font-size:.7rem;color:var(--muted);align-self:center;margin-left:4px}
+/* ---------- eurosat ---------- */
+.split{display:grid;gap:7px;margin-top:12px}
+.split-row{display:grid;grid-template-columns:170px minmax(0,1fr) 82px;gap:10px;align-items:center}
+.split-name{font-size:.74rem;font-weight:750;line-height:1.3;min-width:0}
+.split-name em{display:block;font-style:normal;font-weight:600;font-size:.64rem;color:var(--muted)}
+.blocks{display:flex;gap:3px;height:20px}
+.block{flex:1;border-radius:4px;background:#E9E1D2;transition:background .35s ease,transform .35s ease;transform-origin:center}
+.block.pool{background:var(--coral)}
+.block.test{background:var(--teal)}
+.block.unused{background:#E9E1D2}
+.blocks.shuffling .block{transform:scaleY(.35)}
+.split-count{font-size:.66rem;color:var(--muted);text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.legend{display:flex;flex-wrap:wrap;gap:12px;margin-top:12px;font-size:.7rem;color:var(--muted)}
+.legend i{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+.legend .p{background:var(--coral)}.legend .t{background:var(--teal)}.legend .u{background:#E9E1D2;border:1px solid var(--line-strong)}
+.split-result{font-size:.78rem;font-weight:750;margin-top:10px}
+.split-result.ok{color:var(--teal)}
+.split-result.bad{color:var(--coral)}
+/* ---------- cache ---------- */
+.cache-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);gap:14px}
+.log{background:var(--code);color:var(--code-ink);border-radius:12px;padding:12px 14px;font-family:var(--mono);font-size:11.8px;line-height:1.75;min-height:122px;max-height:180px;overflow:auto;white-space:pre-wrap;margin:0}
+.log .hit{color:#A8D8B9}.log .miss{color:#F0A868}.log .warnline{color:#F2A08A}.log .dim{color:#8C8272}
+.cache-warn{display:none;margin-top:10px;padding:10px 12px;border-radius:10px;background:var(--coral-soft);border:1px solid #EAB6A3;font-size:.76rem;line-height:1.55}
+.cache-warn.show{display:block}
+/* ---------- patch grid ---------- */
+.patch-layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:18px;align-items:start}
+.patch-wrap{position:relative;aspect-ratio:1/1;max-width:420px;border-radius:12px;overflow:hidden;border:1px solid var(--line-strong);background:#5B7A4C}
+.patch-bg{position:absolute;inset:0;background:
+  radial-gradient(circle at 20% 26%,rgba(110,139,74,.95) 0 14%,transparent 15%),
+  radial-gradient(circle at 76% 64%,rgba(183,163,106,.9) 0 20%,transparent 21%),
+  radial-gradient(circle at 38% 82%,rgba(72,104,62,.9) 0 17%,transparent 18%),
+  repeating-linear-gradient(34deg,rgba(255,255,255,.11) 0 2px,transparent 2px 15px),
+  repeating-linear-gradient(-18deg,rgba(0,0,0,.08) 0 1px,transparent 1px 19px),
+  linear-gradient(135deg,#4E6B3A,#8FA36A 42%,#C2B280 72%,#5B7A4C);}
+.patch-grid{position:absolute;inset:0;display:grid;grid-template-columns:repeat(14,1fr);grid-template-rows:repeat(14,1fr)}
+.patch{border:1px solid rgba(255,255,255,.19);background:transparent;padding:0;cursor:pointer;transition:background .12s}
+.patch:hover,.patch:focus-visible{background:rgba(228,87,46,.38);outline:2px solid #fff;outline-offset:-2px}
+.patch.sel{background:rgba(31,122,108,.5);box-shadow:inset 0 0 0 2px #fff}
+.prefix-strip{display:none;flex-wrap:wrap;gap:5px;margin:10px 0 0;align-items:center}
+.prefix-strip.show{display:flex}
+.prefix-strip .tok{font-size:.64rem;font-weight:850;padding:4px 8px;border-radius:7px;background:var(--coral-soft);border:1px solid #F0C2B1;color:#9C3416;white-space:nowrap}
+.prefix-strip .tok.patchtok{background:var(--teal-soft);border-color:#BFDDD5;color:#155A4F}
+.prefix-strip .arrow{color:var(--muted);font-size:.7rem}
+.patch-readout{background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:9px 12px;font-size:.76rem;line-height:1.55;margin-top:10px;min-height:58px}
+.patch-readout b{color:var(--coral)}
+/* ---------- quiz ---------- */
+.quiz-top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
+.quiz-count{font-size:.72rem;font-weight:850;color:var(--muted);letter-spacing:.06em}
+.quiz-track{height:6px;border-radius:999px;background:var(--paper-3);overflow:hidden;flex:1;max-width:220px}
+.quiz-track i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--coral),var(--mustard));transition:width .3s}
+.quiz-q{font-size:1.02rem;font-weight:850;line-height:1.5;margin:0 0 13px}
+.quiz-opts{display:grid;gap:8px}
+.opt{font:inherit;font-size:.86rem;line-height:1.5;text-align:left;padding:11px 14px;border:1px solid var(--line-strong);border-radius:11px;background:var(--card);color:var(--ink);cursor:pointer;display:flex;gap:10px;align-items:flex-start;transition:border-color .15s,transform .12s,background .15s}
+.opt:hover:not(:disabled){border-color:var(--ink);transform:translateY(-1px)}
+.opt .ltr{font-size:.66rem;font-weight:900;width:20px;height:20px;border-radius:50%;background:var(--paper-2);border:1px solid var(--line);display:grid;place-items:center;flex:none;margin-top:1px}
+.opt.correct{background:var(--teal-soft);border-color:var(--teal)}
+.opt.correct .ltr{background:var(--teal);color:#fff;border-color:var(--teal)}
+.opt.wrong{background:var(--coral-soft);border-color:var(--coral)}
+.opt.wrong .ltr{background:var(--coral);color:#fff;border-color:var(--coral)}
+.opt:disabled{cursor:default}
+.quiz-fb{display:none;margin-top:12px;padding:12px 14px;border-radius:11px;font-size:.82rem;line-height:1.6;background:var(--paper-2);border:1px solid var(--line)}
+.quiz-fb.show{display:block}
+.quiz-fb.ok{background:var(--teal-soft);border-color:#B8D8CE}
+.quiz-fb.no{background:var(--coral-soft);border-color:#EAB6A3}
+.quiz-fb b{display:block;margin-bottom:2px}
+.quiz-actions{display:flex;justify-content:flex-end;margin-top:12px}
+.quiz-result{text-align:center;padding:12px 0}
+.quiz-result .score{font-size:3rem;font-weight:950;letter-spacing:-.05em;line-height:1;color:var(--coral)}
+.quiz-result .score small{font-size:1rem;color:var(--muted);font-weight:750}
+/* ---------- accordion ---------- */
+.acc{background:var(--card);border:1px solid var(--line);border-radius:12px;margin-bottom:7px;overflow:hidden}
+.acc summary{cursor:pointer;padding:11px 15px;font-size:.86rem;font-weight:800;list-style:none;display:flex;align-items:center;justify-content:space-between;gap:10px}
+.acc summary::-webkit-details-marker{display:none}
+.acc summary::after{content:"+";font-size:1rem;color:var(--coral);font-weight:900;flex:none}
+.acc[open] summary::after{content:"−"}
+.acc[open] summary{background:var(--paper);border-bottom:1px solid var(--line)}
+.acc .body{padding:11px 15px 13px;font-size:.82rem;color:var(--muted);line-height:1.65}
+.acc .body p:last-child{margin-bottom:0}
+.acc .body code{font-size:.84em}
+/* ---------- misc ---------- */
+.arrow-list{list-style:none;padding:0;margin:10px 0}
+.arrow-list li{position:relative;padding-left:20px;margin:6px 0;font-size:.87rem}
+.arrow-list li::before{content:"→";position:absolute;left:0;color:var(--coral);font-weight:900}
+.mini-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:9px;margin:12px 0}
+.mini{background:var(--paper);border:1px solid var(--line);border-radius:11px;padding:10px 12px;font-size:.76rem;line-height:1.5}
+.mini b{display:block;font-size:.86rem;margin-bottom:2px}
+.mini .mono{font-family:var(--mono);font-size:.68rem;color:var(--muted)}
+.quote{border-left:3px solid var(--mustard);padding:2px 0 2px 14px;color:var(--muted);font-size:.9rem;margin:12px 0}
+.tag-list{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}
+.footer{border-top:1px solid var(--line);margin-top:20px;padding:30px 24px 44px;background:var(--paper-2)}
+.footer-inner{max-width:900px;margin:0 auto;font-size:.76rem;color:var(--muted);line-height:1.7}
+.footer-inner strong{color:var(--ink)}
+.footer-links{display:flex;flex-wrap:wrap;gap:14px;margin-top:8px}
+/* ---------- responsive ---------- */
+@media (max-width:1080px){
+  .layout{grid-template-columns:minmax(0,1fr);gap:0;padding-top:58px}
+  .sidenav{position:sticky;top:58px;z-index:40;max-height:none;min-width:0;overflow:visible;background:rgba(251,247,239,.96);backdrop-filter:blur(10px);border-bottom:1px solid var(--line);padding:8px 0;margin:0 -24px;padding-left:24px;padding-right:24px}
+  .navlabel,.navfoot{display:none}
+  .toc{display:flex;gap:5px;overflow-x:auto;padding-bottom:3px;scrollbar-width:thin;max-width:100%}
+  .toc a{white-space:nowrap;padding:5px 9px;font-size:.75rem;border:1px solid var(--line)}
+  .toc a.active{border-color:var(--ink)}
+  main{max-width:none;padding-top:26px}
+}
+@media (max-width:820px){
+  .hero{grid-template-columns:1fr}
+  .hero-art{min-height:0}
+  .grid-3,.grid-4{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .patch-layout,.cache-grid,.norm-grid{grid-template-columns:1fr}
+  .swatch{height:64px}
+  .split-row{grid-template-columns:120px minmax(0,1fr) 62px;gap:8px}
+}
+@media (max-width:620px){
+  body{font-size:15.5px}
+  .layout{padding-left:16px;padding-right:16px}
+  .sidenav{margin:0 -16px;padding-left:16px;padding-right:16px}
+  .hero-copy{padding:24px 20px}
+  .hero-art{padding:18px}
+  .card,.panel{padding:17px 16px}
+  .grid-2,.grid-3,.grid-4{grid-template-columns:1fr}
+  .split-row{grid-template-columns:98px minmax(0,1fr)}
+  .split-count{display:none}
+  .code{font-size:11.6px;padding:14px}
+  .codewrap{grid-template-columns:42px minmax(0,1fr)}
+  .gutter{font-size:11.6px;padding-right:7px}
+  .codewrap .code{max-height:420px}
+  h1{font-size:2.1rem}
+  .topmeta .chip:not(.keep){display:none}
+  .step{padding-left:42px}
+}
+@media (prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+  *,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}
+}
+</style>
+</head>
+<body>
+<a class="skip" href="#main">본문으로 건너뛰기</a>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <a class="brand" href="#hero"><span class="logo">D</span><span>common_dino.py 강의</span></a>
+    <div class="topmeta">
+      <span class="chip keep">4일차 · DINOv3</span>
+      <span class="chip">약 35분</span>
+    </div>
+  </div>
+  <div id="progress" aria-hidden="true"></div>
+</header>
+
+<div class="layout">
+  <aside class="sidenav" aria-label="강의 목차">
+    <p class="navlabel">Lecture map</p>
+    <nav class="toc" id="toc">
+      <a href="#hero"><span class="num">00</span>시작</a>
+      <a href="#map"><span class="num">01</span>파일 지도</a>
+      <a href="#imports"><span class="num">02</span>준비물</a>
+      <a href="#constants"><span class="num">03</span>상수 8개</a>
+      <a href="#device"><span class="num">04</span>pick_device</a>
+      <a href="#load"><span class="num">05</span>load</a>
+      <a href="#tensor"><span class="num">06</span>_tensor</a>
+      <a href="#embed"><span class="num">07</span>embed</a>
+      <a href="#patch"><span class="num">08</span>patch_tokens</a>
+      <a href="#pixels"><span class="num">09</span>pixels</a>
+      <a href="#eurosat"><span class="num">10</span>eurosat</a>
+      <a href="#cached"><span class="num">11</span>cached</a>
+      <a href="#labs"><span class="num">12</span>실습 연결</a>
+      <a href="#fullcode"><span class="num">13</span>전체 코드</a>
+      <a href="#quiz"><span class="num">14</span>퀴즈</a>
+      <a href="#glossary"><span class="num">15</span>용어 사전</a>
+      <a href="#cheatsheet"><span class="num">16</span>치트시트</a>
+    </nav>
+    <div class="navfoot">
+      <strong>한 줄도 생략 없음.</strong><br>
+      모든 함수·상수·기본값·함정을 다룹니다. 코드는 원문 그대로 실었어요.
+    </div>
+  </aside>
+
+  <main id="main">
+    <section id="hero" class="hero" data-lecture-section="hero">
+      <div class="hero-copy">
+        <p class="eyebrow"><span class="dot"></span> YOLO 특강 · 4일차 · DINOv3</p>
+        <h1>사진을 숫자로 바꾸는<br><mark>요술 상자</mark></h1>
+        <p class="lead"><code>common_dino.py</code>를 5살에게 설명하듯 — 하지만 <strong>한 줄도 빼먹지 않고</strong> 읽는 강의.</p>
+        <p class="hero-desc">이 파일은 혼자 실행되는 프로그램이 아니라, 4일차 실습 파일 5개가 함께 쓰는 <strong>공용 도구 상자</strong>예요. 사진을 열고, 똑똑한 눈(DINOv3)으로 특징을 뽑고, 위성사진을 시험용으로 나누고, 오래 걸리는 계산을 서랍에 저장합니다.</p>
+        <div class="chips">
+          <span class="chip dark">101줄</span>
+          <span class="chip">함수 8개</span>
+          <span class="chip teal">ViT-S/16 · 384차원</span>
+          <span class="chip">EuroSAT 10종</span>
+          <span class="chip coral">오프라인 1파일</span>
+        </div>
+      </div>
+      <div class="hero-art" aria-hidden="true">
+        <svg class="doodle" style="right:14px;top:14px" width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2l2.4 7.6L22 12l-7.6 2.4L12 22l-2.4-7.6L2 12l7.6-2.4z"/></svg>
+        <svg class="doodle" style="left:16px;bottom:16px" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="9"/><path d="M8 12h8M12 8v8"/></svg>
+        <div class="flow">
+          <div class="flow-node"><span class="ficon">📷</span><div><b>사진</b><small>PIL.Image</small></div></div>
+          <div class="flow-link">↓</div>
+          <div class="flow-node"><span class="ficon">🧠</span><div><b>DINOv3 눈</b><small>timm · pretrained</small></div></div>
+          <div class="flow-link">↓</div>
+          <div class="flow-node"><span class="ficon">🔢</span><div><b>숫자 벡터</b><small>(N, 384) · 길이 1</small></div></div>
+          <div class="flow-link">↓</div>
+          <div class="flow-node"><span class="ficon">📐</span><div><b>내적 = 비슷함</b><small>cosine similarity</small></div></div>
+        </div>
+        <p class="hero-note">한 장의 사진이 384개의 숫자로. 비슷한 사진은 비슷한 숫자가 됩니다.</p>
+      </div>
+    </section>
+
+    <section id="map" data-lecture-section="map">
+      <div class="sec-head">
+        <p class="sec-kicker">01 · 파일 지도</p>
+        <h2>이 파일은 누가 쓰나요?</h2>
+        <p class="sub">먼저 큰 그림. <code>common_dino.py</code>는 “실행 파일”이 아니라 “부품 창고”입니다. 4일차 실습 5개가 여기서 부품을 꺼내 씁니다.</p>
+      </div>
+
+      <div class="layer analogy">
+        <span class="tag">🍭 5살 비유</span>
+        <p>여러 명이 같이 쓰는 <strong>공용 반찬통 서랍</strong>이에요. 누군가 사진을 열어 놓으면, 다른 친구는 그 사진을 또 열 필요 없이 그냥 꺼내 쓰면 되죠. 서랍 위치(폴더)도 항상 같아서 헷갈리지 않아요.</p>
+      </div>
+
+      <div class="scroll-x">
+        <table class="table">
+          <thead><tr><th>실습 파일</th><th>가져다 쓰는 부품</th><th>대략 이런 일에</th></tr></thead>
+          <tbody>
+            <tr><td><code>lab17_pca.py</code></td><td><code>MODEL</code>, <code>OUT</code>, <code>load</code>, <code>patch_tokens</code></td><td>패치 특징을 PCA로 눌러 그림으로 보기</td></tr>
+            <tr><td><code>lab18_fewshot.py</code></td><td><code>MODEL</code>, <code>cached</code>, <code>embed</code>, <code>eurosat</code>, <code>load</code>, <code>pixels</code></td><td>몇 장만 보고 분류(few-shot), 픽셀 기준선과 비교</td></tr>
+            <tr><td><code>lab19_search.py</code></td><td><code>cached</code>, <code>embed</code>, <code>eurosat</code>, <code>load</code>, <code>patch_tokens</code>, <code>pixels</code></td><td>비슷한 사진 찾기(검색), 패치 단위 비교</td></tr>
+            <tr><td><code>lab20_reid.py</code></td><td><code>load</code>, <code>embed as dino_embed</code></td><td>같은 물체/사람 다시 찾기(ReID)</td></tr>
+            <tr><td><code>lab21_small.py</code></td><td><code>MODEL</code>, <code>SMALL</code>, <code>cached</code>, <code>embed</code>, <code>eurosat</code>, <code>load</code>, <code>pick_device</code></td><td>ViT와 ConvNeXt, 학습된 것과 무작위 것 비교</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout">
+        <span class="ico">🚪</span>
+        <div><p><strong>이 파일을 직접 실행하면?</strong> 아무 일도 안 일어납니다. 맨 아래에 <code>if __name__ == "__main__":</code> 같은 실행 블록이 없거든요. 함수와 상수만 정의해 둔 <strong>라이브러리</strong>입니다. 다른 파일이 <code>from common_dino import load</code>처럼 불러다 씁니다.</p></div>
+      </div>
+
+      <div class="grid-2">
+        <div class="card flat">
+          <h4>왜 하나로 모았을까?</h4>
+          <ul class="arrow-list">
+            <li>전처리(크기·평균·표준편차)를 실습마다 똑같이 맞추려고</li>
+            <li>데이터 경로와 캐시 경로를 한 곳에서 정하려고</li>
+            <li>모델 이름·시드·사진 수를 한 번만 바꾸면 되게 하려고</li>
+            <li>같은 특징을 여러 실습에서 재사용하려고</li>
+          </ul>
+        </div>
+        <div class="card flat">
+          <h4>라이선스 메모</h4>
+          <p class="note">DINOv3로 만들었고, 가중치는 Meta의 <strong>DINOv3 License</strong>를 따릅니다. 문서에 적힌 링크는 <code>ai.meta.com/resources/models-and-libraries/dinov3-license/</code>. timm에 올라온 가중치를 쓰기 때문에 <strong>Hugging Face 로그인 없이</strong> 내려받아집니다. 이 페이지는 학습용 해설이고, 공식 문서가 아닙니다.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="imports" data-lecture-section="imports">
+      <div class="sec-head">
+        <p class="sec-kicker">02 · 준비물</p>
+        <h2>맨 위의 import 6줄</h2>
+        <p class="sub">요술 상자를 열기 전에, 어떤 도구를 꺼내는지 봅니다. 순서까지 의미가 있어요.</p>
+      </div>
+
+      <div class="code-cap"><span>common_dino.py · 8–16행</span><span>원문 그대로</span></div>
+      <pre class="code"><code>import warnings
+from pathlib import Path
+
+warnings.filterwarnings("ignore", category=UserWarning)
+
+import numpy as np
+import timm
+import torch
+from PIL import Image</code></pre>
+
+      <div class="layer precise">
+        <span class="tag">🔬 정확히는</span>
+        <p><code>warnings</code>는 경고 메시지를 다루는 표준 라이브러리, <code>Path</code>는 운영체제에 상관없는 경로 객체, <code>numpy</code>는 숫자 배열, <code>timm</code>은 PyTorch 이미지 모델 도서관, <code>torch</code>는 딥러닝 엔진, <code>PIL.Image</code>는 사진을 열고 자르고 줄이는 도구입니다.</p>
+      </div>
+
+      <div class="grid-3">
+        <div class="mini"><b>warnings</b><span class="mono">표준 라이브러리</span>시끄러운 경고 벨을 끄는 도구.</div>
+        <div class="mini"><b>pathlib.Path</b><span class="mono">표준 라이브러리</span>폴더/파일 주소를 객체로. <code>/</code> 연산자로 경로를 이어 붙임.</div>
+        <div class="mini"><b>numpy as np</b><span class="mono">pip 패키지</span>사진을 숫자 배열로, 특징을 행렬로 다룸.</div>
+        <div class="mini"><b>timm</b><span class="mono">pip 패키지</span>“모델 이름 → 만들어진 모델”로 바꿔 주는 도서관. DINOv3 가중치도 여기서.</div>
+        <div class="mini"><b>torch</b><span class="mono">pip 패키지</span>텐서, GPU, 신경망 실행 엔진. <code>torch.no_grad</code>도 여기.</div>
+        <div class="mini"><b>PIL.Image</b><span class="mono">Pillow 패키지</span>JPG/PNG를 열고 <code>RGB</code>로 바꾸고 <code>resize</code>하는 사진 도구.</div>
+      </div>
+
+      <h3 style="margin-top:22px">⚠️ 경고 필터가 import보다 먼저인 이유</h3>
+      <p><code>warnings.filterwarnings(...)</code>가 <code>numpy</code>·<code>timm</code>·<code>torch</code>·<code>PIL</code>을 import하기 <strong>전에</strong> 실행됩니다. import되는 순간 라이브러리들이 내는 <code>UserWarning</code>까지 조용히 만들기 위해서예요. 만약 필터를 맨 아래에 두면, import 중에 이미 튀어나온 경고는 못 막습니다.</p>
+      <div class="callout warn">
+        <span class="ico">📢</span>
+        <div><p><strong>부작용도 있어요.</strong> 이 설정은 이 프로세스 전체에 적용됩니다. 내 코드의 진짜 경고까지 같이 숨길 수 있으니, 디버깅할 때는 이 줄을 잠시 끄는 편이 좋습니다. <code>category=UserWarning</code>만 끄고, 에러(<code>Error</code>)는 끄지 않아요.</p></div>
+      </div>
+
+      <div class="layer analogy">
+        <span class="tag">🍭 5살 비유</span>
+        <p>도서관에 들어가기 전에 휴대폰을 무음으로 해 두는 거예요. 책을 꺼내는 순간(<code>import</code>) 울리는 알림까지 조용해지려면, 들어가기 <strong>전에</strong> 미리 꺼야 하죠.</p>
+      </div>
+    </section>
+
+    <section id="constants" data-lecture-section="constants">
+      <div class="sec-head">
+        <p class="sec-kicker">03 · 상수 8개</p>
+        <h2>이 파일의 “설정값” 전부</h2>
+        <p class="sub">경로 3개, 모델 이름 2개, 시드 1개, 사진 수 2개. 실습 전체가 이 숫자들을 공유합니다.</p>
+      </div>
+
+      <div class="code-cap"><span>common_dino.py · 18–25행</span><span>원문 그대로</span></div>
+      <pre class="code"><code>HERE = Path(__file__).resolve().parent
+DATA = HERE / "data"
+OUT = HERE / "runs" / "dino"
+MODEL = "vit_small_patch16_dinov3.lvd1689m"      # ViT-S/16, 2,160만 파라미터
+SMALL = "convnext_tiny.dinov3_lvd1689m"          # 합성곱 판, 2,780만 파라미터(20차시)
+SEED = 7
+POOL_PER_CLASS = 50     # 라벨을 고를 수 있는 사진(클래스마다)
+TEST_PER_CLASS = 100    # 시험 사진(클래스마다)</code></pre>
+
+      <div class="grid-2" style="margin-top:14px">
+        <div class="card flat">
+          <h4><code>HERE</code> — 이 파일의 집 주소</h4>
+          <p class="note"><code>Path(__file__)</code>는 지금 이 파이썬 파일의 경로, <code>.resolve()</code>는 상대 경로를 절대 경로로 풀고, <code>.parent</code>는 그 파일이 들어 있는 폴더입니다. 그래서 <strong>어디서 실행하든</strong> <code>common_dino.py</code>가 있는 폴더를 가리켜요.</p>
+        </div>
+        <div class="card flat">
+          <h4><code>DATA</code> · <code>OUT</code> — 두 개의 서랍</h4>
+          <p class="note"><code>DATA</code>는 데이터셋을 내려받는 곳(<code>data/</code>), <code>OUT</code>은 특징 캐시를 저장하는 곳(<code>runs/dino/</code>). 둘 다 <code>HERE</code> 기준이라 현재 작업 폴더(cwd)와 무관합니다.</p>
+        </div>
+        <div class="card flat">
+          <h4><code>MODEL</code> — 주인공 눈</h4>
+          <p class="note"><code>vit_small_patch16_dinov3.lvd1689m</code>. ViT-S/16 구조, 약 <strong>2,160만 개</strong>의 학습 가능한 숫자(파라미터).</p>
+        </div>
+        <div class="card flat">
+          <h4><code>SMALL</code> — 합성곱 친구</h4>
+          <p class="note"><code>convnext_tiny.dinov3_lvd1689m</code>. ViT가 아닌 <strong>ConvNeXt-Tiny</strong> 판, 약 <strong>2,780만 개</strong> 파라미터. 주석에 “20차시”라고 적혀 있고, <code>lab21_small.py</code>가 가져다 씁니다.</p>
+        </div>
+        <div class="card flat">
+          <h4><code>SEED = 7</code> — “같은 순서” 마법</h4>
+          <p class="note">두 곳에서 쓰입니다. <code>load()</code>의 <code>torch.manual_seed(SEED)</code>(무작위 초기값 재현)와 <code>eurosat()</code>의 <code>np.random.default_rng(SEED)</code>(사진 섞기 재현). 서로 다른 난수 생성기라서 따로 설정합니다.</p>
+        </div>
+        <div class="card flat">
+          <h4><code>POOL_PER_CLASS = 50</code></h4>
+          <p class="note">클래스마다 <strong>라벨을 보고 골라도 되는</strong> 사진 50장. few-shot에서 “배울 예시”로 쓰는 pool입니다. 시험 사진과 겹치지 않아요.</p>
+        </div>
+      </div>
+
+      <div class="card flat" style="margin-top:14px">
+        <h4><code>TEST_PER_CLASS = 100</code> — 시험지</h4>
+        <p class="note">클래스마다 <strong>정답을 숨겨 둔</strong> 시험 사진 100장. pool과 완전히 분리됩니다. 총 사용량: 10클래스 × (50 + 100) = <strong>1,500장</strong>. EuroSAT 전체는 약 27,000장이라 대부분은 이 실습에서 쓰지 않아요.</p>
+      </div>
+
+      <h3 style="margin-top:24px">모델 이름 해부</h3>
+      <div class="scroll-x">
+        <table class="table compact">
+          <thead><tr><th>조각</th><th>뜻</th></tr></thead>
+          <tbody>
+            <tr><td><code>vit</code></td><td>Vision Transformer. 이미지를 16×16 조각으로 잘라 토큰처럼 처리하는 구조.</td></tr>
+            <tr><td><code>small</code></td><td>크기 등급(S). tiny/base/large보다 작고 빠름. 그래도 384차원 특징을 냅니다.</td></tr>
+            <tr><td><code>patch16</code></td><td>패치 한 칸이 16×16 픽셀. 그래서 224×224 사진은 14×14=196칸이 됩니다.</td></tr>
+            <tr><td><code>dinov3</code></td><td>Meta의 DINOv3 방식으로 학습된 가중치.</td></tr>
+            <tr><td><code>lvd1689m</code></td><td>학습에 쓴 데이터 이름, LVD-1689M. “어떤 세상를 보고 자랐는지”를 나타내는 꼬리표.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout">
+        <span class="ico">🧵</span>
+        <div><p><strong>경로에 <code>/</code>를 썼는데 괜찮나요?</strong> <code>Path</code> 객체는 <code>/</code> 연산자를 “경로 이어 붙이기”로 재정의합니다. Windows에서는 내부적으로 <code>\</code>로 알아서 바꿔 줍니다. 문자열끼리 <code>"a" / "b"</code> 하면 에러지만, <code>Path</code>끼리는 됩니다.</p></div>
+      </div>
+
+      <div class="layer analogy">
+        <span class="tag">🍭 5살 비유</span>
+        <p><code>HERE</code>는 “우리 집 주소”, <code>DATA</code>는 “장난감 창고”, <code>OUT</code>은 “숙제 보관함”. <code>SEED=7</code>은 “항상 같은 순서로 카드를 섞는 마법 번호”예요. 7번 마법을 쓰면 내일 다시 섞어도 오늘과 똑같은 순서가 나옵니다.</p>
+      </div>
+    </section>
+
+    <section id="device" data-lecture-section="device">
+      <div class="sec-head">
+        <p class="sec-kicker">04 · pick_device()</p>
+        <h2>어디서 계산할까? — 장치 고르기</h2>
+        <p class="sub">모델과 텐서가 놓일 곳을 고릅니다. 빠른 곳이 있으면 빠른 곳, 없으면 차선, 그것도 없으면 CPU.</p>
+      </div>
+
+      <div class="code-cap"><span>common_dino.py · 28–31행</span><span>원문 그대로</span></div>
+      <pre class="code"><code>def pick_device() -> torch.device:
+    if torch.cuda.is_available():
+        return torch.device("cuda")
+    return torch.device("mps" if torch.backends.mps.is_available() else "cpu")</code></pre>
+
+      <div class="steps">
+        <div class="step"><p><b>CUDA가 있나?</b> NVIDIA GPU용. 있으면 바로 <code>torch.device("cuda")</code>를 돌려주고 함수 끝.</p></div>
+        <div class="step"><p><b>없으면 MPS가 있나?</b> Apple Silicon(M1/M2/…)의 Metal Performance Shaders. 있으면 <code>"mps"</code>.</p></div>
+        <div class="step"><p><b>둘 다 없으면</b> <code>"cpu"</code>. 느리지만 어디서든 돌아감.</p></div>
+      </div>
+
+      <div class="layer precise">
+        <span class="tag">🔬 정확히는</span>
+        <p>반환값은 문자열이 아니라 <code>torch.device</code> 객체입니다. <code>.to(pick_device())</code>처럼 모델/텐서를 옮길 때 씁니다. 마지막 줄의 삼항 연산자는 <strong>CUDA가 없을 때만</strong> 평가됩니다. 즉 CUDA가 있으면 MPS는 검사조차 하지 않아요.</p>
+      </div>
+
+      <div class="panel" id="devicePanel">
+        <div class="panel-head"><h3>🎛️ 장치 선택 시뮬레이터</h3><span class="badge">직접 눌러보기</span></div>
+        <p class="note" style="margin-top:0">아래 체크박스로 “이 컴퓨터에 무엇이 있는지”를 흉내 내 보세요. 함수가 어떤 장치를 돌려줄지 바로 보여줍니다.</p>
+        <div class="controls">
+          <label><input type="checkbox" id="hasCuda" checked> CUDA (NVIDIA GPU) 있음</label>
+          <label><input type="checkbox" id="hasMps"> MPS (Apple Silicon) 있음</label>
+        </div>
+        <div class="formula" style="margin-top:10px">반환값 → <span class="hl" id="deviceOut">torch.device("cuda")</span></div>
+        <p class="note" id="deviceWhy" style="margin:8px 0 0">CUDA가 있으니 첫 번째 <code>if</code>에서 바로 반환합니다. MPS는 검사하지 않아요.</p>
+      </div>
+
+      <div class="callout">
+        <span class="ico">💡</span>
+        <div><p>내 컴퓨터에서 실제로 무엇이 잡히는지는 파이썬에서 <code>torch.cuda.is_available()</code>과 <code>torch.backends.mps.is_available()</code>을 직접 출력해 확인하면 됩니다. 이 페이지는 브라우저라서 실제 GPU를 볼 수 없어요.</p></div>
+      </div>
+
+      <div class="layer analogy">
+        <span class="tag">🍭 5살 비유</span>
+        <p>엘리베이터(CUDA)가 있으면 엘리베이터를 타고, 없으면 에스컬레이터(MPS), 그것도 없으면 계단(CPU)으로 올라가는 거예요. 제일 빠른 것부터 확인합니다.</p>
+      </div>
+    </section>
+
+    <section id="load" data-lecture-section="load">
+      <div class="sec-head">
+        <p class="sec-kicker">05 · load()</p>
+        <h2>똑똑한 눈을 데려오기</h2>
+        <p class="sub">DINOv3 모델을 만들고, 분류용 “이름표 기계”를 떼어 내고, 추론 모드로 세팅합니다.</p>
+      </div>
+
+      <div class="code-cap"><span>common_dino.py · 34–37행</span><span>원문 그대로</span></div>
+      <pre class="code"><code>def load(name: str = MODEL, pretrained: bool = True) -> torch.nn.Module:
+    """분류 머리 없이 특징만 내는 모델. pretrained=False면 같은 구조의 무작위 초기값(견줄 거리)."""
+    torch.manual_seed(SEED)
+    return timm.create_model(name, pretrained=pretrained, num_classes=0).eval().to(pick_device())</code></pre>
+
+      <div class="steps">
+        <div class="step"><p><b>기본값</b>은 <code>name=MODEL</code>, <code>pretrained=True</code>. 아무 인자 없이 <code>load()</code>라고 부르면 ViT-S/16 DINOv3가 옵니다.</p></div>
+        <div class="step"><p><b>시드 고정</b>: <code>torch.manual_seed(7)</code>. <code>pretrained=False</code>일 때 무작위 초기값을 항상 똑같이 만들기 위해서예요.</p></div>
+        <div class="step"><p><b>모델 생성</b>: <code>timm.create_model(name, pretrained=pretrained, num_classes=0)</code>. 이름을 주면 그 구조와 (원하면) 학습된 가중치를 만들어 줍니다.</p></div>
+        <div class="step"><p><b>분류 머리 제거</b>: <code>num_classes=0</code>. “이 사진은 고양이”라고 이름표를 붙이는 마지막 층을 없앱니다. 대신 그 앞의 <strong>풍부한 특징 벡터</strong>가 출력됩니다.</p></div>
+        <div class="step"><p><b>추론 모드</b>: <code>.eval()</code>. 드롭아웃을 끄고 BatchNorm이 학습 중 통계 대신 저장된 통계를 쓰게 합니다.</p></div>
+        <div class="step"><p><b>장치로 이동</b>: <code>.to(pick_device())</code>. 모델의 모든 가중치를 GPU/MPS/CPU로 옮깁니다.</p></div>
+      </div>
+
+      <div class="layer precise">
+        <span class="tag">🔬 정확히는</span>
+        <p>일반 분류 모델은 <code>특징 → (1000개 클래스 점수)</code>로 끝납니다. <code>num_classes=0</code>이면 이 마지막 선형층이 사라져서 출력이 <code>(배치, 특징 차원)</code>이 됩니다. ViT-S/16 DINOv3는 <strong>384차원</strong>, ConvNeXt-Tiny는 <strong>768차원</strong>입니다. 정확한 값은 <code>model.num_features</code>로 확인할 수 있어요.</p>
+      </div>
+
+      <div class="scroll-x" style="margin-top:14px">
+        <table class="table compact">
+          <thead><tr><th>모델</th><th>구조</th><th>파라미터</th><th><code>embed()</code> 출력 차원</th><th>쓰임</th></tr></thead>
+          <tbody>
+            <tr><td><code>MODEL</code></td><td>ViT-S/16</td><td>약 2,160만</td><td>384</td><td>기본 특징 추출, 패치 특징</td></tr>
+            <tr><td><code>SMALL</code></td><td>ConvNeXt-Tiny</td><td>약 2,780만</td><td>768</td><td>합성곱 구조 비교</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="panel" id="pretrainedPanel">
+        <div class="panel-head"><h3>🧠 학습된 눈 vs 무작위 눈</h3><span class="badge">개념도</span></div>
+        <p class="note" style="margin-top:0"><code>pretrained=False</code>는 “모델을 안 만든다”가 아니라 <strong>같은 구조에 무작위 숫자</strong>를 넣는 것입니다. 구조는 같지만 세상을 배우지 않은 상태 — 좋은 비교 기준선이 됩니다.</p>
+        <div class="controls">
+          <button class="btn primary" type="button" id="btnPretrained" aria-pressed="true">pretrained=True</button>
+          <button class="btn" type="button" id="btnRandom" aria-pressed="false">pretrained=False</button>
+        </div>
+        <div id="pretrainedViz" class="batch-visual" aria-hidden="true" style="height:44px;align-items:flex-end"></div>
+        <p class="note" id="pretrainedCaption" style="margin:8px 0 0">학습된 특징은 사진의 구조를 따라 규칙적으로 변합니다. (개념을 위한 그림이지 실제 수치가 아니에요.)</p>
+      </div>
+
+      <div class="layer gotcha">
+        <span class="tag">⚠️ 함정</span>
+        <ul class="arrow-list" style="margin-bottom:0">
+          <li><code>.eval()</code>은 “가중치를 얼린다”가 아닙니다. 학습을 막으려면 <code>torch.no_grad()</code>나 옵티마이저를 안 쓰면 됩니다. <code>eval()</code>은 층의 <strong>동작 모드</strong>만 바꿔요.</li>
+          <li><code>manual_seed</code>는 무작위 초기값 재현용. <code>pretrained=True</code>면 어차피 학습된 가중치를 덮어쓰므로 결과가 시드에 크게 흔들리지 않습니다.</li>
+          <li>timm은 처음 실행할 때 가중치를 내려받아 로컬 캐시에 둡니다. 인터넷이 필요할 수 있지만, 문서대로 Hugging Face 로그인은 필요 없어요.</li>
+          <li><code>load()</code>는 모델을 <strong>학습하지 않습니다</strong>. 이미 학습된 눈을 그대로 빌려오는 것.</li>
+        </ul>
+      </div>
+
+      <div class="layer analogy">
+        <span class="tag">🍭 5살 비유</span>
+        <p>요리사에게 “이게 뭔지 이름 맞히기” 게임을 시키면, 요리사는 재료를 보고 이름표를 붙이죠. 우리는 이름표를 떼고 <strong>“이 재료는 이런 맛이야”라는 설명</strong>만 받는 거예요. 그 설명이 바로 특징 벡터입니다.</p>
+      </div>
+    </section>
+
+    <section id="tensor" data-lecture-section="tensor">
+      <div class="sec-head">
+        <p class="sec-kicker">06 · _tensor()</p>
+        <h2>사진을 모델이 먹는 모양으로 바꾸기</h2>
+        <p class="sub">RGB로 맞추고, 크기를 바꾸고, 0~1로 나누고, 채널을 앞으로 옮기고, 평균·표준편차로 정규화합니다. 순서가 전부 중요해요.</p>
+      </div>
+
+      <div class="code-cap"><span>common_dino.py · 40–47행</span><span>원문 그대로</span></div>
+      <pre class="code"><code>def _tensor(model: torch.nn.Module, images: list[Image.Image], size: tuple[int, int]) -> torch.Tensor:
+    """사진을 정한 크기(높이, 너비)로 바꾸고 모델이 배운 평균·표준편차로 정규화한다."""
+    cfg = model.pretrained_cfg
+    mean = torch.tensor(cfg["mean"]).view(1, 3, 1, 1)
+    std = torch.tensor(cfg["std"]).view(1, 3, 1, 1)
+    arrays = [np.asarray(im.convert("RGB").resize((size[1], size[0]), Image.BICUBIC), np.float32) / 255 for im in images]
+    x = torch.from_numpy(np.stack(arrays)).permute(0, 3, 1, 2)
+    return ((x - mean) / std).to(pick_device())</code></pre>
+
+      <div class="steps">
+        <div class="step"><p><b>전처리 레시피 꺼내기</b>: <code>model.pretrained_cfg</code>에는 그 가중치가 학습될 때 쓴 평균·표준편차·크기·보간법이 들어 있습니다. 하드코딩하지 않고 모델에게 물어봅니다.</p></div>
+        <div class="step"><p><b>브로드캐스트 모양</b>: 평균/표준편차를 <code>(1, 3, 1, 1)</code>로 바꿉니다. 배치 N과 공간 H·W에는 자동으로 퍼지고, 채널 3개에만 각각 적용되게 하려는 모양이에요.</p></div>
+        <div class="step"><p><b>RGB 강제</b>: <code>convert("RGB")</code>. 흑백(1채널)이나 투명 PNG(4채널)가 와도 3채널로 맞춥니다.</p></div>
+        <div class="step"><p><b>크기 변경</b>: <code>resize((size[1], size[0]), Image.BICUBIC)</code>. 여기서 <strong>가로·세로 순서가 뒤집힙니다</strong>. 아래 함정 참고!</p></div>
+        <div class="step"><p><b>0~1로 나누기</b>: <code>/ 255</code>. 픽셀은 원래 0~255 정수인데, 모델은 0~1 실수를 기대합니다.</p></div>
+        <div class="step"><p><b>쌓기</b>: <code>np.stack(arrays)</code> → <code>(N, H, W, 3)</code>. 사진 N장을 한 덩어리로.</p></div>
+        <div class="step"><p><b>채널 앞으로</b>: <code>.permute(0, 3, 1, 2)</code> → <code>(N, 3, H, W)</code>. PyTorch는 채널이 앞에 오는 <strong>CHW</strong>를 좋아합니다. NumPy/PIL은 HWC였죠.</p></div>
+        <div class="step"><p><b>정규화 + 장치 이동</b>: <code>(x - mean) / std</code> 후 <code>.to(device)</code>. 모델이 배운 분포로 맞춰야 특징이 제대로 나옵니다.</p></div>
+      </div>
+
+      <div class="layer gotcha">
+        <span class="tag">⚠️ 대표 함정 — resize의 순서</span>
+        <p><code>size</code>는 <code>(높이, 너비)</code>인데, PIL의 <code>resize</code>는 <code>(너비, 높이)</code>를 받습니다. 그래서 코드가 <code>size[1], size[0]</code>으로 일부러 뒤집어 넣어요. 이걸 놓치면 세로 사진이 가로로 찌그러집니다.</p>
+      </div>
+
+      <div class="panel" id="normPanel">
+        <div class="panel-head"><h3>🎨 정규화 계산기</h3><span class="badge">직접 움직이기</span></div>
+        <div class="norm-grid">
+          <div>
+            <div class="norm-row"><span>픽셀 x</span><input type="range" id="normX" min="0" max="255" value="128"><span id="normXVal">128</span></div>
+            <div class="norm-row"><span>mean</span><input type="range" id="normMean" min="0" max="1" step="0.001" value="0.485"><span id="normMeanVal">0.485</span></div>
+            <div class="norm-row"><span>std</span><input type="range" id="normStd" min="0.05" max="0.5" step="0.001" value="0.229"><span id="normStdVal">0.229</span></div>
+            <div class="controls">
+              <label>채널
+                <select id="normChannel">
+                  <option value="0">R</option>
+                  <option value="1">G</option>
+                  <option value="2">B</option>
+                </select>
+              </label>
+            </div>
+            <div class="formula">(x/255 − mean) / std<br>= (<span id="nfX">0.502</span> − <span id="nfM">0.485</span>) / <span id="nfS">0.229</span><br>= <span class="hl" id="nfOut">0.074</span></div>
+            <div class="norm-table">
+              <div class="stat"><span class="k">R 결과</span><b id="normR">-</b></div>
+              <div class="stat"><span class="k">G 결과</span><b id="normG">-</b></div>
+              <div class="stat"><span class="k">B 결과</span><b id="normB">-</b></div>
+            </div>
+          </div>
+          <div>
+            <div class="swatch" id="normSwatch">x = 128</div>
+            <p class="note" style="margin:8px 0 0">회색조 미리보기. 실제 코드는 R/G/B 채널마다 다른 mean·std를 씁니다.</p>
+          </div>
+        </div>
+        <p class="note" style="margin:10px 0 0"><strong>예시 값은 일반적인 ImageNet 전처리 값</strong>(mean 0.485/0.456/0.406, std 0.229/0.224/0.225)입니다. 실제 코드는 <code>model.pretrained_cfg</code>에서 읽으므로 모델마다 다를 수 있어요.</p>
+      </div>
+
+      <div class="layer precise">
+        <span class="tag">🔬 정확히는 — 왜 정규화?</span>
+        <p>모델은 학습할 때 특정 평균·표준편차로 정규화된 사진만 봤습니다. 추론할 때 다른 분포를 넣으면 특징이 흐려집니다. <code>(x - mean) / std</code>는 각 채널을 평균 0, 표준편차 1 근처로 옮기는 표준화입니다. <code>mean</code>/<code>std</code>가 <code>(1,3,1,1)</code>이라 <code>(N,3,H,W)</code> 텐서의 모든 픽셀에 채널별로 브로드캐스트됩니다.</p>
+      </div>
+
+      <div class="callout ok">
+        <span class="ico">✅</span>
+        <div><p><strong>pretrained=False여도 <code>pretrained_cfg</code>는 있습니다.</strong> timm이 모델 이름에 붙은 기본 전처리 레시피를 계속 제공하기 때문이에요. 그래서 무작위 모델도 같은 전처리를 씁니다. 비교 실험에서 전처리 차이가 섞이지 않도록 하는 장치입니다.</p></div>
+      </div>
+
+      <div class="layer analogy">
+        <span class="tag">🍭 5살 비유</span>
+        <p>사진을 모델이라는 친구에게 먹이려면, 친구가 좋아하는 <strong>도시락 칸</strong>에 맞춰 담아야 해요. 크기를 맞추고, 짠맛(픽셀 값)을 싱겁게 바꾸고, 재료(채널)를 앞칸에 놓는 것. 순서를 틀리면 친구가 맛이 없다고 해요.</p>
+      </div>
+    </section>
+
+    <section id="embed" data-lecture-section="embed">
+      <div class="sec-head">
+        <p class="sec-kicker">07 · embed()</p>
+        <h2>사진 한 장 → 숫자 벡터 하나</h2>
+        <p class="sub">이 파일의 심장. 여러 장을 배치로 나눠 계산하고, 각 벡터의 길이를 1로 맞춰 코사인 비교를 내적 한 번으로 만듭니다.</p>
+      </div>
+
+      <div class="code-cap"><span>common_dino.py · 50–59행</span><span>원문 그대로</span></div>
+      <pre class="code"><code>@torch.no_grad()
+def embed(model: torch.nn.Module, images: list[Image.Image], size: int | tuple[int, int] = 224,
+          batch: int = 64) -> np.ndarray:
+    """사진마다 특징 벡터 하나(길이 1로 맞춤). 코사인 유사도 = 내적. size는 정사각 한 변 또는 (높이, 너비)."""
+    hw = (size, size) if isinstance(size, int) else size
+    chunks = []
+    for i in range(0, len(images), batch):
+        feats = model(_tensor(model, images[i:i + batch], hw)).float().cpu().numpy()
+        chunks.append(feats / np.linalg.norm(feats, axis=1, keepdims=True))
+    return np.concatenate(chunks)</code></pre>
+
+      <div class="steps">
+        <div class="step"><p><b>기울기 끄기</b>: <code>@torch.no_grad()</code>. 우리는 학습이 아니라 추론만 하므로 역전파용 기록을 만들지 않습니다. 메모리와 시간을 아껴요.</p></div>
+        <div class="step"><p><b>기본값</b>: <code>size=224</code>, <code>batch=64</code>. <code>size</code>는 정사각 한 변(int) 또는 <code>(높이, 너비)</code> 튜플.</p></div>
+        <div class="step"><p><b>정사각 처리</b>: <code>isinstance(size, int)</code>면 <code>(size, size)</code>로. 튜플이면 그대로.</p></div>
+        <div class="step"><p><b>배치 루프</b>: <code>range(0, len(images), batch)</code>로 0, 64, 128, … 잘라서 <code>images[i:i+batch]</code>만 모델에 넣습니다. 한 번에 다 넣으면 메모리가 터질 수 있어요.</p></div>
+        <div class="step"><p><b>모델 통과</b>: <code>model(_tensor(...))</code> → <code>(배치, 특징 차원)</code>. 예: <code>(64, 384)</code>.</p></div>
+        <div class="step"><p><b>NumPy로</b>: <code>.float()</code>(fp16/bf16을 fp32로) → <code>.cpu()</code>(GPU에서 RAM으로) → <code>.numpy()</code>.</p></div>
+        <div class="step"><p><b>길이 1로</b>: <code>feats / np.linalg.norm(feats, axis=1, keepdims=True)</code>. 각 행을 자기 L2 길이로 나눕니다.</p></div>
+        <div class="step"><p><b>합치기</b>: <code>np.concatenate(chunks)</code> → <code>(N, 384)</code>. 배치 크기와 무관하게 전체 사진의 특징이 나옵니다.</p></div>
+      </div>
+
+      <div class="layer precise">
+        <span class="tag">🔬 정확히는 — 코사인 = 내적</span>
+        <div class="formula" style="background:var(--card)">cos(a, b) = (a · b) / (‖a‖₂ · ‖b‖₂)<br>‖a‖₂ = √(a₁² + a₂² + … + aₙ²)<br><span class="hl">‖a‖₂ = ‖b‖₂ = 1  →  cos(a, b) = a · b</span></div>
+        <p style="margin-top:10px">그래서 <code>embed()</code>가 미리 모든 벡터를 단위 벡터로 만들어 둡니다. 그러면 실습에서는 <code>test @ pool.T</code> 같은 행렬 곱 한 번으로 모든 쌍의 코사인 유사도를 얻습니다. 값이 1에 가까울수록 같은 방향(비슷한 사진), 0이면 직각(무관), −1이면 반대 방향입니다.</p>
+      </div>
+
+      <div class="panel" id="cosPanel">
+        <div class="panel-head"><h3>📐 코사인 놀이터</h3><span class="badge">벡터를 끌어보세요</span></div>
+        <p class="note" style="margin-top:0">두 화살표를 마우스/손가락으로 끌어 보세요. <strong>L2 정규화</strong>를 켜면 두 벡터의 길이가 1이 되고, 그때는 내적이 곧 코사인 유사도가 됩니다.</p>
+        <div class="canvas-box">
+          <canvas id="cosCanvas" tabindex="0" aria-label="두 개의 2차원 벡터를 끌어서 내적과 코사인 유사도를 확인하는 놀이터"></canvas>
+          <span class="canvas-hint">화살표 끝을 끌어 보세요</span>
+        </div>
+        <div class="readout">
+          <div class="stat"><span class="k">a · b (내적)</span><b id="cosDot">-</b></div>
+          <div class="stat"><span class="k">‖a‖</span><b id="cosNa">-</b></div>
+          <div class="stat"><span class="k">‖b‖</span><b id="cosNb">-</b></div>
+          <div class="stat hot"><span class="k">cosine</span><b id="cosCos">-</b></div>
+          <div class="stat cool"><span class="k">각도</span><b id="cosAngle">-</b></div>
+        </div>
+        <div class="controls" style="margin-top:12px">
+          <label class="switch"><input type="checkbox" id="cosNorm"> L2 정규화 적용 (길이 1)</label>
+        </div>
+        <div class="presets">
+          <button class="btn soft" type="button" data-preset="same">같은 방향</button>
+          <button class="btn soft" type="button" data-preset="right">직각</button>
+          <button class="btn soft" type="button" data-preset="opposite">반대 방향</button>
+          <button class="btn soft" type="button" data-preset="reset">초기화</button>
+        </div>
+        <p class="note" id="cosNote" style="margin:10px 0 0">정규화가 꺼져 있으면 내적과 코사인은 다릅니다. 길이가 다르기 때문이에요.</p>
+      </div>
+
+      <div class="panel" id="batchPanel">
+        <div class="panel-head"><h3>🧺 배치 계산기</h3><span class="badge">메모리 감각</span></div>
+        <p class="note" style="margin-top:0">사진 N장을 <code>batch</code>장씩 나눠 모델에 넣습니다. 배치는 <strong>결과를 바꾸지 않고</strong> 메모리 사용량과 속도만 바꿉니다.</p>
+        <div class="controls">
+          <label class="range-label">사진 수 N <input type="range" id="batchTotal" min="1" max="2000" step="1" value="1500"><b id="batchTotalVal">1500</b></label>
+          <label class="range-label">배치 크기 <input type="range" id="batchSize" min="1" max="256" step="1" value="64"><b id="batchSizeVal">64</b></label>
+        </div>
+        <div class="readout">
+          <div class="stat"><span class="k">모델 호출</span><b id="batchCalls">-</b></div>
+          <div class="stat"><span class="k">마지막 배치</span><b id="batchLast">-</b></div>
+          <div class="stat"><span class="k">한 번에 드는 사진</span><b id="batchMax">-</b></div>
+        </div>
+        <div class="batch-visual" id="batchVisual" aria-hidden="true"></div>
+        <p class="note" style="margin:8px 0 0">예: 1,500장을 64장씩 → 23번 호출 + 마지막 28장. 빨간 칸이 마지막 배치예요.</p>
+      </div>
+
+      <div class="layer gotcha">
+        <span class="tag">⚠️ 함정</span>
+        <ul class="arrow-list" style="margin-bottom:0">
+          <li><code>np.linalg.norm(..., axis=1, keepdims=True)</code>에서 <code>keepdims=True</code>가 중요합니다. <code>(N,)</code> 모양이 되면 <code>(N, D)</code>와 나눌 때 브로드캐스트가 엉뚱하게 됩니다.</li>
+          <li>배치 크기를 바꿔도 <strong>이론상</strong> 같은 특징이 나옵니다. 다만 GPU 커널·수치 정밀도에 따라 소수점 아래 아주 작은 차이는 있을 수 있어요.</li>
+          <li>사진 목록이 비어 있으면 <code>np.concatenate([])</code>에서 에러가 납니다. 최소 1장은 넣으세요.</li>
+          <li><code>size</code>를 바꾸면 특징도 달라집니다. 캐시를 쓸 때는 이름에 크기를 같이 적는 습관이 좋아요.</li>
+          <li>출력은 <code>(N, 특징 차원)</code> NumPy 배열입니다. PyTorch 텐서가 아니에요.</li>
+        </ul>
+      </div>
+
+      <div class="layer analogy">
+        <span class="tag">🍭 5살 비유</span>
+        <p>사진 100장을 한 번에 들면 팔이 아프니까, 64장씩 <strong>바구니</strong>에 나눠 나릅니다. 다 나른 다음 각 사진에 “이 사진을 가리키는 화살표”를 하나씩 붙여요. 화살표 길이는 전부 똑같이 1로 맞춥니다. 그래야 두 화살표가 얼마나 같은 쪽을 보는지 쉽게 비교할 수 있거든요.</p>
+      </div>
+    </section>
+
+    <section id="patch" data-lecture-section="patch">
+      <div class="sec-head">
+        <p class="sec-kicker">08 · patch_tokens()</p>
+        <h2>사진을 14×14 조각으로 나눠 보기</h2>
+        <p class="sub"><code>embed()</code>가 사진 전체를 요약한 한 개의 벡터를 준다면, <code>patch_tokens()</code>는 <strong>조각마다</strong> 하나의 벡터를 줍니다. ViT 전용입니다.</p>
+      </div>
+
+      <div class="code-cap"><span>common_dino.py · 62–67행</span><span>원문 그대로</span></div>
+      <pre class="code"><code>@torch.no_grad()
+def patch_tokens(model: torch.nn.Module, image: Image.Image, size: tuple[int, int]) -> np.ndarray:
+    """ViT의 패치마다 특징(높이/16 × 너비/16 × 384). 앞쪽의 CLS·레지스터 토큰은 뺀다."""
+    tokens = model.forward_features(_tensor(model, [image], size))[0]
+    patches = tokens[model.num_prefix_tokens:].float().cpu().numpy()
+    return patches.reshape(size[0] // 16, size[1] // 16, -1)</code></pre>
+
+      <div class="steps">
+        <div class="step"><p><b>한 장만</b>: 인자도 <code>image</code> 한 장, 반환도 그 한 장의 패치 격자입니다. 배치 차원은 <code>[0]</code>으로 벗겨요.</p></div>
+        <div class="step"><p><b><code>forward_features</code></b>: 분류 머리를 거치지 않고 <strong>토큰 시퀀스</strong>를 그대로 받습니다. <code>model(x)</code>가 요약 벡터를 주는 것과 다릅니다.</p></div>
+        <div class="step"><p><b><code>[0]</code></b>: 배치 하나뿐이므로 첫 번째 샘플의 토큰들 → <code>(토큰 수, 384)</code>.</p></div>
+        <div class="step"><p><b>앞 토큰 자르기</b>: <code>tokens[model.num_prefix_tokens:]</code>. CLS 토큰과 레지스터 토큰을 뺍니다. 이 모델 구성에서는 보통 5개(CLS 1 + 레지스터 4)지만, 코드는 항상 모델에게 <code>num_prefix_tokens</code>를 물어봅니다.</p></div>
+        <div class="step"><p><b>격자로 재배열</b>: <code>reshape(H//16, W//16, -1)</code>. 224×224면 <code>14 × 14 × 384</code>.</p></div>
+      </div>
+
+      <div class="layer precise">
+        <span class="tag">🔬 정확히는</span>
+        <p>224×224 사진은 16×16 패치 196개로 나뉩니다. 각 패치 토큰은 384차원. 그래서 한 장당 <strong>196 × 384 = 75,264</strong>개의 숫자가 나옵니다. <code>reshape</code>의 <code>16</code>은 ViT의 패치 크기라서 <strong>patch16 모델 전용</strong>입니다. <code>convnext_tiny</code>(<code>SMALL</code>)에 이 함수를 쓰면 의도한 패치 격자가 나오지 않습니다.</p>
+      </div>
+
+      <div class="panel" id="patchPanel">
+        <div class="panel-head"><h3>🧩 패치 격자 탐색기</h3><span class="badge">14 × 14</span></div>
+        <p class="note" style="margin-top:0">224×224 입력을 16픽셀 패치로 자른 개념도입니다. 칸에 마우스를 올리거나 클릭해 보세요. (배경은 이해를 위한 가짜 위성사진입니다.)</p>
+        <div class="patch-layout">
+          <div>
+            <div class="patch-wrap">
+              <div class="patch-bg"></div>
+              <div class="patch-grid" id="patchGrid" role="group" aria-label="14 곱하기 14 패치 격자"></div>
+            </div>
+            <div class="prefix-strip" id="prefixStrip">
+              <span class="tok">CLS</span>
+              <span class="tok">R1</span>
+              <span class="tok">R2</span>
+              <span class="tok">R3</span>
+              <span class="tok">R4</span>
+              <span class="arrow">→ 잘라냄 →</span>
+              <span class="tok patchtok">패치 196개만</span>
+            </div>
+            <div class="controls" style="margin-top:8px">
+              <label class="switch"><input type="checkbox" id="prefixToggle"> 앞 토큰(CLS·레지스터) 보기</label>
+            </div>
+          </div>
+          <div>
+            <div class="patch-readout" id="patchReadout" aria-live="polite">칸을 골라 보세요. 각 칸은 <b>384개 숫자</b>를 가집니다.</div>
+            <div class="readout" style="grid-template-columns:1fr 1fr">
+              <div class="stat"><span class="k">패치 수</span><b>14 × 14 = 196</b></div>
+              <div class="stat"><span class="k">한 장 전체</span><b>75,264 숫자</b></div>
+              <div class="stat"><span class="k">앞 토큰</span><b id="prefixCount">5 (예시)</b></div>
+              <div class="stat"><span class="k">최종 모양</span><b>(14, 14, 384)</b></div>
+            </div>
+            <p class="note" style="margin:10px 0 0">실제 <code>num_prefix_tokens</code> 값은 모델 구성에 따라 달라질 수 있습니다. 코드가 상수 5를 쓰지 않고 모델에게 물어보는 이유예요.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="layer gotcha">
+        <span class="tag">⚠️ 함정</span>
+        <ul class="arrow-list" style="margin-bottom:0">
+          <li><code>16</code>이 하드코딩되어 있습니다. patch16 ViT에서만 맞습니다.</li>
+          <li><code>size</code>의 높이·너비가 16으로 나누어떨어져야 합니다. 224는 OK, 225는 격자가 깔끔하지 않아요.</li>
+          <li>반환값은 <code>(H/16, W/16, 384)</code>이고, 앞 토큰은 이미 잘려 있습니다. <code>embed()</code> 출력과 모양이 완전히 다릅니다.</li>
+          <li><code>model.forward_features</code>는 모델 종류마다 반환 형태가 다를 수 있습니다. 이 함수는 “ViT의 토큰 시퀀스”를 전제로 씁니다.</li>
+        </ul>
+      </div>
+
+      <div class="layer analogy">
+        <span class="tag">🍭 5살 비유</span>
+        <p>큰 사진을 <strong>14×14 퍼즐</strong>로 자르고, 조각마다 “이 조각은 초록색이고 줄무늬가 있어” 같은 메모를 384개씩 붙이는 거예요. 퍼즐 전체를 한 문장으로 요약한 게 <code>embed()</code>, 조각마다 메모한 게 <code>patch_tokens()</code>입니다.</p>
+      </div>
+    </section>
+
+    <section id="pixels" data-lecture-section="pixels">
+      <div class="sec-head">
+        <p class="sec-kicker">09 · pixels()</p>
+        <h2>일부러 “멍청한” 기준선 만들기</h2>
+        <p class="sub">DINOv3 특징이 정말 대단한지 보여주려면, 비교할 상대가 필요합니다. 그 상대가 바로 작게 줄인 원본 픽셀입니다.</p>
+      </div>
+
+      <div class="code-cap"><span>common_dino.py · 70–74행</span><span>원문 그대로</span></div>
+      <pre class="code"><code>def pixels(images: list[Image.Image], side: int = 32) -> np.ndarray:
+    """견줄 거리: 사진을 작게 줄인 픽셀값 그대로(길이 1로 맞춤)."""
+    flat = np.stack([np.asarray(im.convert("RGB").resize((side, side)), np.float32).ravel() for im in images])
+    flat -= flat.mean(axis=1, keepdims=True)
+    return flat / np.linalg.norm(flat, axis=1, keepdims=True)</code></pre>
+
+      <div class="steps">
+        <div class="step"><p><b>기본값</b> <code>side=32</code>. 모든 사진을 32×32로 줄입니다. 32×32×3 = <strong>3,072차원</strong>.</p></div>
+        <div class="step"><p><b>펼치기</b>: <code>ravel()</code>로 2D 이미지를 1D 벡터로. 행 우선(C order) 순서입니다.</p></div>
+        <div class="step"><p><b>밝기 빼기</b>: <code>flat -= flat.mean(axis=1, keepdims=True)</code>. 사진마다 평균을 빼서 “전체적으로 밝은 사진”이 유리하지 않게 합니다.</p></div>
+        <div class="step"><p><b>길이 1로</b>: L2 정규화. <code>embed()</code>와 같은 이유 — 코사인 = 내적.</p></div>
+      </div>
+
+      <div class="layer precise">
+        <span class="tag">🔬 정확히는 — 여기엔 /255가 없어요</span>
+        <p><code>_tensor()</code>는 <code>/255</code>를 하지만 <code>pixels()</code>는 하지 않습니다. 픽셀 값은 0~255 그대로 <code>float32</code>가 됩니다. 그래도 평균을 빼고 L2 정규화를 하기 때문에, <strong>코사인 유사도 기준으로는 전체 스케일이 결과에 영향을 주지 않습니다</strong>. 다만 유클리드 거리를 쓰면 스케일이 달라지니 주의하세요.</p>
+      </div>
+
+      <div class="scroll-x" style="margin-top:14px">
+        <table class="table">
+          <thead><tr><th></th><th><code>pixels()</code> 기준선</th><th><code>embed()</code> DINOv3</th></tr></thead>
+          <tbody>
+            <tr><td>입력</td><td>32×32 RGB, 3,072차원</td><td>224×224 → 384차원</td></tr>
+            <tr><td>보는 것</td><td>색·밝기·대략적 위치</td><td>학습된 의미(질감, 모양, 장면)</td></tr>
+            <tr><td>약점</td><td>조금만 밀려도 픽셀이 어긋남. 색만 바뀌어도 크게 흔들림</td><td>학습 데이터에 없는 개념은 약할 수 있음</td></tr>
+            <tr><td>역할</td><td>“맨눈” 비교 대상</td><td>주인공</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout ok">
+        <span class="ico">🏁</span>
+        <div><p><strong>왜 기준선이 필요할까?</strong> “DINO가 90% 맞혔어요”만으로는 잘한 건지 알 수 없습니다. “픽셀만 보면 60%, DINO는 90%”라고 해야 <strong>학습된 특징의 가치</strong>가 보입니다. lab18/lab19가 <code>pixels</code>를 가져가는 이유예요.</p></div>
+      </div>
+
+      <div class="layer gotcha">
+        <span class="tag">⚠️ 함정</span>
+        <ul class="arrow-list" style="margin-bottom:0">
+          <li><code>resize((side, side))</code>는 정사각이라 PIL의 (너비, 높이) 순서 문제가 없습니다.</li>
+          <li><code>ravel()</code>은 채널 순서까지 그대로 펼칩니다. RGB 순서가 바뀌면 벡터도 바뀝니다.</li>
+          <li>픽셀 기준선은 회전·이동·색 변환에 매우 약합니다. 이게 바로 DINO 특징과의 차이를 보여주는 포인트.</li>
+          <li>사진마다 평균을 빼므로 “평균 밝기” 정보는 사라집니다. 의도된 동작입니다.</li>
+        </ul>
+      </div>
+
+      <div class="layer analogy">
+        <span class="tag">🍭 5살 비유</span>
+        <p>“이 그림이 비슷해?”를 물을 때, 그림을 아주 작게 줄여서 <strong>색 점 수천 개만 비교</strong>하는 거예요. 똑똑한 눈은 아니지만 “그냥 눈으로 본 것”과 비교할 수 있는 좋은 기준이 됩니다.</p>
+      </div>
+    </section>
+
+    <section id="eurosat" data-lecture-section="eurosat">
+      <div class="sec-head">
+        <p class="sec-kicker">10 · eurosat()</p>
+        <h2>위성사진을 “연습장”과 “시험지”로 나누기</h2>
+        <p class="sub">EuroSAT에서 클래스마다 50장은 라벨을 볼 수 있는 pool로, 100장은 정답을 숨긴 test로 뽑습니다. 같은 사진이 양쪽에 들어가면 반칙이에요.</p>
+      </div>
+
+      <div class="code-cap"><span>common_dino.py · 77–90행</span><span>원문 그대로</span></div>
+      <pre class="code"><code>def eurosat() -> tuple[list[Image.Image], np.ndarray, list[Image.Image], np.ndarray, list[str]]:
+    """EuroSAT(위성사진 10종, 64×64, MIT 라이선스)에서 클래스마다 고를 거리 50장, 시험 100장을 뽑는다."""
+    from torchvision.datasets import EuroSAT
+    ds = EuroSAT(str(DATA), download=not (DATA / "eurosat" / "2750").exists())
+    labels = np.array(ds.targets)
+    rng = np.random.default_rng(SEED)
+    pool_idx, test_idx = [], []
+    for c in range(len(ds.classes)):
+        idx = rng.permutation(np.nonzero(labels == c)[0])
+        pool_idx += idx[:POOL_PER_CLASS].tolist()
+        test_idx += idx[POOL_PER_CLASS:POOL_PER_CLASS + TEST_PER_CLASS].tolist()
+    load_image = lambda i: Image.open(ds.samples[i][0]).convert("RGB")
+    return ([load_image(i) for i in pool_idx], labels[pool_idx],
+            [load_image(i) for i in test_idx], labels[test_idx], ds.classes)</code></pre>
+
+      <div class="steps">
+        <div class="step"><p><b>지연 import</b>: <code>from torchvision.datasets import EuroSAT</code>가 함수 <strong>안에서</strong> 실행됩니다. 이 파일을 import할 때는 torchvision이 없어도 되고, 실제로 데이터를 뽑을 때만 필요합니다.</p></div>
+        <div class="step"><p><b>다운로드 판단</b>: <code>download=not (DATA / "eurosat" / "2750").exists()</code>. <code>data/eurosat/2750</code> 폴더가 이미 있으면 <code>download=False</code>, 없으면 <code>True</code>.</p></div>
+        <div class="step"><p><b>라벨 배열</b>: <code>labels = np.array(ds.targets)</code>. 사진마다 0~9 정수.</p></div>
+        <div class="step"><p><b>재현 가능한 섞기</b>: <code>np.random.default_rng(SEED)</code>. NumPy의 새 난수 생성기. <code>torch.manual_seed</code>와 별개입니다.</p></div>
+        <div class="step"><p><b>클래스별 순회</b>: <code>for c in range(len(ds.classes))</code>. 0번부터 9번까지.</p></div>
+        <div class="step"><p><b>그 클래스의 인덱스만</b>: <code>np.nonzero(labels == c)[0]</code> → 섞기(<code>rng.permutation</code>).</p></div>
+        <div class="step"><p><b>앞 50장 = pool</b>: <code>idx[:POOL_PER_CLASS]</code>. 뒤 100장 = test: <code>idx[50:150]</code>. 나머지는 버립니다.</p></div>
+        <div class="step"><p><b>사진 열기</b>: <code>Image.open(ds.samples[i][0]).convert("RGB")</code>. <code>ds.samples[i]</code>는 <code>(경로, 라벨)</code>이라 <code>[0]</code>이 경로.</p></div>
+        <div class="step"><p><b>반환 순서</b>: <code>(pool 사진, pool 라벨, test 사진, test 라벨, 클래스 이름)</code>. 이 순서를 헷갈리면 라벨이 사진과 어긋납니다.</p></div>
+      </div>
+
+      <div class="grid-3" style="margin-top:14px">
+        <div class="mini"><b>EuroSAT</b><span class="mono">10 classes · 64×64</span>유럽 위성사진. 연간작물, 숲, 고속도로, 강, 바다 등.</div>
+        <div class="mini"><b>MIT License</b><span class="mono">데이터 라이선스</span>연구/실습에 쓰기 좋은 공개 데이터셋.</div>
+        <div class="mini"><b>약 27,000장</b><span class="mono">전체 규모</span>클래스당 약 2,000~3,000장. 우리는 1,500장만 사용.</div>
+      </div>
+
+      <div class="layer precise">
+        <span class="tag">🔬 정확히는 — 왜 50/100?</span>
+        <p>pool은 few-shot에서 “예시 몇 장”을 고르는 재료이고, test는 성능을 재는 시험지입니다. 클래스마다 <strong>똑같이</strong> 50/100을 뽑아서 클래스 불균형을 없앱니다. 같은 클래스 안에서 인덱스를 섞은 뒤 앞/뒤로 자르므로 pool과 test는 <strong>절대 겹치지 않습니다</strong>. 시드가 7이라 실행할 때마다 같은 나눔이 재현됩니다.</p>
+      </div>
+
+      <div class="panel" id="eurosatPanel">
+        <div class="panel-head"><h3>🛰️ EuroSAT 나눔 시뮬레이터</h3><span class="badge">10 클래스</span></div>
+        <p class="note" style="margin-top:0">각 칸은 사진 10장을 뜻합니다. 클래스마다 50장(pool) + 100장(test)을 뽑고, 나머지는 쓰지 않아요. “섞기”를 눌러 보세요.</p>
+        <div class="split" id="splitRows"></div>
+        <div class="legend">
+          <span><i class="p"></i>pool 50장 (라벨 사용 가능)</span>
+          <span><i class="t"></i>test 100장 (정답 숨김)</span>
+          <span><i class="u"></i>사용 안 함</span>
+        </div>
+        <div class="controls" style="margin-top:12px">
+          <button class="btn primary" type="button" id="shuffleSplit">🔀 섞고 나누기</button>
+          <button class="btn" type="button" id="checkOverlap">겹침 검사</button>
+          <span class="note">실제 코드는 <code>seed=7</code>로 항상 같은 결과.</span>
+        </div>
+        <p class="split-result" id="splitResult" aria-live="polite">아직 검사하지 않았어요.</p>
+      </div>
+
+      <div class="layer gotcha">
+        <span class="tag">⚠️ 함정</span>
+        <ul class="arrow-list" style="margin-bottom:0">
+          <li><code>2750</code> 폴더는 “데이터가 이미 풀려 있다”는 표식입니다. 폴더가 있는데 내용이 깨져 있어도 <code>download=False</code>가 되어 자동 복구되지 않아요. 그럴 땐 <code>data/eurosat</code>를 지우고 다시 실행.</li>
+          <li><code>ds.targets</code>와 <code>ds.classes</code>의 순서가 클래스 번호를 결정합니다. 클래스 이름과 라벨을 함께 확인하세요.</li>
+          <li><code>POOL_PER_CLASS</code>/<code>TEST_PER_CLASS</code>를 바꾸면 나눔이 달라집니다. 캐시를 쓸 때는 이름에 이 값을 반영해야 안전합니다.</li>
+          <li>사진은 <code>Image.open</code>으로 열지만, <code>convert("RGB")</code>가 픽셀을 읽어 들입니다. 파일을 너무 많이 열어 두면 메모리도 늘어납니다.</li>
+          <li><code>download=not (...).exists()</code>는 “폴더 존재”만 봅니다. 버전/부분 다운로드까지 검증하지는 않아요.</li>
+        </ul>
+      </div>
+
+      <div class="layer analogy">
+        <span class="tag">🍭 5살 비유</span>
+        <p>반 친구 10명에게 각각 문제집을 나눠 줍니다. 앞 50장은 <strong>같이 공부하는 연습장</strong>, 뒤 100장은 <strong>선생님이 정답을 가린 시험지</strong>. 연습장 문제가 시험지에 또 나오면 반칙이니까, 한 번 섞은 뒤 앞뒤로 딱 잘라 나눠요.</p>
+      </div>
+    </section>
+
+    <section id="cached" data-lecture-section="cached">
+      <div class="sec-head">
+        <p class="sec-kicker">11 · cached()</p>
+        <h2>오래 걸리는 계산은 서랍에</h2>
+        <p class="sub">특징 뽑기는 몇 분씩 걸릴 수 있습니다. 같은 계산을 두 번 하지 않도록 <code>runs/dino/</code>에 NumPy 파일로 저장합니다.</p>
+      </div>
+
+      <div class="code-cap"><span>common_dino.py · 93–101행</span><span>원문 그대로</span></div>
+      <pre class="code"><code>def cached(name: str, make) -> np.ndarray:
+    """오래 걸리는 특징 뽑기는 runs/dino에 저장해 두고 다시 쓴다."""
+    path = OUT / f"{name}.npy"
+    if path.exists():
+        return np.load(path)
+    OUT.mkdir(parents=True, exist_ok=True)
+    value = make()
+    np.save(path, value)
+    return value</code></pre>
+
+      <div class="steps">
+        <div class="step"><p><b>파일 경로</b>: <code>OUT / f"{name}.npy"</code> → <code>runs/dino/&lt;name&gt;.npy</code>.</p></div>
+        <div class="step"><p><b>있으면 바로</b>: <code>path.exists()</code>면 <code>np.load(path)</code>. 계산은 하지 않습니다.</p></div>
+        <div class="step"><p><b>폴더 만들기</b>: 없을 때만 <code>OUT.mkdir(parents=True, exist_ok=True)</code>. 상위 폴더까지 만들고, 이미 있어도 에러를 내지 않음.</p></div>
+        <div class="step"><p><b>계산</b>: <code>value = make()</code>. <code>make</code>는 인자 없는 함수/람다. 여기서만 실제 계산이 일어납니다.</p></div>
+        <div class="step"><p><b>저장 후 반환</b>: <code>np.save(path, value)</code> → 다음부터는 2번 단계에서 바로 로드.</p></div>
+      </div>
+
+      <div class="panel" id="cachePanel">
+        <div class="panel-head"><h3>🗄️ 캐시 시뮬레이터</h3><span class="badge">HIT / MISS</span></div>
+        <p class="note" style="margin-top:0">이름을 정하고 “실행”을 눌러 보세요. 첫 실행은 계산(MISS), 두 번째는 즉시 로드(HIT)입니다. 모델을 바꾼 뒤 같은 이름을 쓰면 어떻게 될까요?</p>
+        <div class="cache-grid">
+          <div>
+            <div class="controls" style="margin-top:0">
+              <label>이름 <input type="text" id="cacheName" value="eurosat_vit_small_224" size="22"></label>
+            </div>
+            <div class="controls">
+              <label>모델
+                <select id="cacheModel">
+                  <option value="vit_small_patch16_dinov3">vit_small_patch16_dinov3</option>
+                  <option value="convnext_tiny_dinov3">convnext_tiny_dinov3</option>
+                </select>
+              </label>
+            </div>
+            <div class="controls">
+              <button class="btn primary" type="button" id="cacheRun">▶ 실행</button>
+              <button class="btn" type="button" id="cacheReset">캐시 비우기</button>
+            </div>
+            <p class="note" style="margin:6px 0 0">경로: <code>runs/dino/&lt;이름&gt;.npy</code></p>
+          </div>
+          <div>
+            <pre class="log" id="cacheLog" aria-live="polite">[대기] 실행을 눌러 주세요.</pre>
+            <div class="cache-warn" id="cacheWarn"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="layer gotcha">
+        <span class="tag">⚠️ 가장 중요한 함정 — 캐시 키는 이름뿐</span>
+        <p><code>cached("eurosat", ...)</code>는 <strong>모델·크기·seed·pool 크기</strong>가 바뀌어도 이름이 같으면 옛 <code>.npy</code>를 그대로 돌려줍니다. 실험을 바꿨다면 파일을 지우거나, <code>"eurosat_vit_small_224"</code>처럼 조건을 이름에 넣으세요. “코드를 고쳤는데 결과가 그대로”일 때 십중팔구 캐시 문제입니다.</p>
+      </div>
+
+      <div class="callout">
+        <span class="ico">🧯</span>
+        <div><p><strong>그 외 디테일</strong>: <code>np.save</code>는 경로에 <code>.npy</code>가 없으면 자동으로 붙이지만, 여기선 이미 붙어 있습니다. <code>make()</code>가 NumPy 배열이 아닌 객체를 반환하면 object 배열로 저장될 수 있으니, 특징 행렬을 반환하는 용도로 쓰세요. 동시에 두 프로세스가 실행되면 둘 다 계산할 수 있습니다(락 없음).</p></div>
+      </div>
+
+      <div class="layer analogy">
+        <span class="tag">🍭 5살 비유</span>
+        <p>숙제를 매번 처음부터 다시 하면 힘들죠. 한 번 계산한 숙제를 <strong>서랍에 넣어 두고</strong>, 다음에는 서랍에서 꺼내기만 하는 거예요. 단, 서랍에 붙인 이름표가 같으면 <strong>옛 숙제</strong>를 꺼내게 될 수도 있어요!</p>
+      </div>
+    </section>
+
+    <section id="labs" data-lecture-section="labs">
+      <div class="sec-head">
+        <p class="sec-kicker">12 · 실습 연결</p>
+        <h2>그래서 실습에서 어떻게 쓰나?</h2>
+        <p class="sub">이 파일의 부품을 조합하면 4일차 실습 흐름이 됩니다. 각 카드는 “이런 순서로 쓰기 좋다”는 안내이고, 정확한 코드는 각 lab 파일에 있습니다.</p>
+      </div>
+
+      <div class="grid-2">
+        <div class="card flat">
+          <h4>🧭 lab17 — 패치 PCA</h4>
+          <ul class="arrow-list">
+            <li><code>load()</code>로 ViT 준비</li>
+            <li><code>patch_tokens()</code>로 14×14×384 격자</li>
+            <li>384차원을 PCA로 3차원쯤으로 압축</li>
+            <li><code>OUT</code>에 그림 저장</li>
+          </ul>
+        </div>
+        <div class="card flat">
+          <h4>🎯 lab18 — few-shot</h4>
+          <ul class="arrow-list">
+            <li><code>eurosat()</code>으로 pool/test 분리</li>
+            <li>pool에서 클래스별 1~5장만 선택</li>
+            <li><code>embed()</code>로 특징 추출 + <code>cached()</code></li>
+            <li><code>pixels()</code> 기준선과 정확도 비교</li>
+          </ul>
+        </div>
+        <div class="card flat">
+          <h4>🔎 lab19 — 검색</h4>
+          <ul class="arrow-list">
+            <li>pool/test 특징을 <code>embed()</code>로 추출</li>
+            <li>코사인 = 내적이라 <code>test @ pool.T</code></li>
+            <li>가장 높은 점수의 사진을 이웃으로 반환</li>
+            <li>패치 단위 비교에는 <code>patch_tokens()</code></li>
+          </ul>
+        </div>
+        <div class="card flat">
+          <h4>🕵️ lab20 — ReID</h4>
+          <ul class="arrow-list">
+            <li>사람/물체 crop을 <code>embed()</code>로 벡터화</li>
+            <li>같은 대상의 벡터끼리 가까운지 확인</li>
+            <li><code>load</code>, <code>embed as dino_embed</code>만 가져다 씀</li>
+          </ul>
+        </div>
+        <div class="card flat">
+          <h4>⚖️ lab21 — 구조 비교</h4>
+          <ul class="arrow-list">
+            <li><code>MODEL</code>(ViT) vs <code>SMALL</code>(ConvNeXt)</li>
+            <li><code>pretrained=True</code> vs <code>False</code></li>
+            <li>같은 <code>embed()</code>, 같은 <code>eurosat()</code>로 공정 비교</li>
+            <li><code>pick_device()</code>로 실행 장치 확인</li>
+          </ul>
+        </div>
+        <div class="card flat">
+          <h4>🧰 공통 레시피</h4>
+          <div class="formula" style="font-size:.72rem">model = load()
+pool_x, pool_y, test_x, test_y, names = eurosat()
+pool_f = cached("pool", lambda: embed(model, pool_x))
+test_f = cached("test", lambda: embed(model, test_x))
+sims = test_f @ pool_f.T</div>
+        </div>
+      </div>
+
+      <div class="callout warn">
+        <span class="ico">🔍</span>
+        <div><p><strong>캐시 이름을 조건과 함께!</strong> 위 레시피처럼 <code>"pool"</code>이라는 짧은 이름을 쓰면, 모델을 바꿔도 옛 특징을 불러옵니다. <code>"pool_vit_small_224"</code>처럼 모델·크기를 이름에 넣는 습관을 들이세요.</p></div>
+      </div>
+    </section>
+
+    <section id="fullcode" data-lecture-section="fullcode">
+      <div class="sec-head">
+        <p class="sec-kicker">13 · 전체 코드</p>
+        <h2>원문 101줄, 빠짐없이</h2>
+        <p class="sub">위에서 설명한 모든 내용의 원본입니다. 접어 두었으니 필요할 때 펼쳐서 대조해 보세요.</p>
+      </div>
+
+      <details class="card flat" style="padding:0;overflow:hidden">
+        <summary style="cursor:pointer;padding:16px 20px;font-weight:850;display:flex;align-items:center;justify-content:space-between;gap:10px;list-style:none">
+          <span>📄 common_dino.py 전체 보기 (101줄)</span>
+          <span style="display:flex;gap:8px;align-items:center">
+            <button class="btn" type="button" id="copyCode" style="font-size:.7rem;padding:5px 10px">복사</button>
+            <span style="color:var(--coral);font-weight:900">+</span>
+          </span>
+        </summary>
+        <div style="padding:0 14px 14px">
+          <div class="codewrap">
+            <pre class="gutter" id="codeGutter" aria-hidden="true"></pre>
+            <pre class="code" style="max-height:600px"><code id="fullCodeSource">"""4일차(DINOv3) 공통 부분: 모델 불러오기, 특징 뽑기, EuroSAT 나누기.
+
+Built with DINOv3. 가중치는 Meta의 DINOv3 License를 따릅니다
+(https://ai.meta.com/resources/models-and-libraries/dinov3-license/).
+timm에 올라온 가중치를 쓰므로 Hugging Face 로그인 없이 받아집니다.
+"""
+
+import warnings
+from pathlib import Path
+
+warnings.filterwarnings("ignore", category=UserWarning)
+
+import numpy as np
+import timm
+import torch
+from PIL import Image
+
+HERE = Path(__file__).resolve().parent
+DATA = HERE / "data"
+OUT = HERE / "runs" / "dino"
+MODEL = "vit_small_patch16_dinov3.lvd1689m"      # ViT-S/16, 2,160만 파라미터
+SMALL = "convnext_tiny.dinov3_lvd1689m"          # 합성곱 판, 2,780만 파라미터(20차시)
+SEED = 7
+POOL_PER_CLASS = 50     # 라벨을 고를 수 있는 사진(클래스마다)
+TEST_PER_CLASS = 100    # 시험 사진(클래스마다)
+
+
+def pick_device() -> torch.device:
+    if torch.cuda.is_available():
+        return torch.device("cuda")
+    return torch.device("mps" if torch.backends.mps.is_available() else "cpu")
+
+
+def load(name: str = MODEL, pretrained: bool = True) -> torch.nn.Module:
+    """분류 머리 없이 특징만 내는 모델. pretrained=False면 같은 구조의 무작위 초기값(견줄 거리)."""
+    torch.manual_seed(SEED)
+    return timm.create_model(name, pretrained=pretrained, num_classes=0).eval().to(pick_device())
+
+
+def _tensor(model: torch.nn.Module, images: list[Image.Image], size: tuple[int, int]) -> torch.Tensor:
+    """사진을 정한 크기(높이, 너비)로 바꾸고 모델이 배운 평균·표준편차로 정규화한다."""
+    cfg = model.pretrained_cfg
+    mean = torch.tensor(cfg["mean"]).view(1, 3, 1, 1)
+    std = torch.tensor(cfg["std"]).view(1, 3, 1, 1)
+    arrays = [np.asarray(im.convert("RGB").resize((size[1], size[0]), Image.BICUBIC), np.float32) / 255 for im in images]
+    x = torch.from_numpy(np.stack(arrays)).permute(0, 3, 1, 2)
+    return ((x - mean) / std).to(pick_device())
+
+
+@torch.no_grad()
+def embed(model: torch.nn.Module, images: list[Image.Image], size: int | tuple[int, int] = 224,
+          batch: int = 64) -> np.ndarray:
+    """사진마다 특징 벡터 하나(길이 1로 맞춤). 코사인 유사도 = 내적. size는 정사각 한 변 또는 (높이, 너비)."""
+    hw = (size, size) if isinstance(size, int) else size
+    chunks = []
+    for i in range(0, len(images), batch):
+        feats = model(_tensor(model, images[i:i + batch], hw)).float().cpu().numpy()
+        chunks.append(feats / np.linalg.norm(feats, axis=1, keepdims=True))
+    return np.concatenate(chunks)
+
+
+@torch.no_grad()
+def patch_tokens(model: torch.nn.Module, image: Image.Image, size: tuple[int, int]) -> np.ndarray:
+    """ViT의 패치마다 특징(높이/16 × 너비/16 × 384). 앞쪽의 CLS·레지스터 토큰은 뺀다."""
+    tokens = model.forward_features(_tensor(model, [image], size))[0]
+    patches = tokens[model.num_prefix_tokens:].float().cpu().numpy()
+    return patches.reshape(size[0] // 16, size[1] // 16, -1)
+
+
+def pixels(images: list[Image.Image], side: int = 32) -> np.ndarray:
+    """견줄 거리: 사진을 작게 줄인 픽셀값 그대로(길이 1로 맞춤)."""
+    flat = np.stack([np.asarray(im.convert("RGB").resize((side, side)), np.float32).ravel() for im in images])
+    flat -= flat.mean(axis=1, keepdims=True)
+    return flat / np.linalg.norm(flat, axis=1, keepdims=True)
+
+
+def eurosat() -> tuple[list[Image.Image], np.ndarray, list[Image.Image], np.ndarray, list[str]]:
+    """EuroSAT(위성사진 10종, 64×64, MIT 라이선스)에서 클래스마다 고를 거리 50장, 시험 100장을 뽑는다."""
+    from torchvision.datasets import EuroSAT
+    ds = EuroSAT(str(DATA), download=not (DATA / "eurosat" / "2750").exists())
+    labels = np.array(ds.targets)
+    rng = np.random.default_rng(SEED)
+    pool_idx, test_idx = [], []
+    for c in range(len(ds.classes)):
+        idx = rng.permutation(np.nonzero(labels == c)[0])
+        pool_idx += idx[:POOL_PER_CLASS].tolist()
+        test_idx += idx[POOL_PER_CLASS:POOL_PER_CLASS + TEST_PER_CLASS].tolist()
+    load_image = lambda i: Image.open(ds.samples[i][0]).convert("RGB")
+    return ([load_image(i) for i in pool_idx], labels[pool_idx],
+            [load_image(i) for i in test_idx], labels[test_idx], ds.classes)
+
+
+def cached(name: str, make) -> np.ndarray:
+    """오래 걸리는 특징 뽑기는 runs/dino에 저장해 두고 다시 쓴다."""
+    path = OUT / f"{name}.npy"
+    if path.exists():
+        return np.load(path)
+    OUT.mkdir(parents=True, exist_ok=True)
+    value = make()
+    np.save(path, value)
+    return value</code></pre>
+          </div>
+          <p class="note" style="margin:10px 0 0">줄 번호는 원문 기준입니다. 빈 줄도 그대로 보존했어요.</p>
+        </div>
+      </details>
+    </section>
+
+    <section id="quiz" data-lecture-section="quiz">
+      <div class="sec-head">
+        <p class="sec-kicker">14 · 퀴즈</p>
+        <h2>정말 이해했는지 14문제</h2>
+        <p class="sub">틀려도 괜찮아요. 해설이 바로 나옵니다. 함정 문제가 많으니 천천히.</p>
+      </div>
+
+      <div class="panel" id="quizPanel">
+        <div class="quiz-top">
+          <span class="quiz-count" id="quizCount">1 / 14</span>
+          <div class="quiz-track" aria-hidden="true"><i id="quizBar"></i></div>
+          <span class="quiz-count" id="quizScore">0점</span>
+        </div>
+        <div id="quizBody">
+          <p class="quiz-q" id="quizQ">문제를 불러오는 중…</p>
+          <div class="quiz-opts" id="quizOpts"></div>
+          <div class="quiz-fb" id="quizFb" aria-live="polite"></div>
+          <div class="quiz-actions"><button class="btn primary" type="button" id="quizNext" hidden>다음 문제 →</button></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="glossary" data-lecture-section="glossary">
+      <div class="sec-head">
+        <p class="sec-kicker">15 · 용어 사전</p>
+        <h2>막히면 여기로</h2>
+        <p class="sub">이 페이지에 나온 용어를 한곳에 모았습니다. 접어 두었으니 필요한 것만 펼쳐 보세요.</p>
+      </div>
+
+      <details class="acc"><summary>임베딩 / 특징 벡터 (embedding / feature vector)</summary><div class="body"><p>사진·글 같은 복잡한 대상을 숫자 여러 개의 나열로 바꾼 것. DINOv3 ViT-S/16은 사진 한 장을 384개 숫자로 요약합니다. 의미가 비슷한 대상은 벡터도 가까워지도록 학습됩니다.</p></div></details>
+      <details class="acc"><summary>ViT (Vision Transformer)</summary><div class="body"><p>이미지를 16×16 패치로 자르고, 각 패치를 문장의 단어 토큰처럼 처리하는 신경망 구조. 패치들 사이의 관계를 attention으로 계산합니다.</p></div></details>
+      <details class="acc"><summary>패치 (patch)</summary><div class="body"><p>ViT가 이미지를 자르는 작은 조각. <code>patch16</code>은 한 변이 16픽셀이라는 뜻입니다. 224×224 → 14×14 = 196개.</p></div></details>
+      <details class="acc"><summary>CLS 토큰</summary><div class="body"><p>ViT 맨 앞에 붙는 특별한 토큰. 패치 정보를 모아 사진 전체를 요약하는 역할을 합니다. <code>tokens[0]</code>에 해당하며, <code>patch_tokens()</code>는 이 토큰을 잘라냅니다.</p></div></details>
+      <details class="acc"><summary>레지스터 토큰 (register token)</summary><div class="body"><p>CLS 토큰과 함께 앞쪽에 붙는 보조 토큰. attention이 특정 패치에 과도하게 몰리는 현상을 줄이는 데 도움을 줍니다. DINOv2/v3 계열에서 사용됩니다. 앞 토큰 전체 개수는 <code>model.num_prefix_tokens</code>로 확인합니다.</p></div></details>
+      <details class="acc"><summary>파라미터 (parameter)</summary><div class="body"><p>모델 안에서 학습으로 조정되는 숫자. ViT-S/16 DINOv3는 약 2,160만 개, ConvNeXt-Tiny는 약 2,780만 개. “2,160만”은 저장 용량/계산량 감각을 주는 지표입니다.</p></div></details>
+      <details class="acc"><summary>pretrained / 사전학습</summary><div class="body"><p>큰 데이터로 미리 학습해 둔 상태. <code>pretrained=True</code>는 그 지식을 가져오고, <code>False</code>는 같은 구조에 무작위 숫자를 넣어 비교 기준선으로 씁니다.</p></div></details>
+      <details class="acc"><summary>추론 (inference)</summary><div class="body"><p>학습이 끝난 모델로 답을 계산하는 것. 이 파일의 모든 특징 추출은 추론입니다. 그래서 <code>torch.no_grad()</code>를 씁니다.</p></div></details>
+      <details class="acc"><summary>텐서 (tensor)</summary><div class="body"><p>PyTorch의 다차원 숫자 배열. 사진 배치는 <code>(N, C, H, W)</code> 모양을 씁니다. NumPy 배열과 비슷하지만 GPU로 옮길 수 있고 자동 미분을 지원합니다.</p></div></details>
+      <details class="acc"><summary>정규화 (normalization)</summary><div class="body"><p>값의 범위나 분포를 일정하게 맞추는 것. 여기서는 <code>(x − mean) / std</code>로 채널별 표준화를 합니다. 모델이 학습할 때 본 분포와 맞추는 것이 목적입니다.</p></div></details>
+      <details class="acc"><summary>L2 노름 / 단위 벡터</summary><div class="body"><p>벡터의 길이 <code>‖v‖₂ = √(v₁²+…+vₙ²)</code>. 벡터를 자기 길이로 나누면 길이가 1인 단위 벡터가 됩니다. <code>embed()</code>가 이렇게 합니다.</p></div></details>
+      <details class="acc"><summary>코사인 유사도 (cosine similarity)</summary><div class="body"><p>두 벡터가 이루는 각도의 코사인. <code>(a·b)/(‖a‖‖b‖)</code>. 1에 가까우면 같은 방향, 0이면 직각, −1이면 반대. 단위 벡터끼리는 내적과 같습니다.</p></div></details>
+      <details class="acc"><summary>내적 (dot product)</summary><div class="body"><p><code>a·b = a₁b₁ + a₂b₂ + …</code>. NumPy에서는 <code>a @ b</code> 또는 <code>np.dot</code>. 행렬에서는 <code>test @ pool.T</code>로 모든 쌍의 유사도를 한 번에 계산합니다.</p></div></details>
+      <details class="acc"><summary>시드 (seed)</summary><div class="body"><p>난수 생성기의 시작 번호. 같은 시드면 같은 순서의 “무작위”가 재현됩니다. 여기서는 <code>SEED=7</code>을 torch 초기화와 NumPy 데이터 섞기에 각각 사용합니다.</p></div></details>
+      <details class="acc"><summary>배치 (batch)</summary><div class="body"><p>한 번에 모델에 넣는 샘플 묶음. 메모리를 아끼려고 64장씩 나눕니다. 배치 크기는 결과를 바꾸지 않고 속도/메모리만 바꿉니다.</p></div></details>
+      <details class="acc"><summary><code>torch.no_grad()</code></summary><div class="body"><p>자동 미분 기록을 끄는 컨텍스트. 추론에서 메모리를 크게 아낍니다. <code>model.eval()</code>과 역할이 다릅니다 — 하나는 층 모드, 하나는 기울기 기록.</p></div></details>
+      <details class="acc"><summary>eval 모드</summary><div class="body"><p><code>model.eval()</code>로 설정. 드롭아웃을 끄고 BatchNorm이 running statistics를 쓰게 합니다. 학습 중 통계가 섞이지 않아 추론이 결정적이 됩니다.</p></div></details>
+      <details class="acc"><summary>캐시 (cache)</summary><div class="body"><p>비싼 계산 결과를 파일에 저장해 두고 재사용하는 것. 여기서는 <code>runs/dino/&lt;name&gt;.npy</code>. 이름이 키이므로 조건이 바뀌면 반드시 이름을 바꾸거나 파일을 지워야 합니다.</p></div></details>
+      <details class="acc"><summary>EuroSAT</summary><div class="body"><p>유럽 위성사진 분류 데이터셋. 10개 클래스, 64×64 픽셀, MIT 라이선스, 약 27,000장. 이 파일은 클래스당 50장(pool) + 100장(test)만 사용합니다.</p></div></details>
+      <details class="acc"><summary>분류 머리 (classification head)</summary><div class="body"><p>특징 벡터를 클래스 점수로 바꾸는 마지막 층. <code>num_classes=0</code>이면 이 층이 사라져 특징만 나옵니다. “이름표 기계를 떼어 낸다”고 생각하면 쉽습니다.</p></div></details>
+      <details class="acc"><summary><code>forward_features</code></summary><div class="body"><p>timm 모델에서 분류 머리를 건너뛰고 중간 특징(토큰 시퀀스 또는 특징 맵)을 반환하는 메서드. <code>patch_tokens()</code>가 이걸 써서 패치별 토큰을 얻습니다.</p></div></details>
+      <details class="acc"><summary>NumPy 배열 (ndarray)</summary><div class="body"><p>다차원 숫자 배열. <code>embed()</code>, <code>pixels()</code>, <code>patch_tokens()</code>의 반환형입니다. PyTorch 텐서와 달리 GPU에 있지 않고, <code>.npy</code>로 저장할 수 있습니다.</p></div></details>
+    </section>
+
+    <section id="cheatsheet" data-lecture-section="cheatsheet">
+      <div class="sec-head">
+        <p class="sec-kicker">16 · 치트시트</p>
+        <h2>시험 전날 보는 한 장</h2>
+        <p class="sub">핵심 호출법과 함정만 모았습니다. 이 표를 설명할 수 있으면 이 파일은 끝.</p>
+      </div>
+
+      <div class="scroll-x">
+        <table class="table">
+          <thead><tr><th>하고 싶은 것</th><th>한 줄</th></tr></thead>
+          <tbody>
+            <tr><td>모델 불러오기</td><td><code>model = load()</code></td></tr>
+            <tr><td>무작위 기준선</td><td><code>model = load(pretrained=False)</code></td></tr>
+            <tr><td>사진 → 특징</td><td><code>feats = embed(model, images)</code></td></tr>
+            <tr><td>패치 → 격자</td><td><code>grid = patch_tokens(model, img, (224, 224))</code></td></tr>
+            <tr><td>픽셀 기준선</td><td><code>base = pixels(images)</code></td></tr>
+            <tr><td>데이터 나누기</td><td><code>pool_x, pool_y, test_x, test_y, names = eurosat()</code></td></tr>
+            <tr><td>캐시 사용</td><td><code>feats = cached("pool_vit_224", lambda: embed(model, images))</code></td></tr>
+            <tr><td>유사도 행렬</td><td><code>sims = test_feats @ pool_feats.T</code></td></tr>
+            <tr><td>가장 비슷한 것</td><td><code>idx = sims.argmax(axis=1)</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 style="margin-top:24px">함정 체크리스트</h3>
+      <div class="scroll-x">
+        <table class="table">
+          <thead><tr><th>함정</th><th>기억할 말</th></tr></thead>
+          <tbody>
+            <tr><td>PIL resize 순서</td><td>PIL은 <code>(width, height)</code>. 코드는 <code>size[1], size[0]</code>으로 뒤집는다.</td></tr>
+            <tr><td><code>num_classes=0</code></td><td>분류 머리 제거 → 특징 벡터 출력.</td></tr>
+            <tr><td><code>.eval()</code></td><td>층 모드 변경. 가중치 동결 아님.</td></tr>
+            <tr><td><code>@torch.no_grad()</code></td><td>기울기 기록 끔. 추론 메모리 절약.</td></tr>
+            <tr><td><code>//16</code></td><td>ViT patch16 전용. 224 → 14×14.</td></tr>
+            <tr><td><code>num_prefix_tokens</code></td><td>CLS·레지스터를 빼는 경계. 하드코딩 금지.</td></tr>
+            <tr><td><code>2750</code></td><td>EuroSAT 압축 해제 표식. 폴더만 보고 다운로드 생략.</td></tr>
+            <tr><td>캐시 이름</td><td>모델·크기·seed가 바뀌면 이름도 바꾸거나 <code>.npy</code> 삭제.</td></tr>
+            <tr><td><code>pixels()</code></td><td>/255 없음. 평균 빼고 L2 정규화해서 코사인 비교.</td></tr>
+            <tr><td>장치 순서</td><td>CUDA → MPS → CPU.</td></tr>
+            <tr><td><code>patch_tokens</code> + ConvNeXt</td><td>ViT 전용. <code>SMALL</code>에 쓰면 의도한 격자가 아님.</td></tr>
+            <tr><td>경고 필터</td><td>import보다 먼저. 프로세스 전체에 적용.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="card flat" style="margin-top:18px;background:var(--teal-soft);border-color:#BFDDD5">
+        <h4>마지막 한 문장</h4>
+        <p style="margin:0"><strong>“DINOv3는 사진을 384개의 숫자로 바꾸고, 길이를 1로 맞춰 두면 비슷한 사진일수록 내적이 커진다. 이 파일은 그 계산을 여러 실습이 똑같이 하도록 도와주는 공용 도구 상자다.”</strong></p>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<footer class="footer">
+  <div class="footer-inner">
+    <p><strong>common_dino.py — 사진을 숫자로 바꾸는 요술 상자.</strong> YOLO 특강 4일차(DINOv3) 공통 모듈 해설. 원문: <code>src/lab/yolo_labs/common_dino.py</code>.</p>
+    <p>Built with DINOv3. 가중치는 Meta의 DINOv3 License를 따릅니다. 이 페이지는 학습용 비공식 해설이며, 코드의 동작을 설명하기 위해 만든 인터랙티브 시뮬레이션을 포함합니다.</p>
+    <div class="footer-links">
+      <a href="#hero">맨 위로</a>
+      <a href="#fullcode">전체 코드</a>
+      <a href="#quiz">퀴즈 다시 풀기</a>
+    </div>
+  </div>
+</footer>
+
+<script>
+(function () {
+  'use strict';
+
+  var $ = function (s, r) { return (r || document).querySelector(s); };
+  var $$ = function (s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); };
+
+  /* ---------------- Python syntax highlighter (display only) ---------------- */
+  function esc(s) {
+    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+  function enc(n) {
+    var s = '';
+    do { s += String.fromCharCode(97 + (n % 26)); n = Math.floor(n / 26); } while (n > 0);
+    return s;
+  }
+  function dec(s) {
+    var n = 0;
+    for (var i = s.length - 1; i >= 0; i--) n = n * 26 + (s.charCodeAt(i) - 97);
+    return n;
+  }
+  var KEYWORDS = 'def|return|if|else|elif|for|while|in|not|and|or|is|import|from|as|with|lambda|None|True|False|try|except|raise|yield|pass|break|continue';
+
+  function highlightBlock(raw) {
+    var inDoc = false;
+    return raw.replace(/\r\n/g, '\n').split('\n').map(function (line) {
+      var t = line.trim();
+      if (inDoc) {
+        if (t.slice(-3) === '"""' || t.slice(-3) === "'''") inDoc = false;
+        return '<span class="tok-doc">' + esc(line) + '</span>';
+      }
+      if (t.slice(0, 3) === '"""' || t.slice(0, 3) === "'''") {
+        var q = t.slice(0, 3);
+        if (!(t.length > 3 && t.slice(-3) === q)) inDoc = true;
+        return '<span class="tok-doc">' + esc(line) + '</span>';
+      }
+      var cut = -1, quote = null;
+      for (var i = 0; i < line.length; i++) {
+        var ch = line[i];
+        if (quote) {
+          if (ch === '\\') { i++; continue; }
+          if (ch === quote) quote = null;
+        } else if (ch === '"' || ch === "'") {
+          quote = ch;
+        } else if (ch === '#') {
+          cut = i; break;
+        }
+      }
+      var code = cut >= 0 ? line.slice(0, cut) : line;
+      var comment = cut >= 0 ? line.slice(cut) : '';
+      var strings = [];
+      code = esc(code);
+      code = code.replace(/"[^"]*"|'[^']*'/g, function (m) {
+        strings.push(m);
+        return '\u0003' + enc(strings.length - 1) + '\u0003';
+      });
+      code = code.replace(/^(\s*)(@[\w.]+)/, function (m, a, b) { return a + '<span class="tok-dec">' + b + '</span>'; });
+      code = code.replace(new RegExp('\\b(' + KEYWORDS + ')\\b', 'g'), '<span class="tok-k">$1</span>');
+      code = code.replace(/(<span class="tok-k">def<\/span>\s+)([A-Za-z_]\w*)/g, '$1<span class="tok-fn">$2</span>');
+      code = code.replace(/\b(\d+(?:\.\d+)?)\b/g, '<span class="tok-n">$1</span>');
+      code = code.replace(/\u0003([a-z]+)\u0003/g, function (m, idx) {
+        return '<span class="tok-str">' + strings[dec(idx)] + '</span>';
+      });
+      if (comment) comment = '<span class="tok-com">' + esc(comment) + '</span>';
+      return code + comment;
+    }).join('\n');
+  }
+
+  $$('pre.code code').forEach(function (el) {
+    var raw = el.textContent.replace(/\r\n/g, '\n');
+    el.dataset.raw = raw;
+    el.innerHTML = highlightBlock(raw);
+  });
+
+  /* ---------------- full code: gutter + copy ---------------- */
+  var fullCode = $('#fullCodeSource');
+  if (fullCode) {
+    var raw = fullCode.dataset.raw || fullCode.textContent;
+    var lines = raw.split('\n');
+    var gutter = $('#codeGutter');
+    if (gutter) {
+      gutter.textContent = lines.map(function (_, i) { return String(i + 1); }).join('\n');
+    }
+    var copyBtn = $('#copyCode');
+    if (copyBtn) {
+      copyBtn.addEventListener('click', function (e) {
+        e.preventDefault(); e.stopPropagation();
+        var done = function () {
+          copyBtn.textContent = '복사됨 ✓';
+          setTimeout(function () { copyBtn.textContent = '복사'; }, 1500);
+        };
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(raw).then(done, function () { fallbackCopy(raw, done); });
+        } else {
+          fallbackCopy(raw, done);
+        }
+      });
+    }
+  }
+  function fallbackCopy(text, done) {
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand('copy'); done(); } catch (err) { /* ignore */ }
+    document.body.removeChild(ta);
+  }
+
+  /* ---------------- progress + active TOC ---------------- */
+  var progress = $('#progress');
+  var sections = $$('[data-lecture-section]');
+  var tocLinks = $$('#toc a');
+  var ticking = false;
+  function updateScroll() {
+    ticking = false;
+    var max = document.documentElement.scrollHeight - window.innerHeight;
+    if (progress) progress.style.width = (max > 0 ? Math.min(100, Math.max(0, window.scrollY / max * 100)) : 0) + '%';
+    var current = sections[0];
+    for (var i = 0; i < sections.length; i++) {
+      if (sections[i].getBoundingClientRect().top <= 130) current = sections[i];
+    }
+    if (current) {
+      tocLinks.forEach(function (a) {
+        a.classList.toggle('active', a.getAttribute('href') === '#' + current.id);
+      });
+    }
+  }
+  function onScroll() {
+    if (!ticking) { ticking = true; window.requestAnimationFrame(updateScroll); }
+  }
+  window.addEventListener('scroll', onScroll, { passive: true });
+  window.addEventListener('resize', onScroll);
+  updateScroll();
+
+  /* ---------------- device picker ---------------- */
+  var hasCuda = $('#hasCuda'), hasMps = $('#hasMps');
+  if (hasCuda && hasMps) {
+    var deviceOut = $('#deviceOut'), deviceWhy = $('#deviceWhy');
+    var updateDevice = function () {
+      var d = hasCuda.checked ? 'cuda' : (hasMps.checked ? 'mps' : 'cpu');
+      deviceOut.textContent = 'torch.device("' + d + '")';
+      if (hasCuda.checked) {
+        deviceWhy.textContent = hasMps.checked
+          ? 'CUDA가 먼저라서 첫 번째 if에서 바로 반환합니다. MPS 체크박스가 켜져 있어도 무시돼요.'
+          : 'CUDA가 있으니 첫 번째 if에서 바로 반환합니다. MPS는 검사하지 않아요.';
+      } else if (hasMps.checked) {
+        deviceWhy.textContent = 'CUDA가 없으니 MPS를 검사하고, 있으니 "mps"를 반환합니다.';
+      } else {
+        deviceWhy.textContent = '둘 다 없으니 CPU로 떨어집니다. 느리지만 어디서든 돌아가요.';
+      }
+    };
+    hasCuda.addEventListener('change', updateDevice);
+    hasMps.addEventListener('change', updateDevice);
+    updateDevice();
+  }
+
+  /* ---------------- pretrained conceptual viz ---------------- */
+  var viz = $('#pretrainedViz');
+  if (viz) {
+    var structured = [16, 22, 30, 26, 38, 34, 46, 42, 54, 50, 60, 56, 68, 64, 74, 70, 80, 76, 84, 80, 88, 84, 92, 88];
+    var noisy = [42, 18, 74, 28, 56, 88, 34, 66, 22, 80, 48, 30, 70, 52, 90, 26, 62, 38, 76, 44, 58, 84, 32, 68];
+    var bars = [];
+    for (var bi = 0; bi < 24; bi++) {
+      var bar = document.createElement('i');
+      bar.style.width = '12px';
+      bar.style.height = structured[bi] + 'px';
+      bar.style.background = 'var(--teal)';
+      bar.style.opacity = '0.8';
+      viz.appendChild(bar);
+      bars.push(bar);
+    }
+    var btnP = $('#btnPretrained'), btnR = $('#btnRandom'), cap = $('#pretrainedCaption');
+    var setMode = function (pretrained) {
+      bars.forEach(function (bar, i) {
+        var h = pretrained ? structured[i] : noisy[i];
+        bar.style.height = h + 'px';
+        bar.style.background = pretrained ? 'var(--teal)' : 'var(--coral)';
+      });
+      btnP.classList.toggle('primary', pretrained);
+      btnR.classList.toggle('primary', !pretrained);
+      btnP.setAttribute('aria-pressed', String(pretrained));
+      btnR.setAttribute('aria-pressed', String(!pretrained));
+      cap.textContent = pretrained
+        ? '학습된 특징은 사진의 구조를 따라 규칙적으로 변합니다. (개념을 위한 그림이지 실제 수치가 아니에요.)'
+        : '무작위 가중치는 같은 구조라도 규칙성이 없습니다. “학습이 얼마나 큰 차이를 만드는가”의 기준선이에요.';
+    };
+    btnP.addEventListener('click', function () { setMode(true); });
+    btnR.addEventListener('click', function () { setMode(false); });
+  }
+
+  /* ---------------- normalization calculator ---------------- */
+  var normX = $('#normX');
+  if (normX) {
+    var channels = [
+      { name: 'R', mean: 0.485, std: 0.229 },
+      { name: 'G', mean: 0.456, std: 0.224 },
+      { name: 'B', mean: 0.406, std: 0.225 }
+    ];
+    var chSel = $('#normChannel');
+    var meanSlider = $('#normMean'), stdSlider = $('#normStd');
+    var xVal = $('#normXVal'), meanVal = $('#normMeanVal'), stdVal = $('#normStdVal');
+    var nfX = $('#nfX'), nfM = $('#nfM'), nfS = $('#nfS'), nfOut = $('#nfOut');
+    var swatch = $('#normSwatch');
+    var outs = [$('#normR'), $('#normG'), $('#normB')];
+
+    var fmt = function (v) { return (v >= 0 ? '+' : '') + v.toFixed(3); };
+    var calcNorm = function () {
+      var x = Number(normX.value);
+      var ch = Number(chSel.value);
+      channels[ch].mean = Number(meanSlider.value);
+      channels[ch].std = Number(stdSlider.value);
+      xVal.textContent = String(x);
+      meanVal.textContent = channels[ch].mean.toFixed(3);
+      stdVal.textContent = channels[ch].std.toFixed(3);
+      var xn = x / 255;
+      nfX.textContent = xn.toFixed(3);
+      nfM.textContent = channels[ch].mean.toFixed(3);
+      nfS.textContent = channels[ch].std.toFixed(3);
+      nfOut.textContent = fmt((xn - channels[ch].mean) / channels[ch].std);
+      channels.forEach(function (c, i) {
+        if (outs[i]) outs[i].textContent = fmt((xn - c.mean) / c.std);
+      });
+      swatch.style.background = 'rgb(' + x + ',' + x + ',' + x + ')';
+      swatch.textContent = 'x = ' + x;
+      swatch.style.color = x > 150 ? '#211D18' : '#fff';
+      swatch.style.textShadow = x > 150 ? 'none' : '0 1px 3px rgba(0,0,0,.55)';
+    };
+    var syncChannel = function () {
+      var ch = Number(chSel.value);
+      meanSlider.value = channels[ch].mean;
+      stdSlider.value = channels[ch].std;
+      calcNorm();
+    };
+    normX.addEventListener('input', calcNorm);
+    meanSlider.addEventListener('input', calcNorm);
+    stdSlider.addEventListener('input', calcNorm);
+    chSel.addEventListener('change', syncChannel);
+    syncChannel();
+  }
+
+  /* ---------------- cosine playground ---------------- */
+  var cv = $('#cosCanvas');
+  if (cv) {
+    var ctx = cv.getContext('2d');
+    var box = cv.parentElement;
+    var state = { a: { x: 1.12, y: 0.52 }, b: { x: 0.38, y: 1.02 }, norm: false, drag: null };
+    var W = 600, H = 320, DPR = 1;
+    var cosDot = $('#cosDot'), cosNa = $('#cosNa'), cosNb = $('#cosNb'), cosCos = $('#cosCos'), cosAngle = $('#cosAngle'), cosNote = $('#cosNote'), cosNorm = $('#cosNorm');
+
+    var unit = function (v) {
+      var n = Math.hypot(v.x, v.y) || 1;
+      return { x: v.x / n, y: v.y / n };
+    };
+    var shown = function (v) { return state.norm ? unit(v) : v; };
+    var scaleFor = function () { return Math.min(W, H) * 0.3; };
+    var cx = function () { return W / 2; };
+    var cy = function () { return H / 2; };
+    var toScreen = function (v) { var s = scaleFor(); return { x: cx() + v.x * s, y: cy() - v.y * s }; };
+    var toData = function (p) { var s = scaleFor(); return { x: (p.x - cx()) / s, y: (cy() - p.y) / s }; };
+    var clampVec = function (v) {
+      var n = Math.hypot(v.x, v.y);
+      var max = 1.55, min = 0.22;
+      if (n < 1e-6) return { x: min, y: 0 };
+      if (n > max) { v.x = v.x / n * max; v.y = v.y / n * max; }
+      if (n < min) { v.x = v.x / n * min; v.y = v.y / n * min; }
+      if (state.norm) return unit(v);
+      return v;
+    };
+    var normUnit = function (v) { var n = Math.hypot(v.x, v.y) || 1; return { x: v.x / n, y: v.y / n }; };
+
+    function draw() {
+      ctx.clearRect(0, 0, W, H);
+      var s = scaleFor(), x0 = cx(), y0 = cy();
+      ctx.save();
+      ctx.strokeStyle = 'rgba(33,29,24,.08)';
+      ctx.lineWidth = 1;
+      for (var g = -1.5; g <= 1.5; g += 0.5) {
+        ctx.beginPath(); ctx.moveTo(x0 + g * s, 0); ctx.lineTo(x0 + g * s, H); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(0, y0 + g * s); ctx.lineTo(W, y0 + g * s); ctx.stroke();
+      }
+      ctx.strokeStyle = 'rgba(33,29,24,.28)';
+      ctx.beginPath(); ctx.moveTo(0, y0); ctx.lineTo(W, y0); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(x0, 0); ctx.lineTo(x0, H); ctx.stroke();
+      ctx.setLineDash([5, 5]);
+      ctx.strokeStyle = 'rgba(31,122,108,.45)';
+      ctx.beginPath(); ctx.arc(x0, y0, s, 0, Math.PI * 2); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = 'rgba(33,29,24,.5)';
+      ctx.font = '600 11px ui-monospace, monospace';
+      ctx.fillText('1', x0 + s + 5, y0 - 6);
+      ctx.fillText('−1', x0 - s - 22, y0 - 6);
+      ctx.restore();
+
+      var a = shown(state.a), b = shown(state.b);
+      var pa = toScreen(a), pb = toScreen(b);
+      var drawVec = function (p, color, label) {
+        ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = 3.2;
+        ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(p.x, p.y); ctx.stroke();
+        var ang = Math.atan2(p.y - y0, p.x - x0);
+        ctx.beginPath();
+        ctx.moveTo(p.x, p.y);
+        ctx.lineTo(p.x - 12 * Math.cos(ang - 0.42), p.y - 12 * Math.sin(ang - 0.42));
+        ctx.lineTo(p.x - 12 * Math.cos(ang + 0.42), p.y - 12 * Math.sin(ang + 0.42));
+        ctx.closePath(); ctx.fill();
+        ctx.beginPath(); ctx.arc(p.x, p.y, 6, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#FFFDF8'; ctx.beginPath(); ctx.arc(p.x, p.y, 2.4, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = color;
+        ctx.font = '800 13px "Pretendard Variable", Pretendard, sans-serif';
+        ctx.fillText(label, p.x + 9, p.y - 9);
+      };
+      drawVec(pa, '#E4572E', 'a');
+      drawVec(pb, '#1F7A6C', 'b');
+
+      var a1 = Math.atan2(pa.y - y0, pa.x - x0);
+      var a2 = Math.atan2(pb.y - y0, pb.x - x0);
+      var delta = a2 - a1;
+      while (delta > Math.PI) delta -= Math.PI * 2;
+      while (delta < -Math.PI) delta += Math.PI * 2;
+      if (Math.abs(delta) > 0.04) {
+        ctx.strokeStyle = 'rgba(233,180,76,.9)'; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(x0, y0, 48, a1, a1 + delta, delta < 0); ctx.stroke();
+        ctx.fillStyle = '#8A6412';
+        ctx.font = '700 11px ui-monospace, monospace';
+        var mid = a1 + delta / 2;
+        ctx.fillText('θ', x0 + Math.cos(mid) * 60 - 4, y0 + Math.sin(mid) * 60 + 4);
+      }
+    }
+
+    function readout() {
+      var a = shown(state.a), b = shown(state.b);
+      var dot = a.x * b.x + a.y * b.y;
+      var na = Math.hypot(a.x, a.y), nb = Math.hypot(b.x, b.y);
+      var cos = dot / ((na * nb) || 1);
+      var angle = Math.acos(Math.max(-1, Math.min(1, cos))) * 180 / Math.PI;
+      cosDot.textContent = dot.toFixed(3);
+      cosNa.textContent = na.toFixed(3);
+      cosNb.textContent = nb.toFixed(3);
+      cosCos.textContent = cos.toFixed(3);
+      cosAngle.textContent = angle.toFixed(1) + '°';
+      cosNote.textContent = state.norm
+        ? '길이를 1로 맞췄으니 내적과 코사인이 같습니다. 두 숫자가 같은지 보세요.'
+        : '정규화가 꺼져 있으면 내적과 코사인은 다릅니다. 길이가 다르기 때문이에요.';
+    }
+
+    function refresh() { draw(); readout(); }
+
+    function resize() {
+      var rect = box.getBoundingClientRect();
+      DPR = Math.min(window.devicePixelRatio || 1, 2);
+      W = Math.max(280, Math.round(box.clientWidth || rect.width));
+      H = 320;
+      cv.width = W * DPR; cv.height = H * DPR;
+      cv.style.width = W + 'px'; cv.style.height = H + 'px';
+      ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+      refresh();
+    }
+
+    var localPos = function (e) {
+      var r = cv.getBoundingClientRect();
+      return { x: e.clientX - r.left, y: e.clientY - r.top };
+    };
+    cv.addEventListener('pointerdown', function (e) {
+      var p = localPos(e);
+      var pa = toScreen(shown(state.a)), pb = toScreen(shown(state.b));
+      var da = Math.hypot(p.x - pa.x, p.y - pa.y);
+      var db = Math.hypot(p.x - pb.x, p.y - pb.y);
+      if (Math.min(da, db) < 34) {
+        state.drag = da <= db ? 'a' : 'b';
+        cv.setPointerCapture(e.pointerId);
+        cv.style.cursor = 'grabbing';
+        e.preventDefault();
+      }
+    });
+    cv.addEventListener('pointermove', function (e) {
+      if (!state.drag) return;
+      var v = toData(localPos(e));
+      state[state.drag] = clampVec(v);
+      refresh();
+    });
+    var endDrag = function (e) {
+      if (!state.drag) return;
+      state.drag = null;
+      cv.style.cursor = 'crosshair';
+      try { cv.releasePointerCapture(e.pointerId); } catch (err) { /* ignore */ }
+    };
+    cv.addEventListener('pointerup', endDrag);
+    cv.addEventListener('pointercancel', endDrag);
+
+    cv.addEventListener('keydown', function (e) {
+      if (e.key.indexOf('Arrow') !== 0) return;
+      e.preventDefault();
+      var v = e.shiftKey ? state.b : state.a;
+      var step = e.altKey ? 0.02 : 0.1;
+      if (e.key === 'ArrowLeft') v.x -= step;
+      if (e.key === 'ArrowRight') v.x += step;
+      if (e.key === 'ArrowUp') v.y += step;
+      if (e.key === 'ArrowDown') v.y -= step;
+      state[e.shiftKey ? 'b' : 'a'] = clampVec(v);
+      refresh();
+    });
+
+    if (cosNorm) {
+      cosNorm.addEventListener('change', function () {
+        state.norm = cosNorm.checked;
+        if (state.norm) { state.a = normUnit(state.a); state.b = normUnit(state.b); }
+        refresh();
+      });
+    }
+
+    var presets = {
+      same: { a: { x: 1.15, y: 0.42 }, b: { x: 1.05, y: 0.38 } },
+      right: { a: { x: 1.12, y: 0 }, b: { x: 0, y: 1.12 } },
+      opposite: { a: { x: 1.1, y: 0.32 }, b: { x: -1.1, y: -0.32 } },
+      reset: { a: { x: 1.12, y: 0.52 }, b: { x: 0.38, y: 1.02 } }
+    };
+    $$('[data-preset]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var p = presets[btn.getAttribute('data-preset')];
+        if (!p) return;
+        state.a = { x: p.a.x, y: p.a.y };
+        state.b = { x: p.b.x, y: p.b.y };
+        if (state.norm) { state.a = normUnit(state.a); state.b = normUnit(state.b); }
+        refresh();
+      });
+    });
+
+    if (window.ResizeObserver) {
+      new ResizeObserver(resize).observe(box);
+    } else {
+      window.addEventListener('resize', resize);
+    }
+    resize();
+  }
+
+  /* ---------------- batch calculator ---------------- */
+  var batchTotal = $('#batchTotal');
+  if (batchTotal) {
+    var batchSize = $('#batchSize');
+    var btVal = $('#batchTotalVal'), bsVal = $('#batchSizeVal');
+    var callsOut = $('#batchCalls'), lastOut = $('#batchLast'), maxOut = $('#batchMax');
+    var visual = $('#batchVisual');
+    var updateBatch = function () {
+      var n = Number(batchTotal.value), b = Number(batchSize.value);
+      var calls = Math.max(1, Math.ceil(n / b));
+      var last = n - (calls - 1) * b;
+      btVal.textContent = String(n);
+      bsVal.textContent = String(b);
+      callsOut.textContent = String(calls);
+      lastOut.textContent = last + '장';
+      maxOut.textContent = b + '장';
+      visual.innerHTML = '';
+      var show = Math.min(calls, 48);
+      for (var i = 0; i < show; i++) {
+        var bar = document.createElement('i');
+        if (i === show - 1) bar.style.background = 'var(--coral)';
+        if (i === show - 1 && show === 1) bar.style.width = '18px';
+        visual.appendChild(bar);
+      }
+      if (calls > 48) {
+        var more = document.createElement('span');
+        more.className = 'more';
+        more.textContent = '… +' + (calls - 48) + '번';
+        visual.appendChild(more);
+      }
+    };
+    batchTotal.addEventListener('input', updateBatch);
+    batchSize.addEventListener('input', updateBatch);
+    updateBatch();
+  }
+
+  /* ---------------- euroSAT split simulator ---------------- */
+  var splitRows = $('#splitRows');
+  if (splitRows) {
+    var classes = [
+      ['AnnualCrop', '연간 작물'], ['Forest', '숲'], ['HerbaceousVegetation', '초본 식생'],
+      ['Highway', '고속도로'], ['Industrial', '산업 지역'], ['Pasture', '목초지'],
+      ['PermanentCrop', '영구 작물'], ['Residential', '주거 지역'], ['River', '강'], ['SeaLake', '바다·호수']
+    ];
+    var rowRefs = [];
+    classes.forEach(function (c, ci) {
+      var row = document.createElement('div');
+      row.className = 'split-row';
+      var name = document.createElement('div');
+      name.className = 'split-name';
+      name.innerHTML = esc(c[0]) + '<em>' + esc(c[1]) + ' · class ' + ci + '</em>';
+      var blocks = document.createElement('div');
+      blocks.className = 'blocks';
+      for (var i = 0; i < 15; i++) {
+        var b = document.createElement('span');
+        b.className = 'block';
+        b.title = '사진 10장 묶음';
+        blocks.appendChild(b);
+      }
+      var count = document.createElement('div');
+      count.className = 'split-count';
+      count.textContent = '50 + 100';
+      row.appendChild(name); row.appendChild(blocks); row.appendChild(count);
+      splitRows.appendChild(row);
+      rowRefs.push({ row: row, blocks: blocks });
+    });
+
+    var applySplit = function (animate) {
+      rowRefs.forEach(function (ref, ri) {
+        ref.blocks.classList.toggle('shuffling', !!animate);
+        var bs = Array.prototype.slice.call(ref.blocks.children);
+        bs.forEach(function (b, i) {
+          b.className = 'block';
+          b.style.transitionDelay = animate ? (ri * 25 + i * 9) + 'ms' : '0ms';
+        });
+      });
+      setTimeout(function () {
+        rowRefs.forEach(function (ref) {
+          ref.blocks.classList.remove('shuffling');
+          var bs = Array.prototype.slice.call(ref.blocks.children);
+          bs.forEach(function (b, i) {
+            b.classList.add(i < 5 ? 'pool' : (i < 15 ? 'test' : 'unused'));
+          });
+        });
+      }, animate ? 340 : 0);
+    };
+    applySplit(false);
+
+    var splitResult = $('#splitResult');
+    $('#shuffleSplit').addEventListener('click', function () {
+      applySplit(true);
+      splitResult.className = 'split-result';
+      splitResult.textContent = '다시 섞었어요. pool 500장 / test 1,000장.';
+    });
+    $('#checkOverlap').addEventListener('click', function () {
+      var pool = new Set(), test = new Set();
+      var seed = 7;
+      var rnd = function () {
+        seed |= 0; seed = seed + 0x6D2B79F5 | 0;
+        var t = Math.imul(seed ^ seed >>> 15, 1 | seed);
+        t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+        return ((t ^ t >>> 14) >>> 0) / 4294967296;
+      };
+      for (var c = 0; c < 10; c++) {
+        var idx = [];
+        for (var i = 0; i < 3000; i++) idx.push(i);
+        for (var j = idx.length - 1; j > 0; j--) {
+          var k = Math.floor(rnd() * (j + 1));
+          var tmp = idx[j]; idx[j] = idx[k]; idx[k] = tmp;
+        }
+        idx.slice(0, 50).forEach(function (v) { pool.add(c + ':' + v); });
+        idx.slice(50, 150).forEach(function (v) { test.add(c + ':' + v); });
+      }
+      var overlap = 0;
+      test.forEach(function (key) { if (pool.has(key)) overlap++; });
+      splitResult.className = 'split-result ' + (overlap === 0 ? 'ok' : 'bad');
+      splitResult.textContent = overlap === 0
+        ? '겹친 사진: 0장 — pool과 test가 완전히 분리됐어요. (시드 7 시뮬레이션)'
+        : '겹친 사진: ' + overlap + '장 — 나눔 로직을 확인하세요!';
+    });
+  }
+
+  /* ---------------- cache simulator ---------------- */
+  var cacheName = $('#cacheName');
+  if (cacheName) {
+    var cacheModel = $('#cacheModel');
+    var cacheLog = $('#cacheLog');
+    var cacheWarn = $('#cacheWarn');
+    var cacheRun = $('#cacheRun');
+    var cacheReset = $('#cacheReset');
+    var cache = new Map();
+    var busy = false;
+    var cacheLines = [{ text: '[대기] 실행을 눌러 주세요.', cls: 'dim' }];
+
+    var renderLog = function () {
+      cacheLog.innerHTML = cacheLines.map(function (l) {
+        return '<span class="' + l.cls + '">' + esc(l.text) + '</span>';
+      }).join('\n');
+      cacheLog.scrollTop = cacheLog.scrollHeight;
+    };
+    var pushLog = function (text, cls) {
+      if (cacheLines.length === 1 && cacheLines[0].text.indexOf('[대기]') === 0) cacheLines.shift();
+      cacheLines.push({ text: text, cls: cls || '' });
+      if (cacheLines.length > 7) cacheLines.shift();
+      renderLog();
+    };
+
+    cacheRun.addEventListener('click', function () {
+      if (busy) return;
+      var name = cacheName.value.trim() || 'eurosat';
+      var model = cacheModel.value;
+      if (cache.has(name)) {
+        var prev = cache.get(name);
+        pushLog('[HIT] runs/dino/' + name + '.npy 를 불러왔어요.', 'hit');
+        if (prev !== model) {
+          cacheWarn.classList.add('show');
+          cacheWarn.innerHTML = '⚠️ <strong>오래된 캐시!</strong> 이 이름은 <code>' + esc(prev) + '</code>로 저장됐는데 지금은 <code>' + esc(model) + '</code>을(를) 선택했어요. 코드는 이름만 보고 불러오므로 <strong>옛 특징</strong>이 나옵니다. 이름을 바꾸거나 <code>.npy</code>를 지우세요.';
+        } else {
+          cacheWarn.classList.remove('show');
+          cacheWarn.textContent = '';
+        }
+        return;
+      }
+      busy = true; cacheRun.disabled = true;
+      cacheWarn.classList.remove('show'); cacheWarn.textContent = '';
+      pushLog('[MISS] ' + name + ' 계산 시작… (' + model + ')', 'miss');
+      setTimeout(function () {
+        cache.set(name, model);
+        pushLog('[SAVE] runs/dino/' + name + '.npy 저장 완료', 'hit');
+        busy = false; cacheRun.disabled = false;
+      }, 1100);
+    });
+
+    cacheReset.addEventListener('click', function () {
+      cache.clear();
+      cacheLines = [];
+      pushLog('[RESET] 캐시를 비웠어요. 다음 실행은 다시 계산합니다.', 'dim');
+      cacheWarn.classList.remove('show');
+      cacheWarn.textContent = '';
+    });
+    renderLog();
+  }
+
+  /* ---------------- patch grid ---------------- */
+  var patchGrid = $('#patchGrid');
+  if (patchGrid) {
+    var patchReadout = $('#patchReadout');
+    var prefixToggle = $('#prefixToggle');
+    var prefixStrip = $('#prefixStrip');
+    for (var r = 0; r < 14; r++) {
+      for (var c = 0; c < 14; c++) {
+        var b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'patch';
+        b.setAttribute('data-r', String(r));
+        b.setAttribute('data-c', String(c));
+        b.setAttribute('aria-label', '패치 행 ' + (r + 1) + ', 열 ' + (c + 1));
+        b.title = 'row ' + r + ', col ' + c;
+        patchGrid.appendChild(b);
+      }
+    }
+    var showPatch = function (el, selected) {
+      var rr = Number(el.getAttribute('data-r'));
+      var cc = Number(el.getAttribute('data-c'));
+      var flat = rr * 14 + cc;
+      patchReadout.innerHTML = '패치 <b>row ' + rr + ', col ' + cc + '</b> · flat index ' + flat +
+        '<br>이 칸의 특징: <b>384개 숫자</b>' + (selected ? ' · 선택됨' : '');
+      if (selected) {
+        $$('.patch.sel', patchGrid).forEach(function (x) { x.classList.remove('sel'); x.setAttribute('aria-pressed', 'false'); });
+        el.classList.add('sel');
+        el.setAttribute('aria-pressed', 'true');
+      }
+    };
+    patchGrid.addEventListener('pointerover', function (e) {
+      var t = e.target.closest('.patch');
+      if (t) showPatch(t, false);
+    });
+    patchGrid.addEventListener('focusin', function (e) {
+      var t = e.target.closest('.patch');
+      if (t) showPatch(t, false);
+    });
+    patchGrid.addEventListener('click', function (e) {
+      var t = e.target.closest('.patch');
+      if (t) showPatch(t, true);
+    });
+    if (prefixToggle) {
+      prefixToggle.addEventListener('change', function () {
+        prefixStrip.classList.toggle('show', prefixToggle.checked);
+        if (prefixToggle.checked) {
+          patchReadout.innerHTML = '앞쪽 <b>5개 토큰</b>(CLS 1 + 레지스터 4)을 잘라냅니다. 실제 개수는 <b>model.num_prefix_tokens</b>.';
+        } else {
+          patchReadout.innerHTML = '칸을 골라 보세요. 각 칸은 <b>384개 숫자</b>를 가집니다.';
+        }
+      });
+    }
+  }
+
+  /* ---------------- quiz ---------------- */
+  var quizBody = $('#quizBody');
+  if (quizBody) {
+    var questions = [
+      { q: 'load()에서 num_classes=0은 무슨 뜻인가요?', o: ['클래스가 0번인 데이터만 고른다', '분류 머리를 떼어내고 특징 벡터만 출력한다', 'GPU 메모리를 0으로 만든다', '이미지를 0장 사용한다'], a: 1, why: 'num_classes는 마지막 분류층의 출력 개수입니다. 0이면 분류층이 사라져 (N, D) 특징이 나옵니다.' },
+      { q: '.eval()이 하는 일은?', o: ['가중치를 얼린다', '드롭아웃을 끄고 BatchNorm을 추론 모드로 바꾼다', '학습률을 0으로 만든다', 'GPU를 CPU로 바꾼다'], a: 1, why: 'eval()은 층의 동작 모드만 바꿉니다. 학습을 막는 건 no_grad나 옵티마이저를 안 쓰는 쪽입니다.' },
+      { q: '_tensor()가 resize((size[1], size[0]))처럼 순서를 뒤집는 이유는?', o: ['PIL은 (height, width)를 받기 때문', 'PIL은 (width, height)를 받기 때문', 'NumPy가 채널을 앞에 두기 때문', '아무 순서나 상관없기 때문'], a: 1, why: 'PIL의 resize는 (width, height)를 받습니다. size는 (height, width)라서 일부러 뒤집어 넣습니다.' },
+      { q: 'L2 정규화를 하면 코사인 유사도는 무엇과 같아지나요?', o: ['유클리드 거리', '두 벡터의 내적', '항상 1', '계산할 수 없음'], a: 1, why: 'cos = (a·b)/(‖a‖‖b‖)이고, ‖a‖=‖b‖=1이면 cos = a·b입니다.' },
+      { q: 'pretrained=False는 무엇을 만드나요?', o: ['모델을 아예 만들지 않는다', '같은 구조의 무작위 가중치 모델', 'GPU를 쓰지 않는 모델', '흑백 전용 모델'], a: 1, why: '구조는 같고 지식만 없는 비교 기준선입니다. seed=7로 초기값을 재현합니다.' },
+      { q: '@torch.no_grad()의 효과는?', o: ['역전파를 더 잘하게 한다', '그래디언트 기록을 꺼서 메모리/속도를 아낀다', '모델을 eval 모드로 바꾼다', '가중치를 저장한다'], a: 1, why: '추론에는 역전파가 필요 없으므로 기록을 끕니다. eval()과는 다른 역할입니다.' },
+      { q: 'patch_tokens()의 reshape에서 //16의 16은?', o: ['이미지를 16색으로 줄인다', 'ViT 패치 크기가 16픽셀이라서', '배치를 16으로 나눈다', '16비트로 바꾼다'], a: 1, why: '224/16=14 → 14×14 패치 격자. patch16 모델 전용입니다.' },
+      { q: 'tokens[model.num_prefix_tokens:]는 무엇을 하나요?', o: ['모델 이름 앞부분을 자른다', 'CLS·레지스터 토큰을 빼고 패치 토큰만 남긴다', '이미지 앞 16픽셀을 자른다', '첫 번째 배치를 고른다'], a: 1, why: 'ViT 앞쪽에는 CLS와 레지스터 토큰이 붙습니다. 그걸 건너뛰고 패치 토큰만 사용합니다.' },
+      { q: 'EuroSAT 다운로드 판단에 쓰는 2750 폴더는?', o: ['이미지 가격', '데이터가 이미 풀려 있는지 확인하는 표식', '클래스 개수', '모델 파라미터 수'], a: 1, why: 'data/eurosat/2750이 있으면 download=False. 없으면 내려받습니다.' },
+      { q: '같은 캐시 이름으로 다른 모델을 실행하면?', o: ['자동으로 다시 계산한다', '옛 특징을 그대로 불러온다', '항상 에러가 난다', '모델이 자동 선택된다'], a: 1, why: '캐시 키가 name뿐이라서 그렇습니다. .npy를 지우거나 조건을 이름에 넣어야 합니다.' },
+      { q: 'pick_device()의 확인 순서는?', o: ['CPU → CUDA → MPS', 'CUDA → MPS → CPU', 'MPS → CPU → CUDA', '무작위'], a: 1, why: 'CUDA가 있으면 바로 반환, 없으면 MPS, 둘 다 없으면 CPU입니다.' },
+      { q: 'pixels()의 목적은?', o: ['DINO보다 좋은 특징을 만든다', 'DINO 특징과 비교할 단순 픽셀 기준선을 만든다', '이미지를 저장한다', '모델을 학습한다'], a: 1, why: '32×32×3=3,072차원 raw 픽셀. “맨눈” 기준선입니다.' },
+      { q: '_tensor()의 mean/std는 어디서 오나요?', o: ['코드에 하드코딩된 값', 'model.pretrained_cfg', '이미지에서 매번 계산', '사용자 입력'], a: 1, why: '모델이 학습된 전처리와 맞추기 위해 pretrained_cfg에서 읽습니다.' },
+      { q: 'embed()의 batch 크기를 바꾸면?', o: ['특징 값이 달라진다', '결과는 같고 메모리/속도만 달라진다', '이미지가 잘린다', '캐시가 자동 저장된다'], a: 1, why: '배치는 나눠서 계산하는 방법일 뿐입니다. 수치 정밀도 차이는 아주 작게 있을 수 있습니다.' }
+    ];
+    var qi = 0, score = 0, answered = false;
+    var quizQ = $('#quizQ'), quizOpts = $('#quizOpts'), quizFb = $('#quizFb'), quizNext = $('#quizNext');
+    var quizCount = $('#quizCount'), quizScore = $('#quizScore'), quizBar = $('#quizBar');
+
+    var renderQuestion = function () {
+      answered = false;
+      var q = questions[qi];
+      quizQ.textContent = q.q;
+      quizOpts.innerHTML = '';
+      quizFb.className = 'quiz-fb';
+      quizFb.innerHTML = '';
+      quizNext.hidden = true;
+      quizNext.textContent = qi === questions.length - 1 ? '결과 보기 →' : '다음 문제 →';
+      quizCount.textContent = (qi + 1) + ' / ' + questions.length;
+      quizScore.textContent = score + '점';
+      quizBar.style.width = ((qi) / questions.length * 100) + '%';
+      q.o.forEach(function (text, i) {
+        var b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'opt';
+        b.innerHTML = '<span class="ltr">' + 'ABCD'[i] + '</span><span>' + esc(text) + '</span>';
+        b.addEventListener('click', function () { choose(i, b); });
+        quizOpts.appendChild(b);
+      });
+    };
+
+    var choose = function (i, btn) {
+      if (answered) return;
+      answered = true;
+      var q = questions[qi];
+      var opts = $$('.opt', quizOpts);
+      opts.forEach(function (b, idx) {
+        b.disabled = true;
+        if (idx === q.a) b.classList.add('correct');
+        if (idx === i && i !== q.a) b.classList.add('wrong');
+      });
+      var ok = i === q.a;
+      if (ok) score++;
+      quizScore.textContent = score + '점';
+      quizFb.className = 'quiz-fb show ' + (ok ? 'ok' : 'no');
+      quizFb.innerHTML = '<b>' + (ok ? '정답! 🎉' : '아쉬워요. 정답은 ' + 'ABCD'[q.a] + '.') + '</b>' + esc(q.why);
+      quizNext.hidden = false;
+    };
+
+    var handleNext = function () {
+      if (!answered) return;
+      if (qi < questions.length - 1) {
+        qi++;
+        renderQuestion();
+      } else {
+        quizBar.style.width = '100%';
+        quizCount.textContent = questions.length + ' / ' + questions.length;
+        var pct = Math.round(score / questions.length * 100);
+        var msg = pct >= 90 ? '완벽에 가까워요. 이 파일의 주인이네요!' : pct >= 70 ? '좋아요. 함정 몇 개만 다시 보면 됩니다.' : pct >= 50 ? '절반은 잡았어요. 캐시와 패치 부분을 복습해 보세요.' : '괜찮아요. 위로 올라가 천천히 다시 읽으면 금방 이해됩니다.';
+        quizBody.innerHTML = '<div class="quiz-result"><div class="score">' + score + '<small> / ' + questions.length + '</small></div><p style="margin:10px 0 4px;font-weight:800">' + msg + '</p><p class="note">정답률 ' + pct + '%</p><button class="btn primary" type="button" id="quizRestart">다시 풀기</button></div>';
+        $('#quizRestart').addEventListener('click', function () {
+          qi = 0; score = 0;
+          quizBody.innerHTML = '<p class="quiz-q" id="quizQ"></p><div class="quiz-opts" id="quizOpts"></div><div class="quiz-fb" id="quizFb" aria-live="polite"></div><div class="quiz-actions"><button class="btn primary" type="button" id="quizNext" hidden>다음 문제 →</button></div>';
+          quizQ = $('#quizQ'); quizOpts = $('#quizOpts'); quizFb = $('#quizFb'); quizNext = $('#quizNext');
+          quizNext.addEventListener('click', handleNext);
+          renderQuestion();
+        });
+      }
+    };
+    quizNext.addEventListener('click', handleNext);
+
+    renderQuestion();
+  }
+})();
+</script>
+</body>
+</html>
