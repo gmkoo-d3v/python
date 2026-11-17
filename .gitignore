@@ -172,3 +172,7 @@ Thumbs.db
 # TorchScript archives saved without an extension + Gradio runtime files
 **/NN
 .gradio/
+/src/code/Nov_2026/Nov17/docs/
+
+# Separate blog repository
+/blog/
